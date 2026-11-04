@@ -1,0 +1,11 @@
+{
+  "name": "private-library",
+  "private": true,
+  "type": "module",
+  "description": "Private Bücher-PWA. Abhängigkeiten nur für den Datenbank-Import (GitHub Actions), nicht für die App.",
+  "engines": { "node": ">=20" },
+  "dependencies": {
+    "@xmldom/xmldom": "0.8.10",
+    "pg": "8.11.3"
+  }
+}

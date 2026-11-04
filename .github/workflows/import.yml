@@ -1,0 +1,48 @@
+name: Katalog-Import
+
+# Holt die Buchdaten von der DNB, fasst sie zu Werken zusammen, ergänzt Open-Library-Cover-IDs
+# und schreibt alles nach Supabase. Kostenlos: öffentliche Repositories haben unbegrenzte Actions-Minuten.
+on:
+  workflow_dispatch:
+    inputs:
+      years:
+        description: 'Jahre, z. B. 2024 oder 2019-2021 (leer = alle ab 2000)'
+        required: false
+        default: ''
+      groups:
+        description: 'DNB-Sachgruppen, z. B. B oder B,K (leer = laut js/config.js)'
+        required: false
+        default: ''
+      covers:
+        description: 'Cover-IDs aus dem Open-Library-Export laden (dauert länger)'
+        type: boolean
+        default: true
+      dry_run:
+        description: 'Nur testen, nichts in die Datenbank schreiben'
+        type: boolean
+        default: false
+  schedule:
+    - cron: '0 2 1 * *' # monatlich am 1. um 02:00 UTC: vollständiger Abgleich
+
+concurrency:
+  group: catalog-import
+  cancel-in-progress: false
+
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install --no-audit --no-fund
+      - name: Import
+        run: node scripts/import.mjs
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          YEARS: ${{ github.event.inputs.years }}
+          GROUPS: ${{ github.event.inputs.groups }}
+          COVERS: ${{ github.event_name == 'schedule' && 'true' || github.event.inputs.covers }}
+          DRY_RUN: ${{ github.event.inputs.dry_run }}

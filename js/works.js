@@ -34,7 +34,13 @@ export function workKeyOf(edition) {
 /** Gruppiert Ausgaben zu Werken: gleicher Werkschlüssel oder gleiche ISBN. */
 export function groupEditions(editions) {
   const parent = editions.map((_, i) => i);
-  const find = (i) => (parent[i] === i ? i : (parent[i] = find(parent[i])));
+  // Iterativ statt rekursiv – beim Import laufen hier Hunderttausende Ausgaben durch.
+  const find = (i) => {
+    let r = i;
+    while (parent[r] !== r) r = parent[r];
+    while (parent[i] !== r) { const n = parent[i]; parent[i] = r; i = n; }
+    return r;
+  };
   const union = (a, b) => { parent[find(a)] = find(b); };
 
   // Box-Sets: Die DNB legt pro enthaltenem Band einen Datensatz mit derselben Box-ISBN an.

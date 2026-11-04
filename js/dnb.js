@@ -4,8 +4,12 @@ import { normalizeIsbn } from './isbn.js';
 
 const MARC_NS = 'http://www.loc.gov/MARC21/slim';
 
+// Läuft im Browser und (für den Datenbank-Import) in Node. Dort setzt das Import-Skript
+// globalThis.DOMParser auf @xmldom/xmldom – deshalb überall Array.from statt Spread.
+const list = (nodes) => Array.from(nodes);
+
 /** Baut den CQL-Filterteil aus der Konfiguration. */
-function filterCql() {
+export function filterCql() {
   const f = CONFIG.catalogFilter;
   const parts = [`spr=${f.language}`, 'mat=books', `jhr>=${f.fromYear}`];
   if (f.subjectGroups.length) parts.push('(' + f.subjectGroups.map((g) => `sgt=${g}`).join(' or ') + ')');
@@ -37,18 +41,19 @@ export function buildQuery(input) {
   return { cql: `(${terms.join(' and ')}) and ${filterCql()}`, isIsbn: false };
 }
 
-/** Führt eine Suche aus. start ist 1-basiert (SRU-Konvention). */
-export async function searchDnb(input, start = 1, signal) {
-  const q = buildQuery(input);
-  if (!q) return { editions: [], total: 0, next: null };
+/**
+ * Ruft eine Seite Datensätze für eine fertige CQL-Abfrage ab. start ist 1-basiert (SRU-Konvention).
+ * Achtung: Die DNB lässt höchstens bis Datensatz 100.000 blättern.
+ */
+export async function fetchRecords(cql, start = 1, { pageSize = CONFIG.dnb.pageSize, signal, keepAll = false } = {}) {
   const url = new URL(CONFIG.dnb.endpoint);
   url.search = new URLSearchParams({
     version: '1.1',
     operation: 'searchRetrieve',
     recordSchema: 'MARC21-xml',
-    maximumRecords: String(CONFIG.dnb.pageSize),
+    maximumRecords: String(pageSize),
     startRecord: String(start),
-    query: q.cql,
+    query: cql,
   });
   const res = await fetch(url, { signal });
   if (!res.ok) throw new Error(`DNB antwortet mit Fehler ${res.status}`);
@@ -56,22 +61,29 @@ export async function searchDnb(input, start = 1, signal) {
   const diag = xml.getElementsByTagNameNS('*', 'message')[0];
   if (diag) throw new Error(`DNB-Abfrage fehlerhaft: ${diag.textContent}`);
   const total = Number(xml.getElementsByTagNameNS('*', 'numberOfRecords')[0]?.textContent || 0);
-  const records = [...xml.getElementsByTagNameNS(MARC_NS, 'record')];
-  const editions = records.map(parseRecord).filter((e) => e && (q.isIsbn || e.isPrintText));
+  const records = list(xml.getElementsByTagNameNS(MARC_NS, 'record'));
+  const editions = records.map(parseRecord).filter((e) => e && (keepAll || e.isPrintText));
   const fetched = start - 1 + records.length;
   return { editions, total, next: fetched < total && records.length ? fetched + 1 : null };
+}
+
+/** Sucht nach einer Benutzereingabe (Titel/Autor/ISBN). */
+export async function searchDnb(input, start = 1, signal) {
+  const q = buildQuery(input);
+  if (!q) return { editions: [], total: 0, next: null };
+  return fetchRecords(q.cql, start, { signal, keepAll: q.isIsbn });
 }
 
 // ---------- MARC21 auswerten ----------
 
 function fields(rec, tag) {
-  return [...rec.getElementsByTagNameNS(MARC_NS, 'datafield')].filter((f) => f.getAttribute('tag') === tag);
+  return list(rec.getElementsByTagNameNS(MARC_NS, 'datafield')).filter((f) => f.getAttribute('tag') === tag);
 }
 function control(rec, tag) {
-  return [...rec.getElementsByTagNameNS(MARC_NS, 'controlfield')].find((f) => f.getAttribute('tag') === tag)?.textContent || '';
+  return list(rec.getElementsByTagNameNS(MARC_NS, 'controlfield')).find((f) => f.getAttribute('tag') === tag)?.textContent || '';
 }
 function subs(field, code) {
-  return [...field.getElementsByTagNameNS(MARC_NS, 'subfield')]
+  return list(field.getElementsByTagNameNS(MARC_NS, 'subfield'))
     .filter((s) => s.getAttribute('code') === code)
     .map((s) => s.textContent.trim());
 }
