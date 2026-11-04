@@ -128,7 +128,7 @@ function toRows(works, coverIds) {
       publisher: w.publisher || null,
       is_comic: !!w.isComic,
       cover_ids: ids,
-      cover_isbns: w.coverIsbns.slice(0, 4),
+      cover_isbns: w.coverIsbns.slice(0, 3),
       edition_count: w.editions.length,
       search_title: normalizeText([w.title, searchableSubtitle(w.subtitle), w.series].filter(Boolean).join(' ')),
       search_author: normalizeText((w.authors || []).join(' ')),
@@ -165,6 +165,10 @@ async function writeDb(workRows, editionRows) {
   try {
     log('Schema anwenden …');
     await client.query(await readFile(new URL('../supabase/schema.sql', import.meta.url), 'utf8'));
+    if (env.RESET === 'true') {
+      log('RESET: Katalog leeren …');
+      await client.query('truncate editions, works');
+    }
 
     const batch = async (rows, sql, label) => {
       for (let i = 0; i < rows.length; i += 1000) {
@@ -203,8 +207,10 @@ async function writeDb(workRows, editionRows) {
 // ---------- Ablauf ----------
 if (!DRY && !env.SUPABASE_DB_URL) throw new Error('SUPABASE_DB_URL fehlt (GitHub Secret anlegen).');
 const editions = await harvestAll();
-const works = groupEditions(editions);
-log(`Zusammengefasst: ${works.length} Werke`);
+// Werke ohne jede ISBN (Sonderdrucke, falsch einsortierte DVDs …) weglassen – spart rund ein Viertel Speicher.
+const allWorks = groupEditions(editions);
+const works = allWorks.filter((w) => w.editions.length > 0);
+log(`Zusammengefasst: ${allWorks.length} Werke, davon ${works.length} mit ISBN`);
 let coverIds = new Map();
 if (env.COVERS === 'true') {
   coverIds = await withRetry(() => loadCoverIds(new Set(works.flatMap((w) => w.coverIsbns))), 'Open Library');

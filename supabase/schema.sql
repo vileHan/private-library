@@ -37,8 +37,11 @@ create table if not exists editions (
 );
 
 create index if not exists editions_work_idx on editions (work_id);
-create index if not exists works_search_title_trgm on works using gin (search_title gin_trgm_ops);
-create index if not exists works_search_author_trgm on works using gin (search_author gin_trgm_ops);
+-- Trigramm-Indizes waren zu groß für 500 MB (≈ 800 Byte je Werk) → Volltextindex (Wortanfänge) statt dessen.
+drop index if exists works_search_title_trgm;
+drop index if exists works_search_author_trgm;
+create index if not exists works_fts_idx on works
+  using gin (to_tsvector('simple', search_title || ' ' || search_author));
 create index if not exists works_series_idx on works (series) where series is not null;
 create index if not exists works_genre_idx on works (genre) where genre is not null;
 
@@ -51,8 +54,10 @@ drop policy if exists "editions lesbar" on editions;
 create policy "editions lesbar" on editions for select using (true);
 
 -- Suche: tokens = normalisierte Suchwörter (Kleinschrift, Umlaute ausgeschrieben, siehe normalizeText).
+-- Jedes Wort muss als Wortanfang im Titel/Reihe oder Autor vorkommen („kokos“ → „kokosnuss“).
 -- Wörter mit weniger als 2 Zeichen werden ignoriert (z. B. Initialen „R“).
--- Rang: 0 = alle Wörter im Titel/Reihe, 1 = Titel + Autor zusammen, 2 = nur ähnlich (Tippfehler).
+-- Rang: 0 = alle Wörter im Titel/Reihe, 1 = Titel + Autor zusammen, 2 = nur ähnlich (Tippfehler-Rückfall).
+drop function if exists search_works(text[], int, int);
 create or replace function search_works(tokens text[], lim int default 50, off int default 0)
 returns table (
   id text, title text, sort_title text, subtitle text, authors text[], author_sort text,
@@ -64,43 +69,59 @@ language plpgsql stable
 set search_path = public
 as $$
 declare
-  t text[] := array(select x from unnest(tokens) x where length(x) >= 2);
-  phrase text := array_to_string(t, ' ');
-  cond_title text := '';
-  cond_all text := '';
-  i int;
+  t text[] := array(select regexp_replace(x, '[^a-z0-9]', '', 'g') from unnest(tokens) x where length(x) >= 2);
+  q tsquery;
+  phrase text;
+  n_hits int;
 begin
+  t := array(select x from unnest(t) x where x <> '');
   if coalesce(array_length(t, 1), 0) = 0 then
     return;
   end if;
-  for i in 1 .. array_length(t, 1) loop
-    cond_title := cond_title || format(' and w.search_title like %L', '%' || t[i] || '%');
-    cond_all   := cond_all   || format(' and (w.search_title like %L or w.search_author like %L)', '%' || t[i] || '%', '%' || t[i] || '%');
-  end loop;
-  cond_title := substr(cond_title, 6);
-  cond_all   := substr(cond_all, 6);
+  q := to_tsquery('simple', array_to_string(array(select x || ':*' from unnest(t) x), ' & '));
+  phrase := array_to_string(t, ' ');
 
-  return query execute format($q$
+  return query
     with hits as (
       select w.*,
-             case when %1$s then 0 when %2$s then 1 else 2 end as rnk
+             case when to_tsvector('simple', w.search_title) @@ q then 0 else 1 end as rnk
       from works w
-      where (%2$s) or %3$L <%% w.search_title or %3$L <%% w.search_author
+      where to_tsvector('simple', w.search_title || ' ' || w.search_author) @@ q
     )
     select h.id, h.title, h.sort_title, h.subtitle, h.authors, h.author_sort,
            h.series, h.volume, h.year, h.genre, h.publisher, h.is_comic,
-           h.cover_ids, h.cover_isbns, h.edition_count,
-           coalesce((select jsonb_agg(jsonb_build_object(
-                       'isbn', e.isbn, 'publisher', e.publisher, 'year', e.year,
-                       'binding', e.binding, 'edition', e.edition, 'pages', e.pages)
-                     order by e.year desc nulls last)
-                     from editions e where e.work_id = h.id), '[]'::jsonb),
+           h.cover_ids, h.cover_isbns, h.edition_count, editions_json(h.id),
            h.rnk, count(*) over ()
     from hits h
     order by h.rnk, lower(h.sort_title), h.author_sort
-    limit %4$s offset %5$s
-  $q$, cond_title, cond_all, phrase, greatest(1, least(lim, 100)), greatest(0, off));
+    limit greatest(1, least(lim, 100)) offset greatest(0, off);
+
+  get diagnostics n_hits = row_count;
+  -- Keine Treffer und erste Seite: ähnliche Titel suchen (Tippfehler). Ohne Index, daher nur als Rückfall.
+  if n_hits = 0 and off = 0 and length(phrase) >= 4 then
+    return query
+      select w.id, w.title, w.sort_title, w.subtitle, w.authors, w.author_sort,
+             w.series, w.volume, w.year, w.genre, w.publisher, w.is_comic,
+             w.cover_ids, w.cover_isbns, w.edition_count, editions_json(w.id),
+             2, count(*) over ()
+      from works w
+      where word_similarity(phrase, w.search_title) > 0.55 or word_similarity(phrase, w.search_author) > 0.7
+      order by greatest(word_similarity(phrase, w.search_title), word_similarity(phrase, w.search_author)) desc
+      limit least(lim, 30);
+  end if;
 end;
+$$;
+
+create or replace function editions_json(work text)
+returns jsonb
+language sql stable
+set search_path = public
+as $$
+  select coalesce(jsonb_agg(jsonb_build_object(
+           'isbn', e.isbn, 'publisher', e.publisher, 'year', e.year,
+           'binding', e.binding, 'edition', e.edition, 'pages', e.pages)
+         order by e.year desc nulls last), '[]'::jsonb)
+  from editions e where e.work_id = work;
 $$;
 
 -- Alle Bände einer Reihe (für „Alle Bände laden“)
@@ -126,6 +147,7 @@ $$;
 grant usage on schema public to anon, authenticated;
 grant select on works, editions to anon, authenticated;
 grant execute on function search_works(text[], int, int) to anon, authenticated;
+grant execute on function editions_json(text) to anon, authenticated;
 grant execute on function series_works(text, text) to anon, authenticated;
 grant execute on function works_by_isbns(text[]) to anon, authenticated;
 

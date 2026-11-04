@@ -21,6 +21,10 @@ on:
         description: 'Nur testen, nichts in die Datenbank schreiben'
         type: boolean
         default: false
+      reset:
+        description: 'Katalog vorher komplett leeren (eigene Markierungen in der App bleiben erhalten)'
+        type: boolean
+        default: false
   schedule:
     - cron: '0 2 1 * *' # monatlich am 1. um 02:00 UTC: vollständiger Abgleich
 
@@ -46,3 +50,4 @@ jobs:
           GROUPS: ${{ github.event.inputs.groups }}
           COVERS: ${{ github.event_name == 'schedule' && 'true' || github.event.inputs.covers }}
           DRY_RUN: ${{ github.event.inputs.dry_run }}
+          RESET: ${{ github.event.inputs.reset }}
