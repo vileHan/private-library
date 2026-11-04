@@ -8,21 +8,43 @@ import { $, el, escapeHtml, today } from './util.js';
 // Untertitel wie „Roman“ oder „Thriller“ sind nur Gattungsangaben – die stehen schon beim Genre.
 const GENERIC_SUBTITLE = /^(ein(e|en)?\s+)?([\wäöüß-]+\s+)?[\wäöüß-]*(roman|thriller|krimi|kriminalroman|erzählung|erzählungen|novelle|geschichten|gedichte)(\s.*)?$/i;
 
-function setCover(card, isbns, title) {
+/** Reihenfolge: Cover der eigenen Ausgabe(n), dann Cover-IDs aus der Datenbank, dann die übrigen ISBNs. */
+function coverUrls(ownIsbns, coverIds, otherIsbns) {
+  const byIsbn = (i) => CONFIG.covers.sources.map((src) => src(i));
+  const others = otherIsbns.filter((i) => !ownIsbns.includes(i)).slice(0, CONFIG.covers.maxIsbns);
+  return [
+    ...ownIsbns.slice(0, 2).flatMap(byIsbn),
+    ...(coverIds || []).map(CONFIG.covers.byId),
+    ...others.flatMap(byIsbn),
+    ...[...ownIsbns.slice(0, 1), ...others.slice(0, 1)].map(CONFIG.covers.lastResort),
+  ];
+}
+
+function setCover(card, urls, title) {
   const img = card.querySelector('.cover img');
   const ph = card.querySelector('.cover .ph');
   ph.textContent = (title || '?').replace(/^(der|die|das|ein|eine)\s+/i, '').charAt(0).toUpperCase();
-  const urls = (isbns || []).slice(0, CONFIG.covers.maxIsbns).flatMap((i) => CONFIG.covers.sources.map((src) => src(i)));
   let n = 0;
-  const next = () => {
+  let timer = null;
+  // Hängt eine Quelle (z. B. Open Library unter Last), nach ein paar Sekunden die nächste versuchen.
+  const arm = () => { clearTimeout(timer); timer = setTimeout(next, CONFIG.covers.timeoutMs); };
+  function next() {
+    clearTimeout(timer);
     if (n >= urls.length) { img.classList.remove('loaded'); img.removeAttribute('src'); ph.hidden = false; return; }
     img.src = urls[n++];
-  };
+    // Lazy-Bilder außerhalb des Bildschirms laden noch gar nicht – die Zeit läuft erst, wenn sie sichtbar werden.
+    if (visible) arm();
+  }
+  let visible = false;
+  new IntersectionObserver((entries, obs) => {
+    if (entries.some((e) => e.isIntersecting)) { visible = true; if (!img.complete) arm(); obs.disconnect(); }
+  }, { rootMargin: '200px' }).observe(card);
   img.onload = () => {
+    clearTimeout(timer);
     if (CONFIG.covers.isPlaceholder(img)) next();
     else { img.classList.add('loaded'); ph.hidden = true; }
   };
-  img.onerror = next;
+  img.onerror = () => next();
   next();
 }
 
@@ -55,7 +77,7 @@ export function bookCard(work, opts = {}) {
   card.querySelector('.author').textContent = (work.authors || []).join(', ') || 'Unbekannter Autor';
   const meta = card.querySelector('.meta');
   const mine = ownedIsbnsOf(entry);
-  setCover(card, [...mine, ...(work.coverIsbns || []).filter((i) => !mine.includes(i))], work.title);
+  setCover(card, coverUrls(mine, work.coverIds, work.coverIsbns || []), work.title);
 
   const own = card.querySelector('.toggle.own');
   const read = card.querySelector('.toggle.read');

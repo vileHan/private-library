@@ -1,6 +1,6 @@
 // Reihen-Ansicht: Welche Bände einer Reihe habe ich, welche fehlen?
 import { catalog } from './catalog.js';
-import { groupEditions, normalizeText, compareTitle } from './works.js';
+import { normalizeText, compareTitle } from './works.js';
 import { library, entryFor } from './library.js';
 import { bookCard } from './card.js';
 import { el, fmt } from './util.js';
@@ -15,20 +15,7 @@ function byVolume(a, b) {
   return va - vb || (a.year || 0) - (b.year || 0) || compareTitle(a, b);
 }
 
-async function loadAllVolumes(series, authorSort) {
-  const surname = (authorSort || '').split(',')[0].trim();
-  const query = `${series} ${surname}`.trim();
-  const editions = [];
-  let cursor = null;
-  for (let page = 0; page < 4; page++) {
-    const res = await catalog.search(query, cursor);
-    editions.push(...res.editions);
-    if (!res.next) break;
-    cursor = res.next;
-  }
-  const key = seriesKey(series, authorSort);
-  return groupEditions(editions).filter((w) => w.series && seriesKey(w.series, w.authorSort) === key);
-}
+const loadAllVolumes = (series, authorSort) => catalog.seriesWorks(series, authorSort);
 
 export function renderSeries(container) {
   const groups = new Map();

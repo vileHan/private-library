@@ -1,14 +1,93 @@
-// Katalog-Schnittstelle der App. Heute steckt die DNB (live) dahinter,
-// später die eigene Supabase-Datenbank – die Oberfläche bleibt dabei unverändert.
+// Katalog-Schnittstelle der App: eigene Supabase-Datenbank, wenn eingerichtet – sonst live bei der DNB.
+// Die DNB bleibt immer zuständig für ISBN-Suchen (ungefiltert, auch Bücher außerhalb des Katalogs)
+// und springt ein, falls Supabase nicht erreichbar ist.
+import { CONFIG } from './config.js';
 import { searchDnb } from './dnb.js';
+import { normalizeIsbn } from './isbn.js';
+import { normalizeText, groupEditions } from './works.js';
+
+const sb = CONFIG.supabase;
+const useDb = () => !!(sb.url && sb.anonKey);
+
+async function rpc(fn, body, signal) {
+  const res = await fetch(`${sb.url}/rest/v1/rpc/${fn}`, {
+    method: 'POST',
+    headers: { apikey: sb.anonKey, 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+    signal,
+  });
+  if (!res.ok) throw new Error(`Datenbank antwortet mit Fehler ${res.status}`);
+  return res.json();
+}
+
+/** Datenbankzeile → Werk im Format von works.js */
+function toWork(r) {
+  const editions = (r.editions || []).map((e) => ({
+    isbn: e.isbn, publisher: e.publisher || '', year: e.year, binding: e.binding || '', edition: e.edition || '', pages: e.pages || '',
+  }));
+  return {
+    key: r.id,
+    title: r.title,
+    sortTitle: r.sort_title || r.title,
+    subtitle: r.subtitle || '',
+    authors: r.authors || [],
+    authorSort: r.author_sort || '',
+    series: r.series || '',
+    volume: r.volume ? String(r.volume) : '',
+    year: r.year,
+    genre: r.genre || '',
+    publisher: r.publisher || '',
+    isComic: !!r.is_comic,
+    isbns: [...new Set([...editions.map((e) => e.isbn), ...(r.cover_isbns || [])])],
+    coverIds: r.cover_ids || [],
+    coverIsbns: r.cover_isbns || [],
+    editions,
+  };
+}
+
+const PAGE = 50;
 
 export const catalog = {
-  name: 'DNB live',
+  get name() { return useDb() ? 'Datenbank' : 'DNB live'; },
+
   /**
    * Sucht im Katalog. cursor = null für die erste Seite, danach der zurückgegebene next-Wert.
-   * Liefert Ausgaben; das Zusammenfassen zu Werken übernimmt works.js.
+   * Liefert entweder { works } (Datenbank, schon zusammengefasst) oder { editions } (DNB).
    */
   async search(query, cursor = null, signal) {
+    if (useDb() && !normalizeIsbn(query)) {
+      try {
+        const off = cursor ?? 0;
+        const tokens = normalizeText(query).split(' ').filter(Boolean);
+        const rows = await rpc('search_works', { tokens, lim: PAGE, off }, signal);
+        const total = Number(rows[0]?.total || 0);
+        return { works: rows.map(toWork), total, next: off + rows.length < total ? off + rows.length : null };
+      } catch (err) {
+        if (err.name === 'AbortError') throw err;
+        console.warn('Datenbank nicht erreichbar, suche live bei der DNB:', err);
+      }
+    }
     return searchDnb(query, cursor ?? 1, signal);
+  },
+
+  /** Alle Bände einer Reihe als Werke. */
+  async seriesWorks(series, authorSort) {
+    if (useDb()) {
+      try {
+        return (await rpc('series_works', { series_name: series, author: authorSort || null })).map((r) => toWork({ ...r, editions: [] }));
+      } catch (err) {
+        console.warn('Datenbank nicht erreichbar, lade Reihe live bei der DNB:', err);
+      }
+    }
+    const surname = (authorSort || '').split(',')[0].trim();
+    const editions = [];
+    let cursor = 1;
+    for (let page = 0; page < 4 && cursor; page++) {
+      const res = await searchDnb(`${series} ${surname}`.trim(), cursor);
+      editions.push(...res.editions);
+      cursor = res.next;
+    }
+    const key = (s, a) => `${normalizeText(s)}|${normalizeText(a || '')}`;
+    return groupEditions(editions).filter((w) => w.series && key(w.series, w.authorSort) === key(series, authorSort));
   },
 };

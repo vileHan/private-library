@@ -1,5 +1,5 @@
 import { catalog } from './catalog.js';
-import { groupEditions, compareTitle, compareAuthor, normalizeText } from './works.js';
+import { groupEditions, compareTitle, compareAuthor, normalizeText, searchableSubtitle } from './works.js';
 import { exportJson, importJson } from './store.js';
 import { normalizeIsbn } from './isbn.js';
 import { library, loadLibrary, entryFor, onLibraryChange, allTags } from './library.js';
@@ -14,17 +14,19 @@ onLibraryChange(() => {
 });
 
 function matchesTokens(entry, tokens, extra = '') {
-  const hay = normalizeText([entry.title, entry.subtitle, ...(entry.authors || []), entry.series, extra].join(' '));
+  const hay = normalizeText([entry.title, searchableSubtitle(entry.subtitle), ...(entry.authors || []), entry.series, extra].join(' '));
   return tokens.every((t) => hay.includes(t));
 }
 
 // ---------- Suche ----------
-const search = { query: '', editions: [], total: 0, next: null, controller: null };
+// editions: von der DNB (werden hier zusammengefasst), works: aus der Datenbank (schon zusammengefasst)
+const search = { query: '', editions: [], works: [], total: 0, next: null, controller: null };
 
 function renderResults() {
   const box = $('#results');
   box.replaceChildren();
-  const works = groupEditions(search.editions);
+  const fromDb = search.works.length > 0;
+  const works = fromDb ? search.works : groupEditions(search.editions);
   const seen = new Set();
   const owned = [];
   const others = [];
@@ -35,7 +37,8 @@ function renderResults() {
   }
   // Eigene Bücher, die zur Suche passen, immer zeigen – auch wenn die DNB sie (noch) nicht geliefert hat.
   const isbn = normalizeIsbn(search.query);
-  const tokens = normalizeText(search.query).split(' ').filter(Boolean);
+  // Einzelbuchstaben (Initialen wie das „R“ in „George R R Martin“) passen auf fast alles – ignorieren.
+  const tokens = normalizeText(search.query).split(' ').filter((t) => t.length >= 2);
   for (const e of library.byKey.values()) {
     if (!e.owned || seen.has(e.key)) continue;
     if (isbn ? (e.isbns || []).includes(isbn) : matchesTokens(e, tokens)) owned.push(e);
@@ -44,7 +47,7 @@ function renderResults() {
   // 2 = sonstige Treffer (z. B. Person nur als Übersetzerin beteiligt).
   const titleHit = (w) => {
     if (!tokens.length) return 0;
-    const t = normalizeText([w.title, w.subtitle, w.series].join(' '));
+    const t = normalizeText([w.title, searchableSubtitle(w.subtitle), w.series].join(' '));
     if (tokens.every((x) => t.includes(x))) return 0;
     const ta = `${t} ${normalizeText((w.authors || []).join(' '))}`;
     return tokens.every((x) => ta.includes(x)) ? 1 : 2;
@@ -66,10 +69,14 @@ function renderResults() {
   const loaded = Math.min(search.total, (search.next ?? search.total + 1) - 1);
   const status = $('#searchStatus');
   status.classList.remove('error');
-  status.textContent = search.total
-    ? `${plural(works.length, 'Buch', 'Bücher')} aus ${fmt.format(loaded)} von ${plural(search.total, 'Ausgabe', 'Ausgaben')}`
-      + (search.next ? ' – sortiert innerhalb der geladenen Treffer.' : '.')
-    : '';
+  if (fromDb) {
+    status.textContent = `${fmt.format(works.length)} von ${plural(search.total, 'Buch', 'Büchern')}.`;
+  } else {
+    status.textContent = search.total
+      ? `${plural(works.length, 'Buch', 'Bücher')} aus ${fmt.format(loaded)} von ${plural(search.total, 'Ausgabe', 'Ausgaben')}`
+        + (search.next ? ' – sortiert innerhalb der geladenen Treffer.' : '.')
+      : '';
+  }
   const more = $('#moreBtn');
   more.hidden = !search.next;
   more.disabled = false;
@@ -82,7 +89,7 @@ async function runSearch(query, append = false) {
   search.controller = controller;
   const status = $('#searchStatus');
   if (!append) {
-    Object.assign(search, { query, editions: [], total: 0, next: null });
+    Object.assign(search, { query, editions: [], works: [], total: 0, next: null });
     $('#moreBtn').hidden = true;
     status.classList.remove('error');
     status.textContent = 'Suche läuft …';
@@ -93,7 +100,8 @@ async function runSearch(query, append = false) {
   try {
     const res = await catalog.search(query, append ? search.next : null, controller.signal);
     if (controller.signal.aborted) return;
-    search.editions.push(...res.editions);
+    if (res.works) search.works.push(...res.works);
+    else search.editions.push(...res.editions);
     search.total = res.total;
     search.next = res.next;
     renderResults();

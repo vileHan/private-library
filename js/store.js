@@ -49,6 +49,7 @@ export function entryFromWork(work, existing) {
     volume: work.volume || '',
     isbns: [...new Set([...(existing?.isbns || []), ...work.isbns])],
     coverIsbns: work.coverIsbns?.length ? work.coverIsbns.slice(0, 6) : existing?.coverIsbns || [],
+    coverIds: work.coverIds?.length ? work.coverIds : existing?.coverIds || [],
     editions: work.editions?.length ? work.editions : existing?.editions || [],
     owned: existing?.owned ?? false,
     read: existing?.read ?? false,

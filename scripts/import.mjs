@@ -17,7 +17,7 @@ import pg from 'pg';
 globalThis.DOMParser = DOMParser;
 const { CONFIG } = await import('../js/config.js');
 const { fetchRecords, filterCql } = await import('../js/dnb.js');
-const { groupEditions, normalizeText } = await import('../js/works.js');
+const { groupEditions, normalizeText, searchableSubtitle } = await import('../js/works.js');
 const { normalizeIsbn } = await import('../js/isbn.js');
 
 const env = process.env;
@@ -130,7 +130,7 @@ function toRows(works, coverIds) {
       cover_ids: ids,
       cover_isbns: w.coverIsbns.slice(0, 4),
       edition_count: w.editions.length,
-      search_title: normalizeText([w.title, w.subtitle, w.series].filter(Boolean).join(' ')),
+      search_title: normalizeText([w.title, searchableSubtitle(w.subtitle), w.series].filter(Boolean).join(' ')),
       search_author: normalizeText((w.authors || []).join(' ')),
     });
     for (const e of w.editions) {

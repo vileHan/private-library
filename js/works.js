@@ -5,12 +5,21 @@ const ARTICLES = /^(der|die|das|des|dem|den|ein|eine|einer|eines|the|a|an|le|la|
 /** Vereinheitlicht Text für Vergleiche: Kleinschreibung, Umlaute ausgeschrieben, nur Buchstaben/Ziffern. */
 export function normalizeText(s = '') {
   return s
+    .normalize('NFC') // DNB liefert Umlaute teils zerlegt (u + ¨) – erst zusammensetzen
     .toLowerCase()
     .replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss')
     .normalize('NFKD').replace(/[̀-ͯ]/g, '')
     .replace(/\(.*?\)|\[.*?\]/g, ' ')
     .replace(/[^a-z0-9]+/g, ' ')
     .trim();
+}
+
+/**
+ * Untertitel nur durchsuchen, wenn er kurz ist. Lange Untertitel sind oft Werbetexte
+ * („»So sollte Fantasy sein!« George R.R. Martin“) und würden falsche Treffer liefern.
+ */
+export function searchableSubtitle(s = '') {
+  return s && s.length <= 60 ? s : '';
 }
 
 function titleKey(title) {

@@ -40,7 +40,8 @@ Commits laufen mit der GitHub-noreply-Adresse (in der lokalen Git-Konfiguration 
 |---|---|---|
 | **DNB SRU** `https://services.dnb.de/sru/dnb` | Hauptquelle: Titel, Autor, Verlag, Jahr, Seiten, ISBN, Sachgruppe, Gattungsbegriff | Frei, keine Anmeldung, CORS erlaubt, Lizenz CC0. `recordSchema=MARC21-xml` für alle Felder, `oai_dc` für einfache Felder. |
 | **DNB-Cover** `https://portal.dnb.de/opac/mvb/cover?isbn=<ISBN>` | **Nicht verwenden** | Im Browser schaltet portal.dnb.de eine Bot-Prüfseite vor („Dein Browser wird geprüft!“). Die wird **nicht umgangen**. |
-| **Open Library** `https://covers.openlibrary.org/b/isbn/<ISBN>-M.jpg?default=false` | Cover (erste Wahl), ergänzende Schlagworte | Frei, ohne Schlüssel. Fehlt das Cover, kommt 404. |
+| **Open Library** `https://covers.openlibrary.org/b/id/<COVER-ID>-M.jpg` | Cover (erste Wahl, IDs aus der Datenbank) | Frei, **ohne Ratenbegrenzung**. Die Cover-IDs holt der Import aus dem Open-Library-Datenexport (`ol_dump_editions_latest.txt.gz`). |
+| **Open Library per ISBN** `https://covers.openlibrary.org/b/isbn/<ISBN>-M.jpg?default=false` | Nur letzte Möglichkeit | **Max. 100 Abrufe pro 5 Minuten und IP.** Danach hängen die Anfragen (kein Fehler!). Deshalb gibt es pro Cover-Quelle eine Zeitgrenze (`covers.timeoutMs`). |
 | **Google-Books-Cover** `https://books.google.com/books/content?vid=ISBN<ISBN>&printsec=frontcover&img=1&zoom=1` | Cover (zweite Wahl) | Frei, ohne Schlüssel. Fehlt das Cover, kommt ein PNG-Platzhalter („image not available“) mit **128×184 oder 128×170 px**. Er wird an der Größe erkannt und übersprungen. Kein CORS, deshalb kein Dateivergleich im Browser. Beim DB-Import serverseitig per Hash prüfen. |
 | **Google Books API** `https://www.googleapis.com/books/v1/volumes?q=isbn:<ISBN>` | Optionale Ergänzung (Kategorien) | Nur mit eigenem kostenlosem API-Schlüssel. Ohne Schlüssel gibt es Fehler 429. |
 
@@ -84,7 +85,9 @@ Ziel: Die Daten werden **einmal aufbereitet** und nicht bei jeder Suche neu.
 
 - **Supabase, Gratis-Tarif**: Postgres mit 500 MB, automatische REST-Schnittstelle, Zugriff aus der PWA mit dem öffentlichen `anon`-Key. Der Katalog ist dabei nur lesbar (Row Level Security).
 - **Inhalt**: Werke und Ausgaben gemäß Katalogfilter (~735.000 Ausgaben), bereits zu Werken gruppiert. Zusätzlich: ermittelte **Cover-URL**, Genre auf Deutsch, Sachgruppe, Jahr, Verlag, ISBNs.
-- **Keine Bilder speichern**, nur die Adresse des Covers. Reihenfolge der Quellen: Open Library → Google Books → Platzhalter, pro ISBN der Ausgaben eines Werks.
+- **Keine Bilder speichern**, nur Cover-IDs. Reihenfolge in der App (`coverUrls` in card.js): eigene Ausgabe per Google → Open-Library-Cover-ID → weitere ISBNs per Google → Open Library per ISBN → Platzhalter.
+- **Import-Workflow** `.github/workflows/import.yml`: manuell (Jahre/Sachgruppen wählbar, Probelauf ohne Datenbank möglich) und monatlich. Die DNB wird nach Jahr × Sachgruppe aufgeteilt (Blättergrenze 100.000). Dauer etwa 1,5 h plus Cover-Export. Schema in `supabase/schema.sql` wird bei jedem Lauf angewendet (idempotent).
+- **Testhinweis Browser-Ansicht:** Lazy-Bilder laden in Hintergrund-Tabs nicht. Vor Cover-Tests den Tab nach vorne holen.
 - **Speicherbudget beachten**: Nur die nötigen Felder ablegen, kein komplettes MARC. Zielgröße unter ~350 MB.
 - **Fehlertolerante Suche** über Postgres `pg_trgm`, mit Index auf normalisiertem Titel und Autor.
 - **Import und Aktualisierung** über **GitHub Actions** (läuft in der Cloud, lokal ist nichts nötig): Erstimport per DNB SRU seitenweise. Danach monatlich ein Abgleich neuer Datensätze. Die DNB höflich abfragen: Pausen zwischen Anfragen, wiederaufnehmbar bei Abbruch.

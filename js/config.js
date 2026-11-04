@@ -1,5 +1,10 @@
 // Zentrale Einstellungen. Neue Sachgruppen (z. B. '900' für Geschichte) einfach hier ergänzen.
 export const CONFIG = {
+  // Eigene Katalog-Datenbank. Beide Werte sind öffentlich (nur Leserechte). Leer = live bei der DNB suchen.
+  supabase: {
+    url: '',
+    anonKey: '',
+  },
   dnb: {
     endpoint: 'https://services.dnb.de/sru/dnb',
     pageSize: 50,            // Datensätze pro Abruf (DNB erlaubt max. 100)
@@ -17,10 +22,15 @@ export const CONFIG = {
   // portal.dnb.de schaltet dort eine Bot-Prüfseite vor, die wir nicht umgehen.
   covers: {
     maxIsbns: 4,
+    timeoutMs: 5000, // so lange auf eine Cover-Quelle warten, dann die nächste
+    // Open-Library-Cover über die Cover-ID (aus der Datenbank) – ohne Ratenbegrenzung.
+    byId: (id) => `https://covers.openlibrary.org/b/id/${id}-M.jpg`,
+    // Über die ISBN: zuerst Google (schnell). Open Library erlaubt per ISBN nur 100 Abrufe pro 5 Minuten
+    // und lässt Anfragen danach hängen – deshalb nur als letzte Möglichkeit (siehe coverUrls in card.js).
     sources: [
-      (isbn) => `https://covers.openlibrary.org/b/isbn/${isbn}-M.jpg?default=false`,
       (isbn) => `https://books.google.com/books/content?vid=ISBN${isbn}&printsec=frontcover&img=1&zoom=1`,
     ],
+    lastResort: (isbn) => `https://covers.openlibrary.org/b/isbn/${isbn}-M.jpg?default=false`,
     // Google liefert bei fehlendem Cover ein „image not available“-Bild (PNG) in einer dieser Größen.
     // Echte Cover kommen als JPEG und haben fast immer andere Maße.
     googlePlaceholderSizes: ['128x184', '128x170'],
