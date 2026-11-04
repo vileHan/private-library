@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Meine Bibliothek</title>
+  <meta name="description" content="Private Bücherliste: nachsehen, welche Bücher ich besitze und gelesen habe.">
+  <meta name="theme-color" content="#2f5d50">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Bibliothek">
+  <link rel="stylesheet" href="css/style.css">
+  <script type="module" src="js/app.js"></script>
+</head>
+<body>
+  <header class="top">
+    <h1>Meine Bibliothek</h1>
+    <nav class="tabs" role="tablist">
+      <button role="tab" id="tab-search" aria-controls="view-search" aria-selected="true" data-view="search">Suche</button>
+      <button role="tab" id="tab-library" aria-controls="view-library" aria-selected="false" data-view="library">
+        Meine Bücher <span class="count" id="libCount"></span>
+      </button>
+    </nav>
+  </header>
+
+  <main>
+    <section id="view-search" role="tabpanel" aria-labelledby="tab-search">
+      <form id="searchForm" class="searchbar" role="search">
+        <input id="searchInput" type="search" name="q" placeholder="Titel, Autor oder ISBN" autocomplete="off" enterkeyhint="search" aria-label="Suchbegriff">
+        <button type="submit">Suchen</button>
+      </form>
+      <p class="status" id="searchStatus" aria-live="polite">Suche nach einem Buch – deine eigenen Bücher erscheinen immer oben.</p>
+      <div id="results" class="list"></div>
+      <button id="moreBtn" class="more" hidden>Mehr laden</button>
+    </section>
+
+    <section id="view-library" role="tabpanel" aria-labelledby="tab-library" hidden>
+      <div class="segmented" role="group" aria-label="Ansicht">
+        <button data-sub="list" aria-pressed="true">Liste</button>
+        <button data-sub="series" aria-pressed="false">Reihen</button>
+        <button data-sub="stats" aria-pressed="false">Statistik</button>
+      </div>
+
+      <div id="sub-series" hidden>
+        <p class="status">Reihen, aus denen du mindestens ein Buch markiert hast. „Alle Bände laden“ zeigt, was noch fehlt.</p>
+        <div id="seriesList" class="list"></div>
+      </div>
+
+      <div id="sub-stats" hidden>
+        <div id="statsBox"></div>
+      </div>
+
+      <div id="sub-list">
+      <div class="lib-tools">
+        <input id="libFilter" type="search" placeholder="Filtern …" autocomplete="off" aria-label="Meine Bücher filtern">
+        <select id="libSort" aria-label="Sortierung">
+          <option value="title">Titel A–Z</option>
+          <option value="author">Autor A–Z</option>
+          <option value="year">Neueste zuerst</option>
+          <option value="added">Zuletzt hinzugefügt</option>
+          <option value="readAt">Zuletzt gelesen</option>
+          <option value="rating">Beste Bewertung</option>
+        </select>
+      </div>
+      <div class="chips" role="group" aria-label="Filter">
+        <button class="chip" data-filter="owned" aria-pressed="true">Besitze ich</button>
+        <button class="chip" data-filter="read" aria-pressed="false">Gelesen</button>
+        <button class="chip" data-filter="unread" aria-pressed="false">Ungelesen</button>
+        <button class="chip" data-filter="wish" aria-pressed="false">Merkliste</button>
+        <button class="chip" data-filter="all" aria-pressed="false">Alle</button>
+        <select id="tagFilter" class="chip-select" aria-label="Regal" hidden></select>
+      </div>
+      <p class="status" id="libStatus" aria-live="polite"></p>
+      <div id="libList" class="list"></div>
+      </div>
+
+      <details class="data">
+        <summary>Daten sichern</summary>
+        <p>Deine Markierungen, Bewertungen und Notizen liegen nur auf diesem Gerät. Exportiere sie regelmäßig als Sicherung.</p>
+        <div class="data-actions">
+          <button id="exportBtn" type="button">Exportieren</button>
+          <label class="button">Importieren<input id="importInput" type="file" accept="application/json,.json" hidden></label>
+        </div>
+      </details>
+    </section>
+  </main>
+
+  <template id="bookTpl">
+    <article class="book">
+      <div class="cover"><span class="ph"></span><img alt="" loading="lazy" decoding="async"></div>
+      <div class="info">
+        <h3 class="title"></h3>
+        <p class="author"></p>
+        <p class="meta"></p>
+        <div class="actions">
+          <button class="toggle own" type="button" aria-pressed="false">Besitze ich</button>
+          <button class="toggle read" type="button" aria-pressed="false">Gelesen</button>
+          <button class="toggle wish" type="button" aria-pressed="false">Merken</button>
+        </div>
+        <div class="links">
+          <button class="link editions-btn" type="button" aria-expanded="false" hidden></button>
+          <button class="link details-btn" type="button" aria-expanded="false">Details</button>
+        </div>
+        <ul class="editions" hidden></ul>
+        <div class="details" hidden></div>
+      </div>
+    </article>
+  </template>
+</body>
+</html>
