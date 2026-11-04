@@ -6,7 +6,9 @@ Sprache der Oberfläche und der Daten: **Deutsch**.
 
 > **Oberste Regel: Alles muss kostenlos sein.** Kein kostenpflichtiger Dienst, kein bezahlter Tarif, keine kostenpflichtigen Claude-Funktionen. Nur Gratis-Tarife, und deren Grenzen werden eingehalten. Wenn etwas nur bezahlt ginge, wird eine kostenlose Alternative gesucht.
 
-Repository: https://github.com/vileHan/private-library (Branch `main`).
+Repository: https://github.com/vileHan/private-library (Branch `main`, **öffentlich**, weil GitHub Pages nur so kostenlos ist).
+Live-App: **https://vilehan.github.io/private-library/**. GitHub Pages veröffentlicht automatisch jeden Push auf `main` aus dem Wurzelverzeichnis.
+Commits laufen mit der GitHub-noreply-Adresse (in der lokalen Git-Konfiguration gesetzt). Keine privaten Daten oder Schlüssel ins Repository.
 
 ## Kernfunktion (Phase 1)
 

@@ -29,7 +29,7 @@ Die Entscheidungen und Details stehen in [CLAUDE.md](CLAUDE.md).
 17. Genre-Zuordnungstabelle gemeinsam durchgehen und korrigieren.
 
 ## Phase 3 – Aufs Handy
-18. Veröffentlichen auf GitHub Pages.
+18. ✅ Veröffentlicht auf GitHub Pages: https://vilehan.github.io/private-library/ (04.11.2026)
 19. Auf dem Handy testen und zum Startbildschirm hinzufügen.
 
 ## Phase 4 – Später
