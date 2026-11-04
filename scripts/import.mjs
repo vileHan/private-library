@@ -48,6 +48,20 @@ async function withRetry(fn, label) {
   }
 }
 
+/**
+ * Nur die Felder behalten, die das Zusammenfassen braucht – und die Texte frisch kopieren.
+ * Sonst halten Teilstrings intern die komplette XML-Antwort der DNB fest (Speicher lief beim
+ * ersten Vollimport bei ~300.000 Ausgaben über).
+ */
+function slim(e) {
+  return JSON.parse(JSON.stringify({
+    isbns: e.isbns, authors: e.authors, authorsSort: e.authorsSort.slice(0, 1), title: e.title, sortTitle: e.sortTitle,
+    subtitle: e.subtitle, series: e.series, volume: e.volume, publisher: e.publisher, year: e.year,
+    genres: e.genres.slice(0, 2), themes: e.themes.slice(0, 1), isComic: e.isComic, isEbook: e.isEbook,
+    binding: e.binding, edition: '', pages: '', relatedIsbns: [],
+  }));
+}
+
 async function harvestPartition(year, group) {
   const cql = `${filterCql()} and jhr=${year} and sgt=${group}`;
   const out = [];
@@ -56,11 +70,12 @@ async function harvestPartition(year, group) {
     const res = await withRetry(() => fetchRecords(cql, start, { pageSize: 100 }), `${year}/${group}@${start}`);
     total = res.total;
     if (total > 100000) throw new Error(`${year}/${group}: ${total} Treffer – mehr als die DNB blättern lässt. Partition verkleinern.`);
-    out.push(...res.editions);
+    for (const e of res.editions) out.push(slim(e));
     start = res.next;
     await sleep(250); // höflich bleiben
   }
-  log(`  ${year} ${group}: ${total} Datensätze → ${out.length} gedruckte Ausgaben`);
+  const mem = Math.round(process.memoryUsage().heapUsed / 1024 / 1024);
+  log(`  ${year} ${group}: ${total} Datensätze → ${out.length} gedruckte Ausgaben (Speicher ${mem} MB)`);
   return out;
 }
 
@@ -72,7 +87,7 @@ async function harvestAll() {
   const worker = async () => {
     while (queue.length) {
       const [y, g] = queue.shift();
-      editions.push(...await harvestPartition(y, g));
+      for (const e of await harvestPartition(y, g)) editions.push(e);
     }
   };
   await Promise.all(Array.from({ length: 3 }, worker)); // max. 3 gleichzeitige Anfragen

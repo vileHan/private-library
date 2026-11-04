@@ -45,6 +45,7 @@ jobs:
       - name: Import
         run: node scripts/import.mjs
         env:
+          NODE_OPTIONS: --max-old-space-size=10240 # GitHub-Runner für öffentliche Repos haben 16 GB
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
           YEARS: ${{ github.event.inputs.years }}
           GROUPS: ${{ github.event.inputs.groups }}
