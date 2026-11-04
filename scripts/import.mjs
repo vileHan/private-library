@@ -110,14 +110,14 @@ async function loadCoverIds(neededIsbns) {
 const smallint = (v) => { const n = Number(v); return Number.isInteger(n) && n > 0 && n < 32767 ? n : null; };
 
 function toRows(works, coverIds) {
-  const workRows = [];
-  const editionRows = [];
-  for (const w of works) {
-    const ids = [...new Set(w.coverIsbns.map((i) => coverIds.get(i)).filter(Boolean))].slice(0, 3);
-    workRows.push({
+  return works.map((w) => {
+    // ISBNs in Cover-Reihenfolge (neueste gedruckte Ausgabe zuerst), danach alle übrigen
+    const isbns = [...new Set([...w.coverIsbns, ...w.isbns])].filter((i) => /^\d{13}$/.test(i));
+    const sortTitle = w.sortTitle && w.sortTitle !== w.title ? w.sortTitle : null;
+    return {
       id: w.key,
       title: w.title,
-      sort_title: w.sortTitle || w.title,
+      sort_title: sortTitle,
       subtitle: w.subtitle || null,
       authors: w.authors || [],
       author_sort: w.authorSort || null,
@@ -125,41 +125,29 @@ function toRows(works, coverIds) {
       volume: smallint(w.volume),
       year: smallint(w.year),
       genre: w.genre || null,
-      publisher: w.publisher || null,
       is_comic: !!w.isComic,
-      cover_ids: ids,
-      cover_isbns: w.coverIsbns.slice(0, 3),
-      edition_count: w.editions.length,
+      isbns,
+      cover_ids: [...new Set(isbns.map((i) => coverIds.get(i)).filter(Boolean))].slice(0, 3),
       search_title: normalizeText([w.title, searchableSubtitle(w.subtitle), w.series].filter(Boolean).join(' ')),
       search_author: normalizeText((w.authors || []).join(' ')),
-    });
-    for (const e of w.editions) {
-      editionRows.push({
-        isbn: e.isbn, work_id: w.key, publisher: e.publisher || null, year: smallint(e.year),
-        binding: e.binding || null, edition: e.edition || null, pages: e.pages || null, is_ebook: e.binding === 'E-Book',
-      });
-    }
-  }
-  return { workRows, editionRows };
+    };
+  });
 }
 
 // ---------- 4. In die Datenbank schreiben ----------
-const WORK_COLS = ['title', 'sort_title', 'subtitle', 'authors', 'author_sort', 'series', 'volume', 'year', 'genre',
-  'publisher', 'is_comic', 'cover_ids', 'cover_isbns', 'edition_count', 'search_title', 'search_author'];
-const WORK_TYPES = 'id text, title text, sort_title text, subtitle text, authors text[], author_sort text, series text, volume smallint, '
-  + 'year smallint, genre text, publisher text, is_comic boolean, cover_ids integer[], cover_isbns text[], edition_count smallint, '
-  + 'search_title text, search_author text';
-const ED_COLS = ['work_id', 'publisher', 'year', 'binding', 'edition', 'pages', 'is_ebook'];
-const ED_TYPES = 'isbn text, work_id text, publisher text, year smallint, binding text, edition text, pages text, is_ebook boolean';
+const COLS = ['title', 'sort_title', 'subtitle', 'authors', 'author_sort', 'series', 'volume', 'year', 'genre',
+  'is_comic', 'isbns', 'cover_ids', 'search_title', 'search_author'];
+const TYPES = 'id text, title text, sort_title text, subtitle text, authors text[], author_sort text, series text, volume smallint, '
+  + 'year smallint, genre text, is_comic boolean, isbns bigint[], cover_ids integer[], search_title text, search_author text';
 
 // Nur geänderte Zeilen werden aktualisiert – das hält die Datenbank klein (500-MB-Grenze).
-const upsertSql = (table, key, cols, types) => `
-  insert into ${table} (${key}, ${cols.join(', ')})
-  select ${key}, ${cols.join(', ')} from jsonb_to_recordset($1::jsonb) as x(${types})
-  on conflict (${key}) do update set ${cols.map((c) => `${c} = excluded.${c}`).join(', ')}${table === 'works' ? ', updated_at = now()' : ''}
-  where (${cols.map((c) => `${table}.${c}`).join(', ')}) is distinct from (${cols.map((c) => `excluded.${c}`).join(', ')})`;
+const UPSERT = `
+  insert into works (id, ${COLS.join(', ')})
+  select id, ${COLS.join(', ')} from jsonb_to_recordset($1::jsonb) as x(${TYPES})
+  on conflict (id) do update set ${COLS.map((c) => `${c} = excluded.${c}`).join(', ')}
+  where (${COLS.map((c) => `works.${c}`).join(', ')}) is distinct from (${COLS.map((c) => `excluded.${c}`).join(', ')})`;
 
-async function writeDb(workRows, editionRows) {
+async function writeDb(rows) {
   const client = new pg.Client({ connectionString: env.SUPABASE_DB_URL, ssl: { rejectUnauthorized: false } });
   await client.connect();
   try {
@@ -167,38 +155,31 @@ async function writeDb(workRows, editionRows) {
     await client.query(await readFile(new URL('../supabase/schema.sql', import.meta.url), 'utf8'));
     if (env.RESET === 'true') {
       log('RESET: Katalog leeren …');
-      await client.query('truncate editions, works');
+      await client.query('truncate works');
     }
-
-    const batch = async (rows, sql, label) => {
-      for (let i = 0; i < rows.length; i += 1000) {
-        await client.query(sql, [JSON.stringify(rows.slice(i, i + 1000))]);
-        if ((i / 1000) % 50 === 0) log(`  ${label}: ${i + Math.min(1000, rows.length - i)} / ${rows.length}`);
-      }
-    };
-    await batch(workRows, upsertSql('works', 'id', WORK_COLS, WORK_TYPES), 'Werke');
-    await batch(editionRows, upsertSql('editions', 'isbn', ED_COLS, ED_TYPES), 'Ausgaben');
-
+    for (let i = 0; i < rows.length; i += 1000) {
+      // ISBNs als Text übergeben – JSON-Zahlen > 2^53 wären ungenau (ISBN-13 passt zwar, sicher ist sicher)
+      await client.query(UPSERT, [JSON.stringify(rows.slice(i, i + 1000))]);
+      if ((i / 1000) % 50 === 0) log(`  Werke: ${i + Math.min(1000, rows.length - i)} / ${rows.length}`);
+    }
     if (fullRun) {
-      log('Vollständiger Lauf: veraltete Einträge entfernen …');
-      await client.query('create temp table seen_works (id text primary key); create temp table seen_eds (isbn text primary key)');
-      for (let i = 0; i < workRows.length; i += 5000) {
-        await client.query('insert into seen_works select unnest($1::text[]) on conflict do nothing', [workRows.slice(i, i + 5000).map((r) => r.id)]);
+      log('Vollständiger Lauf: veraltete Werke entfernen …');
+      await client.query('create temp table seen (id text primary key)');
+      for (let i = 0; i < rows.length; i += 5000) {
+        await client.query('insert into seen select unnest($1::text[]) on conflict do nothing', [rows.slice(i, i + 5000).map((r) => r.id)]);
       }
-      for (let i = 0; i < editionRows.length; i += 5000) {
-        await client.query('insert into seen_eds select unnest($1::text[]) on conflict do nothing', [editionRows.slice(i, i + 5000).map((r) => r.isbn)]);
-      }
-      const e = await client.query('delete from editions e where not exists (select 1 from seen_eds s where s.isbn = e.isbn)');
-      const w = await client.query('delete from works w where not exists (select 1 from seen_works s where s.id = w.id)');
-      log(`  entfernt: ${w.rowCount} Werke, ${e.rowCount} Ausgaben`);
+      const d = await client.query('delete from works w where not exists (select 1 from seen s where s.id = w.id)');
+      log(`  entfernt: ${d.rowCount} Werke`);
     }
     await client.query(`insert into import_state (key, value, updated_at) values ('last_import', $1, now())
       on conflict (key) do update set value = excluded.value, updated_at = now()`,
-      [JSON.stringify({ years: env.YEARS || 'alle', groups, works: workRows.length, editions: editionRows.length })]);
-    const size = await client.query("select pg_size_pretty(pg_database_size(current_database())) as s, pg_database_size(current_database()) as b");
-    const counts = await client.query('select (select count(*) from works) as works, (select count(*) from editions) as editions');
-    log(`Datenbank: ${size.rows[0].s}, ${counts.rows[0].works} Werke, ${counts.rows[0].editions} Ausgaben`);
-    if (Number(size.rows[0].b) > 450 * 1024 * 1024) log('WARNUNG: Datenbank nähert sich der 500-MB-Grenze des Gratis-Tarifs!');
+      [JSON.stringify({ years: env.YEARS || 'alle', groups, works: rows.length })]);
+    const size = await client.query(`select pg_size_pretty(pg_database_size(current_database())) as s,
+      pg_database_size(current_database()) as b, pg_size_pretty(pg_total_relation_size('works')) as w,
+      (select count(*) from works) as n`);
+    const s = size.rows[0];
+    log(`Datenbank: ${s.s} gesamt, Tabelle works ${s.w}, ${s.n} Werke`);
+    if (Number(s.b) > 450 * 1024 * 1024) log('WARNUNG: Datenbank nähert sich der 500-MB-Grenze des Gratis-Tarifs!');
   } finally {
     await client.end();
   }
@@ -209,17 +190,17 @@ if (!DRY && !env.SUPABASE_DB_URL) throw new Error('SUPABASE_DB_URL fehlt (GitHub
 const editions = await harvestAll();
 // Werke ohne jede ISBN (Sonderdrucke, falsch einsortierte DVDs …) weglassen – spart rund ein Viertel Speicher.
 const allWorks = groupEditions(editions);
-const works = allWorks.filter((w) => w.editions.length > 0);
+const works = allWorks.filter((w) => w.isbns.length > 0);
 log(`Zusammengefasst: ${allWorks.length} Werke, davon ${works.length} mit ISBN`);
 let coverIds = new Map();
 if (env.COVERS === 'true') {
-  coverIds = await withRetry(() => loadCoverIds(new Set(works.flatMap((w) => w.coverIsbns))), 'Open Library');
+  coverIds = await withRetry(() => loadCoverIds(new Set(works.flatMap((w) => w.isbns))), 'Open Library');
 }
-const { workRows, editionRows } = toRows(works, coverIds);
-log(`Zeilen: ${workRows.length} Werke, ${editionRows.length} Ausgaben, ${workRows.filter((w) => w.cover_ids.length).length} Werke mit Cover-ID`);
+const rows = toRows(works, coverIds);
+log(`Zeilen: ${rows.length} Werke, ${rows.reduce((n, r) => n + r.isbns.length, 0)} ISBNs, ${rows.filter((r) => r.cover_ids.length).length} mit Cover-ID`);
 if (DRY) {
-  log('DRY_RUN – Beispiele:', JSON.stringify(workRows.slice(0, 3), null, 1));
+  log('DRY_RUN – Beispiele:', JSON.stringify(rows.slice(0, 3), null, 1));
 } else {
-  await writeDb(workRows, editionRows);
+  await writeDb(rows);
 }
 log('Fertig.');
