@@ -2,7 +2,7 @@
 // Die DNB bleibt immer zuständig für ISBN-Suchen (ungefiltert, auch Bücher außerhalb des Katalogs)
 // und springt ein, falls Supabase nicht erreichbar ist.
 import { CONFIG } from './config.js';
-import { searchDnb } from './dnb.js';
+import { searchDnb, editionsByIsbns } from './dnb.js';
 import { normalizeIsbn } from './isbn.js';
 import { normalizeText, groupEditions } from './works.js';
 
@@ -20,11 +20,12 @@ async function rpc(fn, body, signal) {
   return res.json();
 }
 
-/** Datenbankzeile → Werk im Format von works.js */
+/**
+ * Datenbankzeile → Werk im Format von works.js. Die Datenbank kennt nur die ISBNs der Ausgaben;
+ * Details (Verlag, Bindung …) lädt die Karte bei Bedarf über catalog.editionDetails.
+ */
 function toWork(r) {
-  const editions = (r.editions || []).map((e) => ({
-    isbn: e.isbn, publisher: e.publisher || '', year: e.year, binding: e.binding || '', edition: e.edition || '', pages: e.pages || '',
-  }));
+  const isbns = (r.isbns || []).map(String);
   return {
     key: r.id,
     title: r.title,
@@ -36,12 +37,12 @@ function toWork(r) {
     volume: r.volume ? String(r.volume) : '',
     year: r.year,
     genre: r.genre || '',
-    publisher: r.publisher || '',
+    publisher: '',
     isComic: !!r.is_comic,
-    isbns: [...new Set([...editions.map((e) => e.isbn), ...(r.cover_isbns || [])])],
+    isbns,
     coverIds: r.cover_ids || [],
-    coverIsbns: r.cover_isbns || [],
-    editions,
+    coverIsbns: isbns.slice(0, 3),
+    editions: [],
   };
 }
 
@@ -70,11 +71,14 @@ export const catalog = {
     return searchDnb(query, cursor ?? 1, signal);
   },
 
+  /** Ausgaben-Details zu ISBNs (live von der DNB). */
+  editionDetails: (isbns) => editionsByIsbns(isbns),
+
   /** Alle Bände einer Reihe als Werke. */
   async seriesWorks(series, authorSort) {
     if (useDb()) {
       try {
-        return (await rpc('series_works', { series_name: series, author: authorSort || null })).map((r) => toWork({ ...r, editions: [] }));
+        return (await rpc('series_works', { series_name: series, author: authorSort || null })).map(toWork);
       } catch (err) {
         console.warn('Datenbank nicht erreichbar, lade Reihe live bei der DNB:', err);
       }

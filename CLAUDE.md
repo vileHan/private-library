@@ -12,7 +12,7 @@ Commits laufen mit der GitHub-noreply-Adresse (in der lokalen Git-Konfiguration 
 
 ## Kernfunktion (Phase 1)
 
-- Suchfeld nach Titel (später auch Autor). Die Treffer kommen aus unserer **eigenen Katalog-Datenbank in Supabase**. Bis der Import fertig ist, kommen sie übergangsweise live von der DNB (siehe „Architektur“).
+- Suchfeld nach Titel, Autor oder ISBN. Die Treffer kommen aus der **eigenen Katalog-Datenbank in Supabase** (ISBN-Suchen und Ausfälle: live von der DNB).
 - Trefferliste: **Bücher in meinem Besitz ganz oben**, darunter der Rest. Innerhalb beider Blöcke **A–Z nach Titel** sortiert.
 - Nicht besessene Bücher werden **ausgegraut** dargestellt.
 - Jeder Eintrag zeigt **Cover, Titel, Autor**, dazu Genre, Jahr und Verlag, soweit vorhanden.
@@ -83,18 +83,23 @@ Hardcover, Taschenbuch, Lizenzausgaben (z. B. Weltbild) und E-Book haben jeweils
 
 Ziel: Die Daten werden **einmal aufbereitet** und nicht bei jeder Suche neu.
 
-- **Supabase, Gratis-Tarif**: Postgres mit 500 MB, automatische REST-Schnittstelle, Zugriff aus der PWA mit dem öffentlichen `anon`-Key. Der Katalog ist dabei nur lesbar (Row Level Security).
-- **Inhalt**: Werke und Ausgaben gemäß Katalogfilter (~735.000 Ausgaben), bereits zu Werken gruppiert. Zusätzlich: ermittelte **Cover-URL**, Genre auf Deutsch, Sachgruppe, Jahr, Verlag, ISBNs.
-- **Keine Bilder speichern**, nur Cover-IDs. Reihenfolge in der App (`coverUrls` in card.js): eigene Ausgabe per Google → Open-Library-Cover-ID → weitere ISBNs per Google → Open Library per ISBN → Platzhalter.
-- **Import-Workflow** `.github/workflows/import.yml`: manuell (Jahre/Sachgruppen wählbar, Probelauf ohne Datenbank möglich) und monatlich. Die DNB wird nach Jahr × Sachgruppe aufgeteilt (Blättergrenze 100.000). Dauer etwa 1,5 h plus Cover-Export. Schema in `supabase/schema.sql` wird bei jedem Lauf angewendet (idempotent).
+- **Supabase, Gratis-Tarif**: Projekt `vdkobcydrflzamrqrwtu` (Frankfurt), Postgres mit **500 MB**. Die App nutzt nur den öffentlichen Publishable-Key (in `js/config.js`) und kann ausschließlich lesen (Row Level Security; Schreibversuch getestet → abgelehnt).
+- **Zugang für den Import**: GitHub-Secret `SUPABASE_DB_URL` mit der **Session-pooler**-Adresse (`postgres.<projekt>@aws-1-eu-central-1.pooler.supabase.com:5432`). Die direkte Verbindung geht von GitHub aus nicht (nur IPv6). Passwort nie in Code, Chat oder Repository.
+- **Schema** `supabase/schema.sql` (Version 2, idempotent, läuft bei jedem Import):
+  - **Eine Tabelle `works`**. Ausgaben stehen nur als `isbns bigint[]` darin. Details (Verlag, Bindung, Jahr) lädt die App beim Antippen von „N Ausgaben“ live von der DNB (`editionsByIsbns`).
+  - **Volltextindex** (`to_tsvector('simple', search_title || ' ' || search_author)`) für die Suche nach Wortanfängen. **Kein Trigramm-Index**: der war ~4× größer und hätte die 500 MB gesprengt.
+  - Tippfehler: `search_works` sucht nur bei **0 Treffern** per `word_similarity` (ohne Index).
+  - **Stand nach dem Vollimport (05.11.2026): 456.514 Werke, Datenbank 213 MB** von 500 MB. 51.813 Werke haben eine Open-Library-Cover-ID (~11 %), der Rest läuft über Google. Der Import dauert ~3,5 h (DNB ~1,5 h, Open-Library-Export ~2 h).
+  - **Supabase bricht öffentliche Anfragen nach 3 s ab.** Deshalb ignoriert `search_works` Füllwörter (der, die, und …), deckelt die Treffermenge bei 3.000 und sucht Tippfehler nur unter Werken mit gleichen Wortanfängen (Index). Alle Testsuchen liegen bei 0,1–0,3 s.
+  - Schema ändern ohne Daten neu zu laden: Import-Workflow mit „Nur das Datenbankschema aktualisieren“.
+- **Werke ohne ISBN** werden nicht importiert (~13 %: Buchclub-Ausgaben, Heftromane, Selbstverlage, Merchandise, Katalog-Sammeleinträge).
+- **Cover**: nur Open-Library-Cover-IDs speichern, keine Bilder. Reihenfolge in der App (`coverUrls` in card.js): eigene Ausgabe per Google → Open-Library-Cover-ID → weitere ISBNs per Google → Open Library per ISBN → Platzhalter.
+- **Import-Workflow** `.github/workflows/import.yml`: manuell (Jahre/Sachgruppen wählbar, Probelauf, „Katalog leeren“) und monatlich am 1. Die DNB wird nach Jahr × Sachgruppe aufgeteilt (Blättergrenze 100.000), 3 Anfragen parallel. Nur geänderte Zeilen werden geschrieben, damit die Datenbank nicht aufbläht.
+- **Verbindungstest/Größen**: Workflow „Supabase wach halten“ (`scripts/ping.mjs`) zeigt Benutzer/Host (nie das Passwort) und die Tabellengrößen. Er läuft alle 3 Tage, damit Supabase nicht pausiert.
+- **Achtung GitHub**: Zeitgesteuerte Workflows in öffentlichen Repos werden nach 60 Tagen ohne Commit deaktiviert. GitHub schickt vorher eine Mail, dann im Actions-Tab wieder aktivieren.
+- **Datenquelle austauschbar**: `js/catalog.js` nutzt Supabase, wenn `CONFIG.supabase` gesetzt ist, sonst die DNB live. ISBN-Suchen laufen immer über die DNB (ungefiltert). Bei Datenbankfehlern greift automatisch die DNB.
 - **Testhinweis Browser-Ansicht:** Lazy-Bilder laden in Hintergrund-Tabs nicht. Vor Cover-Tests den Tab nach vorne holen.
-- **Speicherbudget beachten**: Nur die nötigen Felder ablegen, kein komplettes MARC. Zielgröße unter ~350 MB.
-- **Fehlertolerante Suche** über Postgres `pg_trgm`, mit Index auf normalisiertem Titel und Autor.
-- **Import und Aktualisierung** über **GitHub Actions** (läuft in der Cloud, lokal ist nichts nötig): Erstimport per DNB SRU seitenweise. Danach monatlich ein Abgleich neuer Datensätze. Die DNB höflich abfragen: Pausen zwischen Anfragen, wiederaufnehmbar bei Abbruch.
-- **Gegen das Pausieren**: Supabase pausiert Gratis-Projekte nach 7 Tagen ohne Nutzung. Eine GitHub Action fragt die Datenbank deshalb regelmäßig einmal an, um das zu verhindern.
-- **Zugangsdaten** (Service-Key für den Import) nur als GitHub Secret, **nie im Code oder Repository**. In der PWA steht ausschließlich der öffentliche `anon`-Key.
-- **Datenquelle austauschbar**: Die PWA spricht eine Katalog-Schnittstelle an (`searchCatalog`, `getByIsbn` …). Dahinter steckt entweder die DNB live (Übergang) oder Supabase.
-- Die eigenen Markierungen liegen zunächst lokal in IndexedDB. Später können sie optional in eine Supabase-Tabelle mit Anmeldung übertragen werden, damit Handy und PC denselben Stand haben.
+- Die eigenen Markierungen liegen weiterhin lokal in IndexedDB. Später optional Abgleich über Supabase mit Anmeldung.
 
 ## Technik
 

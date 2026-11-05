@@ -54,7 +54,8 @@ function renderResults() {
   };
   const byRelevance = (a, b) => titleHit(a) - titleHit(b) || compareTitle(a, b);
   owned.sort(byRelevance);
-  others.sort(byRelevance);
+  // Die Datenbank liefert schon fertig sortiert (bei Tippfehlern: ähnlichste zuerst) – Reihenfolge behalten.
+  if (!fromDb) others.sort(byRelevance);
 
   if (owned.length) {
     box.append(el('h2', { class: 'section-title', text: `In deinem Besitz (${owned.length})` }));

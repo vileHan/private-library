@@ -67,6 +67,22 @@ export async function fetchRecords(cql, start = 1, { pageSize = CONFIG.dnb.pageS
   return { editions, total, next: fetched < total && records.length ? fetched + 1 : null };
 }
 
+/** Details zu bekannten ISBNs (Verlag, Bindung, Jahr …) – für die Ausgabenliste im Datenbank-Modus. */
+export async function editionsByIsbns(isbns) {
+  const wanted = isbns.slice(0, 30);
+  if (!wanted.length) return [];
+  const res = await fetchRecords(wanted.map((i) => `num=${i}`).join(' or '), 1, { pageSize: 50, keepAll: true });
+  const byIsbn = new Map();
+  for (const e of res.editions) {
+    for (const i of e.isbns) {
+      if (wanted.includes(i) && !byIsbn.has(i)) {
+        byIsbn.set(i, { isbn: i, publisher: e.publisher, year: e.year, binding: e.binding, edition: e.edition, pages: e.pages });
+      }
+    }
+  }
+  return wanted.map((i) => byIsbn.get(i) || { isbn: i, publisher: '', year: null, binding: '', edition: '', pages: '' });
+}
+
 /** Sucht nach einer Benutzereingabe (Titel/Autor/ISBN). */
 export async function searchDnb(input, start = 1, signal) {
   const q = buildQuery(input);

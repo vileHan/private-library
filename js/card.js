@@ -1,5 +1,6 @@
 // Darstellung eines Buchs (Suche, Meine Bücher, Reihen) inkl. Detailbereich.
 import { CONFIG } from './config.js';
+import { catalog } from './catalog.js';
 import { entryFor, updateEntry, allTags } from './library.js';
 import { ownedIsbnsOf } from './store.js';
 import { formatIsbn } from './isbn.js';
@@ -103,7 +104,8 @@ export function bookCard(work, opts = {}) {
     x.owned = !x.owned;
     if (x.owned) {
       x.wish = false; // gekauft → von der Merkliste nehmen
-      if (!x.ownedIsbns.length && work.editions?.length === 1) x.ownedIsbns = [work.editions[0].isbn];
+      const all = work.editions?.length ? work.editions.map((e) => e.isbn) : work.isbns || [];
+      if (!x.ownedIsbns.length && all.length === 1) x.ownedIsbns = [all[0]];
     } else x.ownedIsbns = [];
   }));
   read.addEventListener('click', () => change((x) => {
@@ -113,18 +115,35 @@ export function bookCard(work, opts = {}) {
   }));
   wish.addEventListener('click', () => change((x) => { x.wish = !x.wish; }));
 
-  // Ausgaben
-  const editions = (work.editions || []).filter((ed) => ed.isbn);
+  // Ausgaben – von der DNB schon vorhanden, aus der Datenbank nur als ISBNs (Details werden nachgeladen)
+  let editions = (work.editions || []).filter((ed) => ed.isbn);
+  const isbnCount = editions.length || (work.isbns || []).length;
   const edBtn = card.querySelector('.editions-btn');
   const edList = card.querySelector('.editions');
-  if (editions.length) {
+  if (isbnCount) {
     edBtn.hidden = false;
-    edBtn.textContent = editions.length === 1 ? 'Ausgabe' : `${editions.length} Ausgaben`;
-    edBtn.addEventListener('click', () => {
+    edBtn.textContent = isbnCount === 1 ? 'Ausgabe' : `${isbnCount} Ausgaben`;
+    edBtn.addEventListener('click', async () => {
       const open = edList.hidden;
+      if (open && !editions.length) {
+        edList.replaceChildren(el('li', { text: 'Lade Ausgaben …' }));
+        edList.hidden = false;
+        try {
+          editions = await catalog.editionDetails(work.isbns);
+        } catch {
+          editions = work.isbns.map((isbn) => ({ isbn }));
+        }
+        renderEditions();
+        paint(entry);
+      }
       edList.hidden = !open;
       edBtn.setAttribute('aria-expanded', String(open));
     });
+    if (editions.length) renderEditions();
+  }
+
+  function renderEditions() {
+    edList.replaceChildren();
     for (const ed of editions) {
       // Mehrere Ausgaben desselben Buchs können gleichzeitig „besessen“ sein.
       const box = el('input', { type: 'checkbox', value: ed.isbn, title: 'Diese Ausgabe besitze ich' });

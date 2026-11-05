@@ -19,14 +19,13 @@ Die Entscheidungen und Details stehen in [CLAUDE.md](CLAUDE.md).
 - Statistik
 
 ## Phase 2 – Eigene Katalog-Datenbank (Supabase)
-10. Supabase-Projekt anlegen (Gratis-Tarif). **Das musst du selbst tun**, ich leite dich an.
-11. GitHub-Konto und Repository anlegen (selbst, mit Anleitung). Supabase-Keys als GitHub Secrets hinterlegen.
-12. Datenbankschema: Werke, Ausgaben, Genres, Genre-Zuordnungstabelle. Suchindex mit `pg_trgm`, Leserechte über Row Level Security.
-13. Import-Skript für GitHub Actions: DNB seitenweise abrufen, filtern, zu Werken gruppieren, Genre bestimmen, Cover-Quelle ermitteln. Fortsetzbar bei Abbruch.
-14. Erstimport durchführen und Speicherverbrauch prüfen (Ziel unter ~350 MB).
-15. PWA auf Supabase als Datenquelle umstellen. Die DNB bleibt nur für ISBN-Suchen außerhalb des Katalogs.
-16. GitHub Actions für die monatliche Aktualisierung und gegen das Pausieren.
-17. Genre-Zuordnungstabelle gemeinsam durchgehen und korrigieren.
+10. ✅ Supabase-Projekt angelegt (Gratis-Tarif, Frankfurt), GitHub-Secret `SUPABASE_DB_URL` hinterlegt.
+11. ✅ Schema: eine Tabelle `works`, Ausgaben als ISBN-Zahlen, Volltextindex, Leserechte über Row Level Security.
+12. ✅ Import-Skript und Workflows (Import monatlich + manuell, wach halten alle 3 Tage).
+13. ✅ Probeimport (Kinderbuch 2024) und Größenmessung: ~630 Byte je Werk.
+14. ✅ Vollimport: 456.514 Werke, 213 MB (05.11.2026). Erster Versuch scheiterte am Arbeitsspeicher, zweiter nur am Aufräumschritt (Zeitgrenze) – beides behoben.
+15. ✅ App nutzt die Datenbank (05.11.2026).
+16. Genres: Werke ohne DNB-Gattungsbegriff über Open Library/Google ergänzen, Zuordnungstabelle gemeinsam durchgehen.
 
 ## Phase 3 – Aufs Handy
 18. ✅ Veröffentlicht auf GitHub Pages: https://vilehan.github.io/private-library/ (04.11.2026)
@@ -35,7 +34,7 @@ Die Entscheidungen und Details stehen in [CLAUDE.md](CLAUDE.md).
 ## Phase 4 – Später
 - Stöbern nach Autor und Genre zur Inspiration.
 - Sammelbände/Gesamtausgaben (z. B. „4192 Seiten“) aus den Ausgaben eines Einzelbandes heraushalten.
-- Suche verfeinern: „George R R Martin“ zeigt Robin Hobb vor Martin. Einzelbuchstaben („R“) passen bisher als Teilwort auf fast alles. Initialen und Wortanfänge sauber behandeln, Autorentreffer besser gewichten.
+- ✅ Suche verfeinert: Initialen werden ignoriert, lange Werbe-Untertitel zählen nicht (George R R Martin).
 - Barcode-Scan mit der Handykamera.
 - Abgleich der Markierungen zwischen Geräten über Supabase mit Anmeldung.
 - Weitere Sachgruppen freischalten, z. B. Geschichte (`900`): Konfiguration ergänzen und den Import für diesen Bereich laufen lassen.

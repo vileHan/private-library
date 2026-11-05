@@ -2,8 +2,8 @@
 export const CONFIG = {
   // Eigene Katalog-Datenbank. Beide Werte sind öffentlich (nur Leserechte). Leer = live bei der DNB suchen.
   supabase: {
-    url: '',
-    anonKey: '',
+    url: 'https://vdkobcydrflzamrqrwtu.supabase.co',
+    anonKey: 'sb_publishable_lbKwD07G85vD_xNZ50imqQ_Kt_EfKeu',
   },
   dnb: {
     endpoint: 'https://services.dnb.de/sru/dnb',
