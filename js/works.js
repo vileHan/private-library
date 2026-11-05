@@ -40,8 +40,53 @@ export function workKeyOf(edition) {
   return `${authorKey(edition)}|${titleKey(edition.title)}${edition.isComic ? '|comic' : ''}`;
 }
 
+/** „das Vermächtnis der Drachenreiter ; Roman zum Film“ → „Das Vermächtnis der Drachenreiter“ */
+function mainSubtitle(s = '') {
+  const t = s.split(/\s+;\s+/)[0].trim();
+  return t ? t.charAt(0).toUpperCase() + t.slice(1) : '';
+}
+
+/**
+ * Titel = Reihenname: Manche Ausgaben heißen nur wie ihre Reihe („Eragon“ von Paolini), der eigentliche Titel
+ * steht dann im Untertitel („Eragon : das Vermächtnis der Drachenreiter“) oder in der Reihenangabe
+ * („Eragon“, Reihe „Die Gabel, die Hexe und der Wurm“). Ohne Korrektur landen verschiedene Bücher in einem Werk.
+ * Begleitbücher OHNE Autor, die nur wie eine Reihe heißen (Fan-Anthologie „Eragon“), werden entfernt.
+ */
+export function fixSeriesTitles(editions) {
+  const seriesByAuthor = new Map();
+  const allSeries = new Set();
+  for (const e of editions) {
+    if (!e.series) continue;
+    const s = titleKey(e.series);
+    allSeries.add(s);
+    const a = authorKey(e);
+    if (!seriesByAuthor.has(a)) seriesByAuthor.set(a, new Set());
+    seriesByAuthor.get(a).add(s);
+  }
+  const out = [];
+  for (const e of editions) {
+    const a = authorKey(e);
+    const t = titleKey(e.title);
+    if (!a && allSeries.has(t)) continue; // Begleitbuch ohne Autor
+    if (a && seriesByAuthor.get(a)?.has(t)) {
+      if (e.series && titleKey(e.series) !== t) {
+        out.push({ ...e, title: e.series, sortTitle: e.series.replace(/^\s*(der|die|das|ein|eine)\s+/i, ''), series: e.title, volume: '' });
+        continue;
+      }
+      const sub = mainSubtitle(e.subtitle);
+      if (sub && !/^(roman|ein roman|thriller|fantasy)/i.test(sub)) {
+        out.push({ ...e, title: sub, sortTitle: sub.replace(/^\s*(der|die|das|ein|eine)\s+/i, ''), subtitle: '', series: e.title });
+        continue;
+      }
+    }
+    out.push(e);
+  }
+  return out;
+}
+
 /** Gruppiert Ausgaben zu Werken: gleicher Werkschlüssel oder gleiche ISBN. */
 export function groupEditions(editions) {
+  editions = fixSeriesTitles(editions);
   const parent = editions.map((_, i) => i);
   // Iterativ statt rekursiv – beim Import laufen hier Hunderttausende Ausgaben durch.
   const find = (i) => {

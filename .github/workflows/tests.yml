@@ -1,0 +1,20 @@
+name: Tests
+
+# Katalogregeln und Werk-Zusammenfassung gegen echte DNB-Datensätze prüfen (tests/cases.js).
+on:
+  push:
+    branches: [main]
+    paths: ['js/**', 'tests/**', 'scripts/**']
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install --no-audit --no-fund
+      - run: node tests/run.mjs

@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Katalog-Tests</title>
+  <style>
+    body { font: 15px/1.5 system-ui, sans-serif; margin: 16px; background: #fff; color: #222; }
+    li.ok::marker { content: "✓ "; color: #1a7f37; }
+    li.fail::marker { content: "✗ "; color: #b3261e; }
+    li.fail { color: #b3261e; }
+    small { color: #666; }
+  </style>
+</head>
+<body>
+  <h1>Katalog-Tests</h1>
+  <p id="status">Läuft … (holt Daten live von der DNB)</p>
+  <ul id="list"></ul>
+  <script type="module">
+    import { runAll } from './cases.js';
+    const results = await runAll();
+    const failed = results.filter((r) => !r.ok).length;
+    document.getElementById('status').textContent = failed ? `${failed} von ${results.length} Tests fehlgeschlagen` : `Alle ${results.length} Tests bestanden`;
+    for (const r of results) {
+      const li = document.createElement('li');
+      li.className = r.ok ? 'ok' : 'fail';
+      li.innerHTML = `${r.name} <small>${r.detail || ''}</small>`;
+      document.getElementById('list').append(li);
+    }
+    window.__testResults = results;
+  </script>
+</body>
+</html>

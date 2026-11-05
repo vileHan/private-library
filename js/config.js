@@ -17,6 +17,9 @@ export const CONFIG = {
     // Selfpublishing-Plattformen ausschließen
     excludedPublishers: ['epubli', 'Books on Demand', 'tredition', 'Neopubli'],
     excludeThesis: true,     // Hochschulschriften (Dissertationen usw.)
+    // Gattungen ohne erzählende Bücher (siehe GENRE_GROUPS in js/classify.js):
+    // spielLernen = Rätsel-/Bastel-/Lernhefte, geschenk = Geschenkbücher & Kalender, kinderSachbuch = Kinder-Sachbücher
+    excludeGenreGroups: ['spielLernen', 'geschenk', 'kinderSachbuch'],
   },
   // Cover-Quellen in dieser Reihenfolge, pro ISBN. Den DNB-Coverdienst nutzen wir im Browser nicht:
   // portal.dnb.de schaltet dort eine Bot-Prüfseite vor, die wir nicht umgehen.

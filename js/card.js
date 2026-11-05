@@ -73,8 +73,10 @@ export function bookCard(work, opts = {}) {
   const card = $('#bookTpl').content.firstElementChild.cloneNode(true);
   if (opts.compact) card.classList.add('compact');
   let entry = entryFor(work);
-  const showSub = work.subtitle && work.subtitle.length < 60 && !GENERIC_SUBTITLE.test(work.subtitle);
-  card.querySelector('.title').textContent = (opts.prefix || '') + work.title + (showSub ? ` – ${work.subtitle}` : '');
+  // Untertitel nur bis zum ersten „;“ („der Schreibwettbewerb zum Film ; 20 junge Autoren …“)
+  const sub = (work.subtitle || '').split(/\s+;\s+/)[0];
+  const showSub = sub && sub.length < 60 && !GENERIC_SUBTITLE.test(sub);
+  card.querySelector('.title').textContent = (opts.prefix || '') + work.title + (showSub ? ` – ${sub}` : '');
   card.querySelector('.author').textContent = (work.authors || []).join(', ') || 'Unbekannter Autor';
   const meta = card.querySelector('.meta');
   const mine = ownedIsbnsOf(entry);

@@ -1,6 +1,7 @@
 // Anbindung an die SRU-Schnittstelle der Deutschen Nationalbibliothek (frei, CC0, ohne Anmeldung).
 import { CONFIG } from './config.js';
 import { normalizeIsbn } from './isbn.js';
+import { classify } from './classify.js';
 
 const MARC_NS = 'http://www.loc.gov/MARC21/slim';
 
@@ -62,7 +63,9 @@ export async function fetchRecords(cql, start = 1, { pageSize = CONFIG.dnb.pageS
   if (diag) throw new Error(`DNB-Abfrage fehlerhaft: ${diag.textContent}`);
   const total = Number(xml.getElementsByTagNameNS('*', 'numberOfRecords')[0]?.textContent || 0);
   const records = list(xml.getElementsByTagNameNS(MARC_NS, 'record'));
-  const editions = records.map(parseRecord).filter((e) => e && (keepAll || e.isPrintText));
+  // Katalogregeln (js/classify.js): nur gedruckte, „herkömmliche“ Bücher. ISBN-Suchen (keepAll) bleiben ungefiltert.
+  const editions = records.map(parseRecord).filter((e) => e && (keepAll
+    || (e.isPrintText && classify(e, { excludeGenreGroups: CONFIG.catalogFilter.excludeGenreGroups }).keep)));
   const fetched = start - 1 + records.length;
   return { editions, total, next: fetched < total && records.length ? fetched + 1 : null };
 }
@@ -101,7 +104,9 @@ function control(rec, tag) {
 function subs(field, code) {
   return list(field.getElementsByTagNameNS(MARC_NS, 'subfield'))
     .filter((s) => s.getAttribute('code') === code)
-    .map((s) => s.textContent.trim());
+    // Die DNB liefert Umlaute oft zerlegt (u + ¨) – zusammensetzen, sonst greifen Vergleiche wie „Geschenkbücher“ nicht.
+    // Dazu unsichtbare Steuerzeichen (z. B. CGJ U+034F in „Alagae͏̈sia“) entfernen.
+    .map((s) => s.textContent.replace(/͏/g, '').normalize('NFC').trim());
 }
 function sub(field, code) {
   return subs(field, code)[0] || '';
@@ -140,7 +145,8 @@ export function parseRecord(rec) {
 
   const t = fields(rec, '245')[0];
   // Mehrbändige Werke: $a = Reihe („Eragon“), $n = Bandzählung („Bd. 2“ oder „...“), $p = eigentlicher Titel.
-  const rawMain = t ? sub(t, 'a') : '';
+  // Ältere Datensätze haben die Verfasserangabe im Titel: „Matt, der Herzensbrecher / aus dem Amerikan. von …“
+  const rawMain = (t ? sub(t, 'a') : '').split(/\s+\/\s+/)[0];
   const partName = t ? subs(t, 'p').at(-1) || '' : '';
   const partNumber = t ? subs(t, 'n').map(tidy).find((n) => /\d/.test(n)) || '' : '';
   const stripNonSort = (s) => tidy(s.replace(/\u0098[^\u009C]*\u009C\s*/g, ''));
@@ -188,10 +194,13 @@ export function parseRecord(rec) {
   }
   const genres = fields(rec, '655').filter((f) => sub(f, '2') === 'gatbeg').map((f) => tidy(sub(f, 'a')));
   const themes = fields(rec, '926').map((f) => sub(f, 'x')).filter(Boolean);
-  const productForm = fields(rec, '653')
-    .map((f) => sub(f, 'a'))
-    .find((a) => a.startsWith('(Produktform)'))
-    ?.replace('(Produktform)', '');
+  const keywords653 = fields(rec, '653').map((f) => sub(f, 'a'));
+  const productForm = keywords653.find((a) => a.startsWith('(Produktform)'))?.replace('(Produktform)', '');
+  // Signale für „kein herkömmliches Buch“ (Kalender, Spiel, Box …) – ausgewertet in js/classify.js
+  const productForms = keywords653.filter((a) => a.startsWith('(Produktform')).map((a) => a.replace(/^\([^)]*\)\)?/, '').trim());
+  const formTerms = fields(rec, '655').filter((f) => sub(f, '2') !== 'gatbeg').map((f) => tidy(sub(f, 'a'))).filter(Boolean);
+  const leader = list(rec.getElementsByTagNameNS(MARC_NS, 'leader'))[0]?.textContent || '';
+  const extent = fields(rec, '300')[0] ? tidy(sub(fields(rec, '300')[0], 'a')) : '';
 
   const contentTypes = fields(rec, '336').flatMap((f) => subs(f, 'b'));
   const mediaTypes = fields(rec, '337').flatMap((f) => subs(f, 'b'));
@@ -224,6 +233,11 @@ export function parseRecord(rec) {
     genres,
     themes,
     binding: bindingLabel(productForm, isEbook),
+    productForms,
+    formTerms,
+    extent,
+    leader19: leader.charAt(19),
+    hasAuthor: authorsRaw.some(Boolean),
     isEbook,
     isPrintText,
     isComic: subjectGroups.some((g) => g.startsWith('741.5')),
