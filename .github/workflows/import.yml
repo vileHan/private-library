@@ -21,6 +21,10 @@ on:
         description: 'Nur testen, nichts in die Datenbank schreiben'
         type: boolean
         default: false
+      schema_only:
+        description: 'Nur das Datenbankschema (Suchfunktion usw.) aktualisieren, keine Daten laden'
+        type: boolean
+        default: false
       reset:
         description: 'Katalog vorher komplett leeren (eigene Markierungen in der App bleiben erhalten)'
         type: boolean
@@ -52,3 +56,4 @@ jobs:
           COVERS: ${{ github.event_name == 'schedule' && 'true' || github.event.inputs.covers }}
           DRY_RUN: ${{ github.event.inputs.dry_run }}
           RESET: ${{ github.event.inputs.reset }}
+          SCHEMA_ONLY: ${{ github.event.inputs.schema_only }}

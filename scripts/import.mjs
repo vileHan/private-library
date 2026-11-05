@@ -166,6 +166,7 @@ async function writeDb(rows) {
   const client = new pg.Client({ connectionString: env.SUPABASE_DB_URL, ssl: { rejectUnauthorized: false } });
   await client.connect();
   try {
+    await client.query('set statement_timeout = 0');
     log('Schema anwenden …');
     await client.query(await readFile(new URL('../supabase/schema.sql', import.meta.url), 'utf8'));
     if (env.RESET === 'true') {
@@ -179,10 +180,13 @@ async function writeDb(rows) {
     }
     if (fullRun) {
       log('Vollständiger Lauf: veraltete Werke entfernen …');
+      // Supabase bricht lange Anweisungen nach einer Zeitgrenze ab – für diesen Schritt aufheben.
+      await client.query('set statement_timeout = 0');
       await client.query('create temp table seen (id text primary key)');
       for (let i = 0; i < rows.length; i += 5000) {
         await client.query('insert into seen select unnest($1::text[]) on conflict do nothing', [rows.slice(i, i + 5000).map((r) => r.id)]);
       }
+      await client.query('analyze seen');
       const d = await client.query('delete from works w where not exists (select 1 from seen s where s.id = w.id)');
       log(`  entfernt: ${d.rowCount} Werke`);
     }
@@ -202,6 +206,16 @@ async function writeDb(rows) {
 
 // ---------- Ablauf ----------
 if (!DRY && !env.SUPABASE_DB_URL) throw new Error('SUPABASE_DB_URL fehlt (GitHub Secret anlegen).');
+if (env.SCHEMA_ONLY === 'true') {
+  // Nur supabase/schema.sql anwenden (z. B. geänderte Suchfunktion), ohne Daten neu zu laden.
+  const client = new pg.Client({ connectionString: env.SUPABASE_DB_URL, ssl: { rejectUnauthorized: false } });
+  await client.connect();
+  await client.query('set statement_timeout = 0');
+  await client.query(await readFile(new URL('../supabase/schema.sql', import.meta.url), 'utf8'));
+  await client.end();
+  log('Schema aktualisiert.');
+  process.exit(0);
+}
 const editions = await harvestAll();
 // Werke ohne jede ISBN (Sonderdrucke, falsch einsortierte DVDs …) weglassen – spart rund ein Viertel Speicher.
 const allWorks = groupEditions(editions);

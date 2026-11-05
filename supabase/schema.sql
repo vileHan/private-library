@@ -53,8 +53,10 @@ create policy "works lesbar" on works for select using (true);
 
 -- Suche: tokens = normalisierte Suchwörter (Kleinschrift, Umlaute ausgeschrieben, siehe normalizeText).
 -- Jedes Wort muss als Wortanfang im Titel/Reihe oder Autor vorkommen („kokos“ → „kokosnuss“).
--- Wörter mit weniger als 2 Zeichen werden ignoriert (z. B. Initialen „R“).
+-- Ignoriert: Wörter unter 2 Zeichen (Initialen wie „R“) und Füllwörter („die“, „und“ …),
+-- solange noch ein anderes Wort übrig bleibt.
 -- Rang: 0 = alle Wörter im Titel/Reihe, 1 = Titel + Autor zusammen, 2 = nur ähnlich (Tippfehler-Rückfall).
+-- Supabase bricht öffentliche Anfragen nach 3 s ab – deshalb wird die Treffermenge gedeckelt.
 drop function if exists search_works(text[], int, int);
 create function search_works(tokens text[], lim int default 50, off int default 0)
 returns table (
@@ -66,12 +68,22 @@ language plpgsql stable
 set search_path = public
 as $$
 declare
+  stop text[] := array['der','die','das','des','dem','den','ein','eine','einer','eines','einem','einen',
+                       'und','oder','im','in','am','an','auf','aus','bei','mit','von','vom','zu','zum','zur',
+                       'fuer','ueber','unter','nach','vor','wie','ist','the','of','and','a','an'];
   t text[];
+  core text[];
   q tsquery;
+  qf tsquery;
   phrase text;
   n_hits int;
+  cap constant int := 3000;  -- höchstens so viele Treffer werden sortiert (sonst > 3 s)
 begin
   t := array(select y from (select regexp_replace(x, '[^a-z0-9]', '', 'g') as y from unnest(tokens) x) s where length(y) >= 2);
+  core := array(select x from unnest(t) x where not x = any(stop));
+  if coalesce(array_length(core, 1), 0) > 0 then
+    t := core;
+  end if;
   if coalesce(array_length(t, 1), 0) = 0 then
     return;
   end if;
@@ -83,6 +95,7 @@ begin
       select w.*, case when to_tsvector('simple', w.search_title) @@ q then 0 else 1 end as rnk
       from works w
       where to_tsvector('simple', w.search_title || ' ' || w.search_author) @@ q
+      limit cap
     )
     select h.id, h.title, coalesce(h.sort_title, h.title), h.subtitle, h.authors, h.author_sort,
            h.series, h.volume, h.year, h.genre, h.is_comic, h.isbns, h.cover_ids,
@@ -92,15 +105,27 @@ begin
     limit greatest(1, least(lim, 100)) offset greatest(0, off);
 
   get diagnostics n_hits = row_count;
-  -- Keine Treffer auf der ersten Seite: ähnliche Titel suchen (Tippfehler). Ohne Index, daher nur als Rückfall.
+  -- Keine Treffer auf der ersten Seite: Tippfehler annehmen. Per Index Werke mit gleichen Wortanfängen
+  -- holen (jedes Wort um bis zu 3 Zeichen gekürzt, mindestens 3 behalten) und nur diese vergleichen.
   if n_hits = 0 and off = 0 and length(phrase) >= 4 then
+    qf := to_tsquery('simple', array_to_string(array(
+            select left(x, greatest(3, length(x) - 3)) || ':*' from unnest(t) x), ' & '));
     return query
-      select w.id, w.title, coalesce(w.sort_title, w.title), w.subtitle, w.authors, w.author_sort,
-             w.series, w.volume, w.year, w.genre, w.is_comic, w.isbns, w.cover_ids,
+      with cand as (
+        select w.* from works w
+        where to_tsvector('simple', w.search_title || ' ' || w.search_author) @@ qf
+        limit 20000
+      ), scored as (
+        select c.*, greatest(word_similarity(phrase, c.search_title),
+                             word_similarity(phrase, c.search_title || ' ' || c.search_author)) as sim
+        from cand c
+      )
+      select s.id, s.title, coalesce(s.sort_title, s.title), s.subtitle, s.authors, s.author_sort,
+             s.series, s.volume, s.year, s.genre, s.is_comic, s.isbns, s.cover_ids,
              2, count(*) over ()
-      from works w
-      where word_similarity(phrase, w.search_title) > 0.55 or word_similarity(phrase, w.search_author) > 0.7
-      order by greatest(word_similarity(phrase, w.search_title), word_similarity(phrase, w.search_author)) desc
+      from scored s
+      where s.sim > 0.5
+      order by s.sim desc, lower(coalesce(s.sort_title, s.title))
       limit least(lim, 30);
   end if;
 end;
