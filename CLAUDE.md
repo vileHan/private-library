@@ -60,6 +60,21 @@ Ausnahme: **Suche per ISBN läuft immer ungefiltert**, damit ich auch Bücher au
 
 Größenordnung (Stand 11/2026): Die komplette Filterabfrage liefert **~735.000 Datensätze**. Das sind Ausgaben, keine Werke. Die Abfrage ist live getestet; „Unterleuten“ liefert 4 Treffer.
 
+## Katalogregeln: nur „herkömmliche“ Bücher (js/classify.js)
+
+Zusätzlich zum DNB-Filter fliegen beim Import (und in der DNB-Live-Suche) heraus, jeweils mit Begründung:
+
+- **Sammelaufnahmen/Pakete**: MARC-Leader Position 19 = `a` oder Umfang „N Bände“.
+- **Produktform** (653 „(Produktform)…“): Kalender, Spiel, Merchandise, Sticker-/Malbuch, Puzzle, Karten, Poster, Notizbuch, Box (Multiple-item) usw. Bindungsarten wie „Card cover“ oder „Hardback (stationery)“ sind normale Bücher. Merchandise-Kennzeichnung zählt nicht, wenn eine erzählende Gattung da ist.
+- **Formschlagwort** (655, GND): Kinder-/Jugendsachbuch, Sachbilderbuch, Ratgeber, Bildband, Atlas, Wörterbuch, Spiel … – außer es gibt eine erzählende Gattung oder „Fiktionale Darstellung“.
+- **Gattung** (`catalogFilter.excludeGenreGroups` in config.js): Spielerisches Lernen/Rätsel/Basteln, Geschenkbücher & Kalender, Kinder-Sachbücher – nur wenn **keine** erzählende Gattung dabei ist.
+- **Titelwörter**: eindeutige immer (Malbuch, Wandkalender, VE 10, Übungsheft …), schwache nur ohne erzählende Gattung (Filmbuch, Begleitbuch, „alles über“, Lexikon …).
+- **Zeitschriftenhefte** („Hot Topic!, 2024, 5“).
+- **Titel = Reihenname** desselben Autors („Eragon“): eigentlicher Titel aus Untertitel bzw. Reihenangabe (`fixSeriesTitles` in works.js). Begleitbücher **ohne Autor**, die nur wie eine Reihe heißen, entfallen.
+- **Umlaute**: Die DNB liefert sie oft zerlegt (u + ¨) → beim Einlesen per NFC zusammensetzen, sonst greifen Regeln mit Umlauten nicht.
+- **Tests**: `tests/cases.js` (28 Fälle gegen echte DNB-Datensätze). Im Browser `http://localhost:8080/tests/index.html`, auf GitHub Workflow „Tests“ (läuft bei jedem Push). Neue Grenzfälle dort ergänzen.
+- Stichprobe 11/2026: Die Regeln entfernen ~13 % der Ausgaben, bei 1.787 geprüften Ausgaben ohne erkennbaren Fehlgriff.
+
 ## Werke statt Ausgaben
 
 Hardcover, Taschenbuch, Lizenzausgaben (z. B. Weltbild) und E-Book haben jeweils eine eigene ISBN, sollen aber **als ein Buch** zählen.
@@ -115,7 +130,8 @@ Ziel: Die Daten werden **einmal aufbereitet** und nicht bei jeder Suche neu.
 
 - `js/config.js`: Filter, Cover-Quellen, Seitengröße
 - `js/dnb.js`: CQL-Abfrage bauen, SRU abrufen, MARC21 auswerten (Hörbücher und E-Books fallen außer bei der ISBN-Suche heraus)
-- `js/works.js`: Ausgaben zu Werken gruppieren (Werkschlüssel + gemeinsame ISBN + DNB-Verknüpfung 776), Sortierung ohne führenden Artikel (DNB-Marker `\u0098…\u009C`)
+- `js/classify.js`: Katalogregeln (siehe oben)
+- `js/works.js`: Ausgaben zu Werken gruppieren (Werkschlüssel + gemeinsame ISBN, Reihentitel-Korrektur), Sortierung ohne führenden Artikel (DNB-Marker `\u0098…\u009C`)
 - `js/catalog.js`: austauschbare Katalog-Schnittstelle (heute DNB, später Supabase)
 - `js/store.js`: IndexedDB, Export/Import
 - `js/library.js`: eigene Bibliothek im Speicher, `entryFor`, `updateEntry` (leere Einträge werden gelöscht)
