@@ -181,24 +181,11 @@ $('#searchForm').addEventListener('submit', cancelLive);
 // ---------- Barcode-Scan ----------
 $('#scanBtn').addEventListener('click', async () => {
   cancelLive();
-  const result = await scanIsbn();
-  if (!result) return;
+  const isbn = await scanIsbn();
+  if (!isbn) return;
   showView('search');
-  const input = $('#searchInput');
-  if (result === 'manual') {
-    // Ausweg, falls die Kamera den Code nicht liest: Ziffern-Tastatur fürs Suchfeld
-    input.value = '';
-    input.setAttribute('inputmode', 'numeric');
-    input.placeholder = 'ISBN eintippen (13 Ziffern)';
-    input.focus();
-    input.addEventListener('blur', () => {
-      input.removeAttribute('inputmode');
-      input.placeholder = 'Titel, Autor oder ISBN';
-    }, { once: true });
-    return;
-  }
-  input.value = result;
-  runSearch(result);
+  $('#searchInput').value = isbn;
+  runSearch(isbn);
 });
 
 // ---------- Ansicht: Liste oder Cover-Raster (pro Gerät gespeichert) ----------

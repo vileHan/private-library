@@ -14,7 +14,7 @@ const ZXING_URL = 'https://cdn.jsdelivr.net/npm/@zxing/browser@0.1.5/+esm';
 const TRY_HARDER = 3; // DecodeHintType.TRY_HARDER in @zxing/library
 
 /**
- * Öffnet den Scanner. Liefert die ISBN-13, 'manual' (Nutzer will die ISBN eintippen) oder null (abgebrochen).
+ * Öffnet den Scanner. Liefert die ISBN-13 oder null (abgebrochen).
  */
 export function scanIsbn() {
   return new Promise((resolve) => {
@@ -34,7 +34,6 @@ export function scanIsbn() {
       video.srcObject = null;
       box.hidden = true;
       $('#scanClose').onclick = null;
-      $('#scanManual').onclick = null;
       document.removeEventListener('keydown', onKey);
       resolve(result);
     };
@@ -50,7 +49,6 @@ export function scanIsbn() {
     hint.textContent = 'Halte den Barcode auf der Buchrückseite in den Rahmen – etwa 15 cm Abstand.';
     engine.textContent = 'Kamera wird gestartet …';
     $('#scanClose').onclick = () => finish(null);
-    $('#scanManual').onclick = () => finish('manual');
     document.addEventListener('keydown', onKey);
 
     const startZxing = async () => {
@@ -64,7 +62,7 @@ export function scanIsbn() {
         if (done) controls.stop();
         engine.textContent = 'Erkennung: ZXing (Strichcodes)';
       } catch {
-        engine.textContent = 'Der Scanner konnte nicht geladen werden (keine Internetverbindung?). Tippe „ISBN eintippen“.';
+        engine.textContent = 'Der Scanner konnte nicht geladen werden (keine Internetverbindung?).';
       }
     };
 
