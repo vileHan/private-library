@@ -27,7 +27,7 @@ Commits laufen mit der GitHub-noreply-Adresse (in der lokalen Git-Konfiguration 
 - **Meine Bücher**: Unteransichten *Liste* (Filter Besitze/Gelesen/Ungelesen/Merkliste/Alle + Regal, Sortierungen inkl. Bewertung und Lesedatum), *Reihen* (eigene Bände, „Alle Bände laden“ zeigt fehlende Bände von der DNB), *Statistik*.
 - **Reihe** kommt aus 245 `$a`/`$p` oder aus 490/830/800, aber nur mit Bandnummer bis 3 Ziffern (so fallen Verlagsreihen mit Bestellnummer heraus).
 - Bewusst **nicht** gewünscht: „Verliehen an“.
-- **Buch-Slot (Variante B)**: Cover | Titel (max. 2 Zeilen), Autor, eine Infozeile (Reihe Band · Jahr · Genre kurz · ★ · ✎). Darunter eine feste Leiste „○ Besitze | □ Gelesen | ♡ Merken | ⋯“ – die Beschriftung bleibt bewusst, damit man die Symbole nicht vergisst. Alle Slots gleich hoch.
+- **Buch-Slot**: großes Cover links (80×120, auf 360-px-Handys 72×108); rechts Titel (max. 2 Zeilen), Autor, eine Infozeile (Reihe Band · Jahr · Genre kurz · ★ · ✎) und darunter **kompakte Pillen „○ Besitze · □ Gelesen · ♡ Merken“** – die Beschriftung bleibt bewusst. **„⋯“ sitzt oben rechts in der Karte.** Alle Slots gleich hoch (~145 px).
 - **Detailblatt** („⋯“, von unten): Cover, voller Titel, Reihe/Jahr/Genre, die drei Knöpfe ausgeschrieben, **Ausgaben zum Ankreuzen**, Bewertung, Lesedatum, Regale, Notiz.
 - **Cover-Raster** (Schalter oben rechts, pro Gerät gespeichert in `js/settings.js`): 2 Cover pro Reihe, keine Titel, Knöpfe nur als Symbole. **Symbole überall: Besitz ○/●, Gelesen □/■, Merken ♡/♥.** Gesten am Cover: einmal tippen = Titel einblenden, doppelt tippen = Detailblatt, **nach rechts wischen = besitze ich, nach links = merken** (jeweils mit „Rückgängig“).
 - **Barcode-Scan** (`js/scan.js`): Knopf oben rechts neben dem Raster-Schalter. Der Suchknopf ist nur eine Lupe. Android/Chrome nutzt `BarcodeDetector`, sonst wird ZXing (`@zxing/browser@0.1.5` von jsDelivr) beim ersten Scan nachgeladen. Ergebnis = ISBN-Suche.
@@ -131,7 +131,7 @@ Ziel: Die Daten werden **einmal aufbereitet** und nicht bei jeder Suche neu.
 - **PWA mit reinem HTML, CSS und JavaScript**, ohne Build-Schritt und ohne Frameworks, die einen Build brauchen. Auf dem Rechner sind **weder Node.js noch Python installiert**.
 - Eigene Daten (Besitz, gelesen, Bewertung, Ausgabe) liegen lokal in **IndexedDB**. Export und Import als JSON-Datei dienen als Backup.
 - Hosting kostenlos auf **GitHub Pages** (oder Cloudflare Pages). Auf dem Handy wird die App über „Zum Startbildschirm hinzufügen“ installiert.
-- Service Worker für die Offline-Nutzung von „Meine Bibliothek“. Die Live-Suche braucht Internet.
+- Service Worker für die Offline-Nutzung von „Meine Bibliothek“. Die Live-Suche braucht Internet. Er fragt mit `cache: no-cache` immer beim Server nach (GitHub Pages erlaubt sonst 10 Minuten Zwischenspeicher – neue Versionen kamen verspätet an).
 - Lokal testen: `tools/serve.ps1` (kleiner PowerShell-Webserver, Port 8080). In `.claude/launch.json` ist er als `bibliothek` eingetragen. ES-Module brauchen einen Server, `file://` funktioniert nicht.
 - Icons erzeugt `tools/make-icons.ps1` (System.Drawing).
 - Neue oder umbenannte Dateien auch in die `SHELL`-Liste in `sw.js` eintragen und `CACHE` hochzählen.

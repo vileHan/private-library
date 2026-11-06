@@ -1,6 +1,6 @@
 // Service Worker: hält die App-Dateien für die Offline-Nutzung bereit.
 // Strategie „Netz zuerst“: Online gibt es immer die neueste Version, offline die gespeicherte.
-const CACHE = 'bibliothek-v13';
+const CACHE = 'bibliothek-v14';
 const SHELL = [
   './',
   'index.html',
@@ -44,7 +44,10 @@ self.addEventListener('fetch', (event) => {
   // Nur eigene Dateien behandeln; DNB- und Cover-Anfragen laufen direkt ins Netz.
   if (event.request.method !== 'GET' || url.origin !== self.location.origin) return;
   event.respondWith(
-    fetch(event.request)
+    // cache: 'no-cache' = beim Server nachfragen, ob es eine neue Version gibt. Ohne das nimmt der Browser
+    // bis zu 10 Minuten lang seine Zwischenkopie (GitHub Pages erlaubt max-age=600) – neue Versionen kämen verspätet.
+    // Neue Request statt event.request, weil sich Seitenaufrufe (mode „navigate“) nicht umkonfigurieren lassen.
+    fetch(event.request.url, { cache: 'no-cache', credentials: 'same-origin' })
       .then((res) => {
         if (res.ok) {
           const copy = res.clone();

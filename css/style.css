@@ -141,30 +141,31 @@ input[type="search"]:focus, select:focus { outline: 2px solid var(--accent); out
 }
 .list { display: flex; flex-direction: column; gap: 8px; }
 
-/* Buch-Slot (Variante B): Cover | Titel, Autor, Infozeile – darunter eine feste Knopfleiste */
+/* Buch-Slot: großes Cover links; rechts Titel, Autor, Infozeile und darunter kompakte Knöpfe
+   „○ Besitze · □ Gelesen · ♡ Merken · ⋯“ (Beschriftung bleibt, damit man die Symbole nicht vergisst) */
 .book {
-  display: grid; grid-template-columns: 64px 1fr; grid-template-areas: "cover info" "actions actions"; gap: 8px 12px;
+  display: grid; grid-template-columns: 80px 1fr; grid-template-areas: "cover info" "cover actions";
+  grid-template-rows: 1fr auto; gap: 6px 12px;
   background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
-  padding: 10px 10px 0; overflow: hidden;
+  padding: 10px; overflow: hidden; position: relative;
 }
 .book > .cover { grid-area: cover; }
-.book > .info { grid-area: info; align-self: center; }
-.book > .actions {
-  grid-area: actions; display: grid; grid-template-columns: 1fr 1fr 1fr 48px; gap: 0;
-  margin: 0 -10px; border-top: 1px solid var(--line);
-}
-.book > .actions > * + * { border-left: 1px solid var(--line); }
+.book > .info { grid-area: info; align-self: start; min-width: 0; padding-right: 26px; } /* Platz für „⋯“ oben rechts */
+.book > .actions { grid-area: actions; display: flex; gap: 5px; margin: 0; align-items: center; flex-wrap: nowrap; min-width: 0; }
 .book > .actions .toggle, .more-btn {
-  border: 0; border-radius: 0; background: transparent; justify-content: center; min-height: 34px; padding: 3px 4px;
-  font-size: .8rem; line-height: 1.2; cursor: pointer; color: inherit;
+  border: 1px solid var(--line); border-radius: 99px; background: transparent; justify-content: center;
+  min-height: 30px; padding: 3px 8px; font-size: .76rem; line-height: 1.2; cursor: pointer; color: inherit; white-space: nowrap; gap: 4px;
 }
-.more-btn { font-size: 1.1rem; line-height: 1; font-weight: 700; color: var(--muted); }
+/* „⋯“ als kleines Symbol oben rechts in der Karte */
+.book > .actions .more-btn { position: absolute; top: 6px; right: 6px; border: 0; min-height: 0; width: 32px; height: 28px; padding: 0;
+  font-size: 1.1rem; line-height: 1; font-weight: 700; color: var(--muted); border-radius: 8px; }
+.book > .actions .more-btn:active { background: var(--accent-soft); }
 .book .title { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .book .author, .book .meta { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .book.owned { border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); }
 
 .cover {
-  position: relative; width: 64px; height: 96px; border-radius: 6px; overflow: hidden;
+  position: relative; width: 80px; height: 120px; border-radius: 6px; overflow: hidden;
   background: var(--ph); display: grid; place-items: center;
 }
 .cover img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity .2s; }
@@ -238,13 +239,11 @@ input[type="search"]:focus, select:focus { outline: 2px solid var(--accent); out
 .series .author { margin: 0; }
 .series-summary { margin: 4px 0 10px; font-size: .85rem; color: var(--muted); }
 .series .list { gap: 6px; }
-.book.compact { grid-template-columns: 44px 1fr; padding: 8px 8px 0; background: var(--bg); }
-.book.compact > .actions { margin: 0 -8px; }
-.book.compact > .actions .toggle, .book.compact .more-btn { min-height: 30px; font-size: .78rem; }
-.book.compact .cover { width: 44px; height: 66px; }
+.book.compact { grid-template-columns: 52px 1fr; padding: 8px; background: var(--bg); }
+.book.compact > .actions .toggle { min-height: 28px; font-size: .75rem; padding: 2px 8px; }
+.book.compact .cover { width: 52px; height: 78px; }
 .book.compact .title { font-size: .92rem; }
 .book.compact .author { display: none; } /* steht schon im Reihenkopf */
-.book.compact .toggle { padding: 3px 9px; font-size: .8rem; }
 .more.small { padding: 8px 14px; font-size: .9rem; margin-top: 10px; }
 
 .tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; }
@@ -270,8 +269,8 @@ input[type="search"]:focus, select:focus { outline: 2px solid var(--accent); out
 .empty { text-align: center; color: var(--muted); padding: 30px 10px; }
 
 @media (min-width: 640px) {
-  .book { grid-template-columns: 76px 1fr; }
-  .cover { width: 76px; height: 114px; }
+  .book { grid-template-columns: 96px 1fr; }
+  .cover { width: 96px; height: 144px; }
 }
 
 /* ---------- Detailblatt (von unten) ---------- */
@@ -310,3 +309,11 @@ body.sheet-open { overflow: hidden; }
   background: #222; color: #fff; padding: 10px 14px; border-radius: 12px; box-shadow: 0 6px 20px rgba(0,0,0,.3); font-size: .9rem;
 }
 .toast button { border: 0; background: none; color: #9fd9c6; font-weight: 700; font-size: .9rem; cursor: pointer; padding: 4px 0; }
+
+/* Schmale Handys (z. B. 360 px): Cover und Knöpfe etwas kleiner, damit alles in eine Zeile passt */
+@media (max-width: 370px) {
+  .book { grid-template-columns: 72px 1fr; gap: 6px 10px; }
+  .book > .cover { width: 72px; height: 108px; }
+  .book > .actions { gap: 4px; }
+  .book > .actions .toggle { padding: 3px 6px; font-size: .72rem; gap: 3px; }
+}
