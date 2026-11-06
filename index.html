@@ -18,9 +18,14 @@
   <header class="top">
     <div class="top-row">
       <h1>Meine Bibliothek</h1>
-      <button id="viewToggle" class="icon-btn" type="button" aria-pressed="false" aria-label="Cover-Raster ein/aus" title="Cover-Raster ein/aus">
-        <span class="ico-grid" aria-hidden="true"></span>
-      </button>
+      <div class="top-actions">
+        <button id="scanBtn" class="icon-btn" type="button" aria-label="Barcode scannen" title="Barcode scannen">
+          <span class="ico-scan" aria-hidden="true"></span>
+        </button>
+        <button id="viewToggle" class="icon-btn" type="button" aria-pressed="false" aria-label="Cover-Raster ein/aus" title="Cover-Raster ein/aus">
+          <span class="ico-grid" aria-hidden="true"></span>
+        </button>
+      </div>
     </div>
     <nav class="tabs" role="tablist">
       <button role="tab" id="tab-search" aria-controls="view-search" aria-selected="true" data-view="search">Suche</button>
@@ -38,10 +43,11 @@
                  aria-label="Suchbegriff" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="suggestions">
           <ul id="suggestions" class="suggestions" role="listbox" hidden></ul>
         </div>
-        <button id="scanBtn" class="scan-btn" type="button" aria-label="Barcode scannen" title="Barcode scannen">
-          <span class="ico-scan" aria-hidden="true"></span>
+        <button type="submit" class="search-btn" aria-label="Suchen" title="Suchen">
+          <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round">
+            <circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5 21 21"/>
+          </svg>
         </button>
-        <button type="submit">Suchen</button>
       </form>
       <p class="status" id="searchStatus" aria-live="polite">Suche nach einem Buch – deine eigenen Bücher erscheinen immer oben.</p>
       <div id="results" class="list"></div>
@@ -106,20 +112,26 @@
         <h3 class="title"></h3>
         <p class="author"></p>
         <p class="meta"></p>
-        <div class="actions">
-          <button class="toggle own" type="button" aria-pressed="false" aria-label="Besitze ich"><span class="lbl">Besitze ich</span></button>
-          <button class="toggle read" type="button" aria-pressed="false" aria-label="Gelesen"><span class="lbl">Gelesen</span></button>
-          <button class="toggle wish" type="button" aria-pressed="false" aria-label="Merken"><span class="lbl">Merken</span></button>
-        </div>
-        <div class="links">
-          <button class="link editions-btn" type="button" aria-expanded="false" hidden></button>
-          <button class="link details-btn" type="button" aria-expanded="false">Details</button>
-        </div>
-        <ul class="editions" hidden></ul>
-        <div class="details" hidden></div>
+      </div>
+      <div class="actions">
+        <button class="toggle own" type="button" aria-pressed="false" aria-label="Besitze ich"><span class="lbl">Besitze</span></button>
+        <button class="toggle read" type="button" aria-pressed="false" aria-label="Gelesen"><span class="lbl">Gelesen</span></button>
+        <button class="toggle wish" type="button" aria-pressed="false" aria-label="Merken"><span class="lbl">Merken</span></button>
+        <button class="more-btn" type="button" aria-label="Mehr: Ausgaben, Bewertung, Notiz" title="Ausgaben, Bewertung, Notiz">⋯</button>
       </div>
     </article>
   </template>
+
+  <div id="sheet" class="sheet" hidden>
+    <div class="sheet-backdrop"></div>
+    <div class="sheet-panel" role="dialog" aria-modal="true" aria-label="Buchdetails">
+      <div class="sheet-grip" aria-hidden="true"></div>
+      <button class="sheet-close" type="button" aria-label="Schließen">✕</button>
+      <div class="sheet-body"></div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
   <div id="scanner" class="scanner" role="dialog" aria-modal="true" aria-label="Barcode scannen" hidden>
     <video id="scanVideo" playsinline muted></video>
