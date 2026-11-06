@@ -1,6 +1,6 @@
 // Service Worker: hält die App-Dateien für die Offline-Nutzung bereit.
 // Strategie „Netz zuerst“: Online gibt es immer die neueste Version, offline die gespeicherte.
-const CACHE = 'bibliothek-v24';
+const CACHE = 'bibliothek-v25';
 const SHELL = [
   './',
   'index.html',
@@ -13,6 +13,7 @@ const SHELL = [
   'js/util.js',
   'js/catalog.js',
   'js/classify.js',
+  'js/titles.js',
   'js/scan.js',
   'js/settings.js',
   'js/config.js',

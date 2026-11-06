@@ -3,6 +3,8 @@
 // Jede Regel liefert einen Grund – so lässt sich in Tests und Berichten nachvollziehen, warum etwas fehlt.
 // Testfälle: tests/cases.js (im Browser: tests/index.html, in GitHub Actions: Workflow „Tests“).
 
+import { isBundleTitle } from './titles.js';
+
 // Produktform des Buchhandels (MARC 653 „(Produktform)…“): alles, was kein Buch zum Lesen ist.
 // Achtung: Bindungsarten wie „Card cover“ oder „Hardback (stationery)“ sind normale Bücher.
 const NON_BOOK_FORMS = /calendar|kalender|\bgame\b|merchandise|counterpack|dumpbin|sticker book|colou?ring|join-the-dot|^cards\b|card game|jigsaw|puzzle|\bkit\b|\btoy\b|poster|postcard|diary|journal|notebook|blank book|address book|multiple-item|pack of|wallchart|other printed item|book (and|\+) toy/i;
@@ -32,11 +34,18 @@ const NON_BOOK_TITLE = words([
   'rätselblock', 'rätselheft', 'wandkalender', 'tischkalender', 'kalender \\d{4}', '\\d{4} kalender', 'postkartenbuch', 'postkarten-box',
   'notizbuch', 'lesezeichen', 'bastelbuch', 'bastelblock', 'origami', 'kratzbild(er)?', 'mitmachblock',
   've \\d+', '\\d+ ?x ?\\d+ exemplare', 'übungsheft', 'lernheft', 'arbeitsheft', 'kopiervorlagen', 'lektürehilfe', 'schreibschrift',
+  // Fan-, Film- und Begleitmaterial – auch wenn der Verlag „Fantasy“ oder „Kinderbuch“ als Gattung angibt
+  // (Analyse 11/2026: Herr der Ringe, Hobbit, Harry Potter, Game of Thrones, Witcher, Narnia)
+  'fanbuch', 'filmbuch', 'begleitbuch', '(in)?offiziell(e|en|er|es)?', 'aus den filmen', 'filmzitate', 'zitate aus den filmen',
+  'unnützes wissen', 'rollenspiel', 'sichtschirm(-set)?', 'sticker-buch', 'pop-up(-buch)?', 'schülerkalender', 'reiseführer',
+  'hinter den kulissen', 'making of', '\\p{L}+-(lexikon|enzyklopädie)', '(lexikon|enzyklopädie) (der|des|zu|über|für|von|aller)',
+  // Boxen und Schuber (mehrere Bücher in einer Verpackung)
+  'schuber', 'geschenkschuber', '\\p{L}*-?box',
 ]);
 // Nur verdächtig, wenn die Gattung nicht erzählend ist oder fehlt
 // (sonst flöge z. B. Arno Geigers Roman „Alles über Sally“ raus):
 const NON_BOOK_TITLE_WEAK = words([
-  'sticker', 'poster', 'puzzle', 'postkarten', 'filmbuch', 'begleitbuch', 'fanbuch', 'alles über', 'lexikon', 'enzyklopädie',
+  'sticker', 'poster', 'puzzle', 'postkarten', 'alles über', 'lexikon', 'enzyklopädie',
   'bildwörterbuch', 'das offizielle (buch|malbuch|stickerbuch|rätselbuch|kochbuch|fanbuch|handbuch)', 'kalender',
 ]);
 const NON_NARRATIVE_GENRE = /Sachb|Spiel|Lernen|Geschenk|Kalender|Ratgeber|Bildung|Nachschlage/;
@@ -63,6 +72,8 @@ export function classify(e, { excludeGenreGroups = Object.keys(GENRE_GROUPS) } =
       if (g) return { keep: false, reason: `Gattung: ${g}` };
     }
   }
+  // Sammelbände: „Von Idioten umzingelt [u.a.] : zwei Comic-Romane“, Box „I-VII“
+  if (isBundleTitle(e.titleRaw || e.title) || /^[IVX]+\s*[-–]\s*[IVX]+$/i.test(e.title || '')) return { keep: false, reason: 'Sammelband/Box' };
   // Zeitschriftenhefte: „Hot Topic!, 2024, 5“, „5!, 2024, Nr. 1“
   if (/,\s*(19|20)\d{2},\s*(Nr\.\s*|Heft\s*)?\d+$/.test(e.title || '')) return { keep: false, reason: 'Zeitschriftenheft' };
   const text = `${e.title || ''} ${e.subtitle || ''}`;

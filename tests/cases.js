@@ -4,7 +4,8 @@
 import { CONFIG } from '../js/config.js';
 import { fetchRecords, searchDnb } from '../js/dnb.js';
 import { classify } from '../js/classify.js';
-import { groupEditions } from '../js/works.js';
+import { groupEditions, normalizeText } from '../js/works.js';
+import { cleanTitle, splitVolumePrefix, isPublisherSeries } from '../js/titles.js';
 
 // Muss im Katalog bleiben (ISBN → Titel zur Lesbarkeit)
 export const KEEP = {
@@ -87,5 +88,58 @@ export async function runAll() {
   const dWorks = groupEditions(dresden).filter((w) => /Sturmnacht/.test(w.title));
   results.push({ name: '„Sturmnacht“ (Harry Dresden 1) ist genau ein Werk, ohne Übersetzerangabe im Titel',
     ok: dWorks.length === 1 && !dWorks[0].title.includes('/'), detail: dWorks.map((w) => `${w.title} (${w.editions.length})`).join('; ') });
+
+  // ---------- Analyse 11/2026: Franchises ----------
+  const grouped = async (query, pages = 4) => {
+    const eds = [];
+    for (let cursor = 1, i = 0; cursor && i < pages; i++) {
+      const res = await searchDnb(query, cursor);
+      eds.push(...res.editions);
+      cursor = res.next;
+    }
+    return groupEditions(eds);
+  };
+  const FAN = /offiziell|fanbuch|filmbuch|begleitbuch|filmzitate|rollenspiel|sticker|enzyklop|aus den filmen|schuber|unnützes/i;
+
+  const hdr = await grouped('Herr der Ringe');
+  const hdr3 = hdr.filter((w) => /Tolkien/.test(w.authors.join()) && Number(w.volume) === 3 && /Herr der Ringe/.test(w.series));
+  results.push({ name: 'Herr der Ringe Band 3 ist ein Werk (Wiederkehr/Rückkehr des Königs = zwei Übersetzungen)',
+    ok: hdr3.length === 1, detail: hdr3.map((w) => `${w.title} (${w.editions.length})`).join('; ') });
+  const hdrBad = hdr.filter((w) => FAN.test(`${w.title} ${w.subtitle}`) || /Bd\.|Neuausgabe|Ausgabe in neuer/.test(w.title));
+  results.push({ name: 'Herr der Ringe: keine Fan-/Film-/Rollenspielbücher, keine „Bd.“/„Neuausgabe“ im Titel',
+    ok: hdrBad.length === 0, detail: hdrBad.map((w) => w.title).join('; ') });
+
+  const percy = (await grouped('Diebe im Olymp', 2)).filter((w) => /Riordan/.test(w.authors.join()));
+  results.push({ name: 'Percy Jackson „Diebe im Olymp“ ist genau ein Werk (statt 4 Schreibweisen)',
+    ok: percy.length === 1, detail: percy.map((w) => `${w.title} (${w.editions.length})`).join('; ') });
+
+  const hobbitBad = (await grouped('Hobbit', 2)).filter((w) => FAN.test(`${w.title} ${w.subtitle}`));
+  results.push({ name: 'Hobbit: keine Film-/Begleit-/Sticker-Bücher, keine Enzyklopädie', ok: hobbitBad.length === 0,
+    detail: hobbitBad.map((w) => w.title).join('; ') });
+
+  const narnia = (await grouped('König von Narnia', 2)).filter((w) => /Lewis/.test(w.authors.join()));
+  results.push({ name: 'Narnia: „Der König von Narnia“ ohne Klammer-Werbetext, als ein Werk',
+    ok: narnia.length >= 1 && narnia.every((w) => !w.title.includes('[')) && narnia.filter((w) => /^Der König von Narnia$/.test(w.title)).length === 1,
+    detail: narnia.map((w) => w.title).join('; ') });
+
+  const biss = (await grouped('Biss zum Morgengrauen', 2)).filter((w) => /Meyer/.test(w.authors.join()));
+  results.push({ name: 'Biss: Verlagsreihe „Carlsen“ gilt nicht als Buchreihe', ok: biss.length >= 1 && biss.every((w) => !/carlsen/i.test(w.series)),
+    detail: biss.map((w) => `${w.title} / ${w.series || '–'}`).join('; ') });
+
+  // ---------- Ohne Netz: Titel-Helfer ----------
+  const unit = [
+    [cleanTitle('Harry Potter und der Stein der Weisen - Ausgabe zur TV-Serie'), 'Harry Potter und der Stein der Weisen'],
+    [cleanTitle('Das Wunder von Narnia – Taschenbuch mit Filmcover'), 'Das Wunder von Narnia'],
+    [cleanTitle('Der König von Narnia : [der Fantasy-Bestseller von C.S. Lewis'), 'Der König von Narnia'],
+    [cleanTitle('Der Herr der Ringe. Ausgabe in neuer Übersetzung und Rechtschreibung'), 'Der Herr der Ringe'],
+    [cleanTitle('Die letzte Ausgabe'), 'Die letzte Ausgabe'],
+    [JSON.stringify(splitVolumePrefix('Der Herr der Ringe. Bd. 1 - Die Gefährten')), JSON.stringify({ series: 'Der Herr der Ringe', volume: '1', title: 'Die Gefährten' })],
+    [JSON.stringify(splitVolumePrefix('Fahrenheit 451: Roman')), 'null'],
+    [String(normalizeText('Die drei ???').includes('fragezeichen')), 'true'],
+    [String(isPublisherSeries('Carlsen', 'Hamburg : Carlsen')), 'true'],
+    [String(isPublisherSeries('Eragon', 'München : cbj')), 'false'],
+  ];
+  const wrong = unit.filter(([got, want]) => got !== want);
+  results.push({ name: `Titel-Helfer (${unit.length} Einzelprüfungen)`, ok: wrong.length === 0, detail: wrong.map(([g, w]) => `„${g}“ statt „${w}“`).join('; ') });
   return results;
 }

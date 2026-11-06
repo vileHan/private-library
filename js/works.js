@@ -10,6 +10,7 @@ export function normalizeText(s = '') {
     .replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss')
     .normalize('NFKD').replace(/[̀-ͯ]/g, '')
     .replace(/\(.*?\)|\[.*?\]/g, ' ')
+    .replace(/\?\?\?/g, ' fragezeichen ') // „Die drei ???“ sonst nicht suchbar (Satzzeichen fallen weg)
     .replace(/[^a-z0-9]+/g, ' ')
     .trim();
 }
@@ -54,20 +55,37 @@ function mainSubtitle(s = '') {
  */
 export function fixSeriesTitles(editions) {
   const seriesByAuthor = new Map();
+  const rawSeriesByAuthor = new Map(); // Originalschreibweise, um den Reihennamen vorne im Titel abzuschneiden
   const allSeries = new Set();
   for (const e of editions) {
     if (!e.series) continue;
     const s = titleKey(e.series);
     allSeries.add(s);
     const a = authorKey(e);
-    if (!seriesByAuthor.has(a)) seriesByAuthor.set(a, new Set());
+    if (!seriesByAuthor.has(a)) { seriesByAuthor.set(a, new Set()); rawSeriesByAuthor.set(a, new Set()); }
     seriesByAuthor.get(a).add(s);
+    rawSeriesByAuthor.get(a).add(e.series);
   }
   const out = [];
-  for (const e of editions) {
+  for (let e of editions) {
     const a = authorKey(e);
+    // Begleitmaterial ohne Autor, das nur wie eine Reihe heißt – im Titel („Eragon“) oder Untertitel
+    // („Ruinen von Eriador : Der Herr der Ringe“, ein Rollenspiel-Band)
+    if (!a && (allSeries.has(titleKey(e.title)) || allSeries.has(titleKey(mainSubtitle(e.subtitle))))) continue;
+    // Reihenname vorne im Titel: „Percy Jackson - Diebe im Olymp“, „Percy Jackson in: Diebe im Olymp“,
+    // „Game of Thrones - das Erbe von Winterfell“ → eigentlicher Titel dahinter
+    if (a) {
+      for (const s of rawSeriesByAuthor.get(a) || []) {
+        const esc = s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+');
+        const m = e.title.match(new RegExp(`^${esc}\\s*(?:\\d{1,3}\\s*)?(?:in)?\\s*[-–:]\\s*(.{3,})$`, 'iu'));
+        if (m) {
+          const title = m[1].charAt(0).toUpperCase() + m[1].slice(1);
+          e = { ...e, title, sortTitle: title.replace(/^\s*(der|die|das|ein|eine)\s+/i, ''), series: e.series || s };
+          break;
+        }
+      }
+    }
     const t = titleKey(e.title);
-    if (!a && allSeries.has(t)) continue; // Begleitbuch ohne Autor
     if (a && seriesByAuthor.get(a)?.has(t)) {
       if (e.series && titleKey(e.series) !== t) {
         out.push({ ...e, title: e.series, sortTitle: e.series.replace(/^\s*(der|die|das|ein|eine)\s+/i, ''), series: e.title, volume: '' });
@@ -113,9 +131,18 @@ export function groupEditions(editions) {
 
   const byKey = new Map();
   const byIsbn = new Map();
+  // Gleicher Autor + gleiche Reihe + gleiche Bandnummer = dasselbe Buch, auch bei anderem Titel –
+  // z. B. zwei Übersetzungen („Die Wiederkehr des Königs“ / „Die Rückkehr des Königs“, Herr der Ringe 3).
+  // Nur mit Autor: ohne Autor sind Bandnummern in der DNB zu oft doppelt vergeben (Star Wars Jedi-Padawan 7).
+  const byVolume = new Map();
   editions.forEach((e, i) => {
     const k = workKeyOf(e);
     if (byKey.has(k)) union(i, byKey.get(k)); else byKey.set(k, i);
+    const a = authorKey(e);
+    if (a && e.series && e.volume && !e.isComic) {
+      const v = `${a}|${titleKey(e.series)}|${Number(e.volume)}`;
+      if (byVolume.has(v)) union(i, byVolume.get(v)); else byVolume.set(v, i);
+    }
     for (const isbn of e.isbns) {
       if (byIsbn.has(isbn)) union(i, byIsbn.get(isbn)); else byIsbn.set(isbn, i);
     }

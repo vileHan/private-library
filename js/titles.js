@@ -1,0 +1,64 @@
+// Titel und Reihen aus DNB-Datensätzen aufräumen (genutzt von js/dnb.js beim Einlesen).
+// Hintergrund: Analyse 11/2026 – dasselbe Buch erschien mehrfach, weil Titel Zusätze trugen:
+//   „Harry Potter und der Stein der Weisen - Ausgabe zur TV-Serie“, „Das Wunder von Narnia – Taschenbuch mit Filmcover“,
+//   „Der König von Narnia : [der Fantasy-Bestseller …“, „Der Herr der Ringe. Bd. 1 - Die Gefährten“,
+//   „Percy Jackson 1: Diebe im Olymp“; dazu Verlagsreihen wie „Carlsen 690“ als vermeintliche Buchreihe.
+import { normalizeText } from './works.js';
+
+// Ausgabe-Zusätze (nur mit Trennzeichen davor oder in Klammern – „Die letzte Ausgabe“ bleibt unangetastet)
+const EDITION = '(?:sonder|schmuck|jubiläums|neu|geschenk|film|lizenz|luxus|serien|tv|taschenbuch|sammler|pracht|deluxe|jahres)?ausgabe'
+  + '|mit filmcover|filmcover|zum kinofilm|zur (?:tv-)?serie|neuübersetzung|in neuer übersetzung';
+const EDITION_TAIL = new RegExp(`\\s*[-–:.]\\s+[^-–:]*?(?:${EDITION})[^-–:]*$`, 'iu');
+const EDITION_PAREN = new RegExp(`\\s*\\((?=[^()]*(?:\\bband\\b|\\bbd\\.|${EDITION}))[^()]*\\)\\s*$`, 'iu');
+
+/** Entfernt Werbetexte in eckigen Klammern, „[u.a.]“-Zusätze und Ausgabe-Hinweise. */
+export function cleanTitle(s = '') {
+  let t = s;
+  t = t.replace(/\s*\[u\.\s?a\.\]?.*$/i, '');   // „Von Idioten umzingelt [u.a.] : zwei Comic-Romane“
+  t = t.replace(/\s*:?\s*\[.*$/, '');            // „Der König von Narnia : [der Fantasy-Bestseller …“
+  t = t.replace(EDITION_PAREN, '');              // „(Disney+ Sonderausgabe …)“, „(Die Chroniken von Narnia, Band 2)“
+  t = t.replace(EDITION_TAIL, '');               // „ - Neuausgabe 2012“, „. Ausgabe in neuer Übersetzung …“
+  t = t.trim();
+  return t || s.trim();
+}
+
+/** Sammelband mit mehreren Titeln („[u.a.]“) – kein einzelnes Buch. */
+export function isBundleTitle(s = '') {
+  return /\[u\.\s?a\.\]?/i.test(s);
+}
+
+/**
+ * Bandangabe vorne im Titel: „Der Herr der Ringe. Bd. 1 - Die Gefährten“, „Percy Jackson 1: Diebe im Olymp“,
+ * „Gregs Tagebuch 12 - Und tschüss!“ → { series, volume, title }. Ohne „Bd./Band“ nur bei mehrwortigen Reihennamen
+ * und höchstens zweistelligen Nummern („Fahrenheit 451: …“, „Catch 22: …“ bleiben unangetastet).
+ */
+export function splitVolumePrefix(s = '') {
+  const m = s.match(/^(.{3,}?)[.,]?\s+(bd\.|band|teil)?\s*(\d{1,2})\s*[-–:]\s+(.{2,})$/i);
+  if (!m) return null;
+  const [, series, keyword, volume, title] = m;
+  if (!keyword && series.trim().split(/\s+/).length < 2) return null;
+  return { series: series.trim(), volume, title: title.trim() };
+}
+
+/** Gleiche Reihe? (normalisiert, eine darf mit der anderen beginnen: „Der Herr der Ringe“ ~ „Der Herr der Ringe. …“) */
+export function sameSeries(a = '', b = '') {
+  const x = normalizeText(a).replace(/^(der|die|das|the)\s+/, '');
+  const y = normalizeText(b).replace(/^(der|die|das|the)\s+/, '');
+  return !!x && !!y && (x === y || x.startsWith(`${y} `) || y.startsWith(`${x} `));
+}
+
+// Verlagsreihen und -programme mit Bestellnummer, die keine Buchreihen sind („Carlsen 690“, „Reclams Universal-Bibliothek 18“)
+const IMPRINTS = /^(carlsen|reclams?|action|insel|dtv|heyne|goldmann|ullstein|fischer|rororo|blanvalet|btb|cbj|cbt|knaur|piper|diogenes|suhrkamp|arena|oetinger|ravensburger|loewe|thienemann|bastei|luebbe|aufbau|droemer|penhaligon|lyx|klett|cornelsen|hamburger lesehefte?)\b/;
+
+/** Ist die „Reihe“ eigentlich eine Verlagsreihe? */
+export function isPublisherSeries(series = '', publisher = '') {
+  if (!series) return false;
+  if (/^\s*\.\.\./.test(series)) return true; // „... Druck der Mariannenpresse“
+  const s = normalizeText(series);
+  if (IMPRINTS.test(s)) return true;
+  const pubWord = normalizeText(publisher).split(' ').find((w) => w.length >= 4);
+  return !!pubWord && s.split(' ')[0] === pubWord;
+}
+
+/** Erster Buchstabe groß („das Erbe von Winterfell“ → „Das Erbe von Winterfell“) */
+export const capitalize = (s = '') => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);

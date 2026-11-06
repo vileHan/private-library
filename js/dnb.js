@@ -2,6 +2,7 @@
 import { CONFIG } from './config.js';
 import { normalizeIsbn } from './isbn.js';
 import { classify } from './classify.js';
+import { cleanTitle, splitVolumePrefix, sameSeries, isPublisherSeries, capitalize } from './titles.js';
 
 const MARC_NS = 'http://www.loc.gov/MARC21/slim';
 
@@ -184,6 +185,21 @@ export function parseRecord(rec) {
 
   const pub = fields(rec, '264').find((f) => f.getAttribute('ind2') === '1') || fields(rec, '260')[0];
   const publisher = pub ? tidy(sub(pub, 'b')) : '';
+
+  // Titel aufräumen (js/titles.js): Werbetexte, „[u.a.]“, Ausgabe-Zusätze; Bandangabe vorne im Titel erkennen
+  const titleRaw = title;
+  title = cleanTitle(title);
+  sortTitle = cleanTitle(sortTitle);
+  seriesFromTitle = cleanTitle(seriesFromTitle);
+  const pre = splitVolumePrefix(title);
+  if (pre && (!seriesFromTitle || sameSeries(pre.series, seriesFromTitle))) {
+    seriesFromTitle = seriesFromTitle || pre.series;
+    volume = volume || pre.volume;
+    title = capitalize(pre.title);
+    sortTitle = title.replace(/^(der|die|das|ein|eine)\s+/i, '');
+  }
+  // Verlagsreihen („Carlsen 690“, „Reclams Universal-Bibliothek“) sind keine Buchreihen
+  if (isPublisherSeries(seriesFromTitle, publisher)) { seriesFromTitle = ''; volume = ''; }
   let year = Number((pub ? sub(pub, 'c') : '').match(/\d{4}/)?.[0] || 0);
   if (!year) year = Number(control(rec, '008').slice(7, 11)) || null;
 
@@ -220,6 +236,7 @@ export function parseRecord(rec) {
     authors: authorsRaw.filter(Boolean).map(displayName),
     authorsSort: authorsRaw.filter(Boolean),
     title,
+    titleRaw, // ungekürzt – für Regeln wie „[u.a.]“ (Sammelband) in js/classify.js
     sortTitle,
     subtitle,
     workTitle,

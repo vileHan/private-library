@@ -84,8 +84,20 @@ Zusätzlich zum DNB-Filter fliegen beim Import (und in der DNB-Live-Suche) herau
 - **Zeitschriftenhefte** („Hot Topic!, 2024, 5“).
 - **Titel = Reihenname** desselben Autors („Eragon“): eigentlicher Titel aus Untertitel bzw. Reihenangabe (`fixSeriesTitles` in works.js). Begleitbücher **ohne Autor**, die nur wie eine Reihe heißen, entfallen.
 - **Umlaute**: Die DNB liefert sie oft zerlegt (u + ¨) → beim Einlesen per NFC zusammensetzen, sonst greifen Regeln mit Umlauten nicht.
-- **Tests**: `tests/cases.js` (28 Fälle gegen echte DNB-Datensätze). Im Browser `http://localhost:8080/tests/index.html`, auf GitHub Workflow „Tests“ (läuft bei jedem Push). Neue Grenzfälle dort ergänzen.
+- **Tests**: `tests/cases.js` (36 Fälle gegen echte DNB-Datensätze, inkl. Herr der Ringe, Percy Jackson, Hobbit, Narnia, Biss). Im Browser `http://localhost:8080/tests/index.html`, auf GitHub Workflow „Tests“ (läuft bei jedem Push). Neue Grenzfälle dort ergänzen.
 - Stichprobe 11/2026: Die Regeln entfernen ~13 % der Ausgaben, bei 1.787 geprüften Ausgaben ohne erkennbaren Fehlgriff.
+
+## Analyse 11/2026: Franchises (Herr der Ringe, Hobbit, Harry Potter, Percy Jackson, Narnia …)
+
+- **Titel aufräumen** (`js/titles.js`, beim Einlesen): Werbetext in eckigen Klammern („ : [der Fantasy-Bestseller …“), „[u.a.]“, Ausgabe-Zusätze nach Trennzeichen oder in Klammern („- Ausgabe zur TV-Serie“, „– Taschenbuch mit Filmcover“, „- Neuausgabe 2012“, „(Disney+ Sonderausgabe)“). „Die letzte Ausgabe“ ohne Trennzeichen bleibt.
+- **Bandangabe im Titel**: „Der Herr der Ringe. Bd. 1 - Die Gefährten“, „Percy Jackson 1: Diebe im Olymp“ → Reihe + Band + Titel (ohne „Bd.“ nur bei mehrwortigen Reihen und max. 2-stelligen Nummern).
+- **Reihenname vorne im Titel** abschneiden, wenn derselbe Autor diese Reihe hat („Percy Jackson – Diebe im Olymp“, „Game of Thrones – das Erbe von Winterfell“).
+- **Gleicher Autor + gleiche Reihe + gleiche Bandnummer = ein Werk** (zwei Übersetzungen: „Die Wiederkehr/Rückkehr des Königs“). Nur mit Autor.
+- **Verlagsreihen** („Carlsen 690“, „Reclams Universal-Bibliothek“, „Heyne“ …) gelten nicht als Reihe (`isPublisherSeries`).
+- **Fan-/Film-/Begleitmaterial unabhängig von der Gattung raus**: (in)offiziell, Fanbuch, Filmbuch, Begleitbuch, „aus den Filmen“, Filmzitate, „unnützes Wissen“, Rollenspiel, Sichtschirm, Sticker-Buch, Pop-up, Schülerkalender, Reiseführer, Hobbit-Enzyklopädie/„Lexikon zu …“, Schuber, Box. Ohne Autor + Untertitel = bekannte Reihe → raus. „Roman zum Film“ bleibt (echte Geschichte mit Filmcover).
+- **Sammelbände** („[u.a.]“, „I-VII“) raus; einbändige Gesamtausgaben („Der Herr der Ringe“ in einem Band) bleiben.
+- **„Die drei ???“**: `normalizeText` macht aus „???“ das Wort „fragezeichen“ (sonst nicht suchbar).
+- Gegenprobe an 1.779 Ausgaben: nur 4 zusätzliche Ausschlüsse (Geschenk-Boxen, Sammelband), kein Roman. Tests: 36.
 
 ## Werke statt Ausgaben
 
