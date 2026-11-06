@@ -78,7 +78,11 @@ button, input, select { font: inherit; color: inherit; }
 /* ---------- Cover-Raster (Einstellung oben rechts) ---------- */
 body.grid-view #results, body.grid-view #libList { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 body.grid-view #results > :not(.book), body.grid-view #libList > :not(.book) { grid-column: 1 / -1; }
-body.grid-view :is(#results, #libList) > .book { display: flex; flex-direction: column; gap: 8px; padding: 0; background: none; border: 0; position: relative; }
+/* Raster: dünner heller Rahmen um Cover + Knöpfe (grün = im Besitz, gold = gemerkt) – wie in der Liste */
+body.grid-view :is(#results, #libList) > .book { display: flex; flex-direction: column; gap: 8px; padding: 6px; background: none; position: relative;
+  border: 1px solid color-mix(in srgb, var(--text) 32%, transparent); border-radius: 12px; }
+body.grid-view :is(#results, #libList) > .book.owned { border-color: var(--accent); }
+body.grid-view :is(#results, #libList) > .book.wished { border-color: var(--gold); }
 body.grid-view :is(#results, #libList) > .book .cover { width: 100%; height: auto; aspect-ratio: 2 / 3; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,.18); }
 body.grid-view :is(#results, #libList) > .book .cover .ph { font-size: 2.4rem; }
 body.grid-view :is(#results, #libList) > .book .info, body.grid-view :is(#results, #libList) > .book .more-btn { display: none; }
@@ -162,7 +166,7 @@ input[type="search"]:focus, select:focus { outline: 2px solid var(--accent); out
 .book > .actions .more-btn:active { background: var(--accent-soft); }
 .book .title { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .book .author, .book .meta { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.book.owned { border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); }
+.book.owned { border-color: var(--accent); }
 
 .cover {
   position: relative; width: 80px; height: 120px; border-radius: 6px; overflow: hidden;
@@ -189,8 +193,8 @@ input[type="search"]:focus, select:focus { outline: 2px solid var(--accent); out
 .toggle[aria-pressed="true"]::before { content: "●"; }
 .toggle.read::before { content: "□"; }
 .toggle.read[aria-pressed="true"]::before { content: "■"; }
-.toggle.own[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
-.toggle.read[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); }
+/* Einheitlich: angewählt = leicht gefüllt + farbiger Rand (Farben feilen wir später) */
+.toggle.own[aria-pressed="true"], .toggle.read[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); }
 .link { border: 0; background: none; color: var(--accent); padding: 4px 2px; font-size: .85rem; cursor: pointer; text-decoration: underline; }
 
 .editions { list-style: none; margin: 8px 0 0; padding: 0; font-size: .82rem; border-top: 1px solid var(--line); }
@@ -200,8 +204,8 @@ input[type="search"]:focus, select:focus { outline: 2px solid var(--accent); out
 
 .toggle.wish::before { content: "♡"; }
 .toggle.wish[aria-pressed="true"]::before { content: "♥"; }
-.toggle.wish[aria-pressed="true"] { border-color: var(--gold); color: var(--gold); }
-.book.wished { border-color: color-mix(in srgb, var(--gold) 55%, var(--line)); }
+.toggle.wish[aria-pressed="true"] { background: color-mix(in srgb, var(--gold) 20%, transparent); border-color: var(--gold); }
+.book.wished { border-color: var(--gold); } /* gemerkt, aber nicht im Besitz */
 
 .links { display: flex; gap: 12px; margin-top: 2px; }
 .extras { display: inline-flex; flex-wrap: wrap; gap: 4px; margin-left: 6px; vertical-align: middle; }

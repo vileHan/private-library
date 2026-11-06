@@ -290,7 +290,7 @@ function openSheet(ctx) {
     return b;
   };
   const bar = el('div', { class: 'actions sheet-actions' },
-    toggle('own', 'Besitze ich', actions.own(work)), toggle('read', 'Gelesen', actions.read()), toggle('wish', 'Merken', actions.wish()));
+    toggle('own', 'Besitze', actions.own(work)), toggle('read', 'Gelesen', actions.read()), toggle('wish', 'Merken', actions.wish()));
 
   // Ausgaben: Häkchen für jede Ausgabe, die ich besitze (Details werden bei Bedarf von der DNB geladen)
   let editions = (work.editions || []).filter((ed) => ed.isbn);
