@@ -88,6 +88,28 @@ export const catalog = {
     return text;
   },
 
+  /** Alle Bücher eines Autors (A–Z, max. 500). Ohne Datenbank: DNB-Suche nach dem Namen. */
+  async authorWorks(author) {
+    if (useDb()) {
+      try {
+        const tokens = normalizeText(author).split(' ').filter((t) => t.length >= 2);
+        return (await rpc('author_works', { author, tokens })).map(toWork);
+      } catch (err) {
+        console.warn('Datenbank nicht erreichbar, suche Autor live bei der DNB:', err);
+      }
+    }
+    const res = await searchDnb(author, 1);
+    return groupEditions(res.editions).filter((w) => (w.authors || []).includes(author));
+  },
+
+  /** Beliebteste Bücher eines Stöber-Genres (js/genres.js), seitenweise. Nur mit Datenbank. */
+  async browseGenre(group, cursor = 0, signal) {
+    const rows = await rpc('browse_genre', { grp: group, lim: PAGE, off: cursor }, signal);
+    return { works: rows.map(toWork), next: rows.length === PAGE ? cursor + PAGE : null };
+  },
+
+  get canBrowse() { return useDb(); },
+
   /** Alle Bände einer Reihe als Werke. */
   async seriesWorks(series, authorSort) {
     if (useDb()) {

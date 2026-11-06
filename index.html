@@ -48,7 +48,12 @@
           </svg>
         </button>
       </form>
+      <div id="browseBar" class="browse-bar" hidden>
+        <button id="browseBack" class="browse-back" type="button" aria-label="Zurück">‹</button>
+        <div><span id="browseKind" class="browse-kind"></span><h2 id="browseTitle" class="browse-title"></h2></div>
+      </div>
       <p class="status" id="searchStatus" aria-live="polite">Suche nach einem Buch – deine eigenen Bücher erscheinen immer oben.</p>
+      <div id="genreChips" class="genre-chips" hidden></div>
       <div id="results" class="list"></div>
       <button id="moreBtn" class="more" hidden>Mehr laden</button>
     </section>

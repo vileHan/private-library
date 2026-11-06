@@ -236,12 +236,81 @@ as $$
   order by volume nulls last, year;
 $$;
 
+-- Alle Werke eines Autors (Autorenseite, A–Z). tokens = normalisierte Namensteile (normalizeText) für den
+-- Volltextindex, author = Name genau wie in authors[] (filtert Namensvettern und Titeltreffer heraus).
+drop function if exists author_works(text, text[]);
+create function author_works(author text, tokens text[])
+returns setof works
+language plpgsql stable
+set search_path = public
+as $$
+declare
+  t text[];
+begin
+  t := array(select y from (select regexp_replace(x, '[^a-z0-9]', '', 'g') as y from unnest(tokens) x) s where length(y) >= 2);
+  if coalesce(array_length(t, 1), 0) = 0 then
+    return;
+  end if;
+  return query
+    select * from works w
+    where to_tsvector('simple', w.search_title || ' ' || w.search_author) @@ to_tsquery('simple', array_to_string(t, ' & '))
+      and author = any(w.authors)
+    order by coalesce(w.sort_title, w.title), w.year
+    limit 500;
+end;
+$$;
+
+-- Stöbern nach Genre (11/2026): Die DNB kennt ~150 Gattungsbegriffe („Fantasy“, „Fantastische Literatur“,
+-- „Epische Fantasy (High Fantasy)“ …). Sie werden zu 14 Stöber-Genres zusammengefasst – dieselbe Liste steht
+-- in js/genres.js (Reihenfolge zählt: „Historische Kriminalromane“ → Krimis). Stichprobe 12.000 Werke: 0,5 % „Sonstiges“.
+create or replace function genre_group(g text)
+returns text
+language sql immutable parallel safe
+as $$
+  select case
+    when g is null or g = '' then null
+    when g ~* 'comic|manga|graphic novel|bildergeschichte' then 'Comics & Manga'
+    when g ~* '\mkrimi|thriller|spannung|spionage|mystery|detektiv|noir' then 'Krimis & Thriller'
+    when g ~* 'science.?fiction|dystop|cyberpunk|space opera' then 'Science-Fiction'
+    when g ~* 'fantasy|fantastisch|märchen|mythen|sagen|magisch' then 'Fantasy'
+    when g ~* 'horror|grusel|unheimlich|gothic' then 'Horror'
+    when g ~* 'liebes|romance|erotik|erotisch|romantisch|new adult' then 'Liebesromane'
+    when g ~* 'histori' then 'Historische Romane'
+    when g ~* 'humor|satire|komisch|cartoon|witz' then 'Humor & Satire'
+    when g ~* 'abenteuer|western|wildwest|seefahrt' then 'Abenteuer'
+    when g ~* 'lyrik|dramatik|gedicht|poesie|drama|libretti|ballade' then 'Lyrik & Drama'
+    when g ~* 'biogra|memoir|erinnerung' then 'Biografische Romane'
+    when g ~* 'kinder|bilderb|erstlese|vorlese|bis 11|vorschul' then 'Kinderbücher'
+    when g ~* 'jugend|ab 12|young adult' then 'Jugendbücher'
+    when g ~* 'erzähl|gegenwart|belletristik|roman|klassi|unterhaltung|anthologie|literatur|novelle|kurzgeschicht|zweisprachig' then 'Romane & Erzählungen'
+    else 'Sonstiges'
+  end;
+$$;
+
+-- Index für „beliebteste zuerst“ je Genre. Ohne ihn liest jede Stöber-Seite die ganze Tabelle (> 3 s, gemessen).
+-- Größe ~15–25 MB (400.000 Einträge à ~40 Byte).
+create index if not exists works_genre_pop_idx on works (genre_group(genre), popularity(works) desc);
+
+drop function if exists browse_genre(text, int, int);
+create function browse_genre(grp text, lim int default 50, off int default 0)
+returns setof works
+language sql stable
+set search_path = public
+as $$
+  select * from works w
+  where genre_group(w.genre) = grp
+  order by popularity(w) desc
+  limit least(lim, 100) offset off;
+$$;
+
 drop function if exists works_by_isbns(text[]);
 
 grant usage on schema public to anon, authenticated;
 grant select on works to anon, authenticated;
 grant execute on function search_works(text[], int, int) to anon, authenticated;
 grant execute on function series_works(text, text) to anon, authenticated;
+grant execute on function author_works(text, text[]) to anon, authenticated;
+grant execute on function browse_genre(text, int, int) to anon, authenticated;
 
 -- ISBN → Open-Library-Cover-ID (nur deutsche ISBNs 978-3…), gefüllt vom Workflow „Cover-IDs“ (scripts/covers.mjs).
 -- Getrennt vom Katalog-Import, weil der Open-Library-Export je nach Server 2–5 Stunden zum Herunterladen braucht.

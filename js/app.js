@@ -9,6 +9,7 @@ import { renderStats } from './stats.js';
 import { $, el, fmt, plural } from './util.js';
 import { scanIsbn } from './scan.js';
 import { settings } from './settings.js';
+import { GENRES } from './genres.js';
 
 onLibraryChange(() => {
   const owned = [...library.byKey.values()].filter((e) => e.owned).length;
@@ -119,6 +120,7 @@ function renderResults() {
 }
 
 async function runSearch(query, append = false) {
+  if (!append) { endBrowse(false); $('#genreChips').hidden = true; }
   search.controller?.abort();
   const controller = new AbortController();
   search.controller = controller;
@@ -158,7 +160,7 @@ $('#searchForm').addEventListener('submit', (ev) => {
   $('#searchInput').blur();
   runSearch(q);
 });
-$('#moreBtn').addEventListener('click', () => runSearch(search.query, true));
+$('#moreBtn').addEventListener('click', () => (browse.mode ? loadBrowse(true) : runSearch(search.query, true)));
 
 // ---------- Live-Suche: Treffer erscheinen beim Tippen ----------
 // Ab 3 Buchstaben, 500 ms nach dem letzten Tastendruck, dieselbe Suche wie mit der Lupe (ohne Tastatur zu schließen).
@@ -177,6 +179,142 @@ $('#searchInput').addEventListener('input', () => {
   }, 500);
 });
 $('#searchForm').addEventListener('submit', cancelLive);
+
+// ---------- Stöbern: Autorenseite und Genres ----------
+// Läuft im Such-Tab: Leiste „‹ Zurück · Titel“ über der Liste. „Zurück“ stellt die vorherige Suche wieder her.
+// Ohne Suche zeigt der Such-Tab die Genre-Knöpfe (nur mit Datenbank – sie sortiert nach Beliebtheit).
+const browse = { mode: null, value: '', works: [], next: null, saved: null, controller: null };
+
+function renderGenreChips() {
+  const box = $('#genreChips');
+  const show = catalog.canBrowse && !browse.mode && !search.query;
+  box.hidden = !show;
+  if (!show || box.childElementCount) return;
+  box.append(el('h2', { class: 'section-title', text: 'Stöbern nach Genre' }),
+    el('div', { class: 'chips' }, ...GENRES.map(([name]) => el('button', {
+      type: 'button', class: 'chip', text: name, onclick: () => startBrowse('genre', name),
+    }))));
+}
+
+function renderBrowse() {
+  const box = $('#results');
+  box.replaceChildren();
+  $('#browseBar').hidden = false;
+  $('#browseTitle').textContent = browse.value;
+  $('#browseKind').textContent = browse.mode === 'author' ? 'Autor' : 'Genre';
+  const status = $('#searchStatus');
+  status.classList.remove('error');
+  let list = browse.works;
+  if (browse.mode === 'author') {
+    // Eigene Bücher oben (auch solche, die nur per ISBN in die Bibliothek kamen), Reihen zusammen, sonst A–Z
+    const seen = new Set();
+    const owned = [], others = [];
+    for (const w of list) {
+      const e = entryFor(w);
+      if (e) seen.add(e.key);
+      (e?.owned ? owned : others).push(w);
+    }
+    for (const e of library.byKey.values()) {
+      if (e.owned && !seen.has(e.key) && (e.authors || []).includes(browse.value)) owned.push(e);
+    }
+    owned.sort(compareTitle);
+    orderSeries(owned);
+    orderSeries(others);
+    if (owned.length) {
+      box.append(el('h2', { class: 'section-title', text: `In deinem Besitz (${owned.length})` }));
+      for (const w of owned) box.append(bookCard(w));
+      if (others.length) box.append(el('h2', { class: 'section-title', text: `Weitere Bücher (${others.length})` }));
+    }
+    for (const w of others) box.append(bookCard(w));
+    list = [...owned, ...others];
+    status.textContent = `${plural(list.length, 'Buch', 'Bücher')}, A–Z${list.length >= 500 ? ' (die ersten 500)' : ''}.`;
+  } else {
+    for (const w of list) box.append(bookCard(w));
+    status.textContent = 'Die beliebtesten zuerst.';
+  }
+  if (!list.length) box.append(el('p', { class: 'empty', text: 'Keine Bücher gefunden.' }));
+  const more = $('#moreBtn');
+  more.hidden = !browse.next;
+  more.disabled = false;
+  more.textContent = 'Mehr laden';
+}
+
+async function loadBrowse(append = false) {
+  browse.controller?.abort();
+  const controller = new AbortController();
+  browse.controller = controller;
+  const status = $('#searchStatus');
+  if (append) { $('#moreBtn').disabled = true; $('#moreBtn').textContent = 'Lädt …'; } else status.textContent = 'Lädt …';
+  try {
+    if (browse.mode === 'author') {
+      browse.works = await catalog.authorWorks(browse.value);
+      browse.next = null;
+    } else {
+      const res = await catalog.browseGenre(browse.value, append ? browse.next : 0, controller.signal);
+      browse.works = append ? [...browse.works, ...res.works] : res.works;
+      browse.next = res.next;
+    }
+    if (controller.signal.aborted || !browse.mode) return;
+    renderBrowse();
+  } catch (err) {
+    if (err.name === 'AbortError') return;
+    status.classList.add('error');
+    status.textContent = `Laden hat nicht geklappt: ${err.message}`;
+    $('#moreBtn').disabled = false;
+    $('#moreBtn').textContent = 'Erneut versuchen';
+  }
+}
+
+function startBrowse(mode, value) {
+  cancelLive();
+  search.controller?.abort();
+  // Vorherigen Zustand merken (nur beim ersten Schritt – Autor → Genre → Autor führt trotzdem zur Suche zurück)
+  if (!browse.mode) browse.saved = { input: $('#searchInput').value, query: search.query, scroll: window.scrollY };
+  Object.assign(browse, { mode, value, works: [], next: null });
+  showView('search');
+  $('#results').replaceChildren();
+  $('#moreBtn').hidden = true;
+  renderGenreChips();
+  $('#browseBar').hidden = false;
+  $('#browseKind').textContent = mode === 'author' ? 'Autor' : 'Genre';
+  $('#browseTitle').textContent = value;
+  loadBrowse();
+}
+
+function endBrowse(restore = true) {
+  if (!browse.mode) return;
+  browse.controller?.abort();
+  const saved = browse.saved;
+  Object.assign(browse, { mode: null, value: '', works: [], next: null, saved: null });
+  $('#browseBar').hidden = true;
+  if (!restore) return;
+  $('#searchInput').value = saved?.input || '';
+  if (search.query) {
+    renderResults();
+    window.scrollTo(0, saved?.scroll || 0);
+  } else {
+    $('#results').replaceChildren();
+    $('#moreBtn').hidden = true;
+    $('#searchStatus').textContent = DEFAULT_STATUS;
+  }
+  renderGenreChips();
+}
+
+const DEFAULT_STATUS = $('#searchStatus').textContent;
+$('#browseBack').addEventListener('click', () => endBrowse());
+document.addEventListener('browse', (ev) => startBrowse(ev.detail.mode, ev.detail.value));
+// Suchfeld geleert (auch per ✕ im Feld) → zurück zur Startansicht mit den Genres
+$('#searchInput').addEventListener('input', () => {
+  if ($('#searchInput').value.trim()) return;
+  endBrowse(false);
+  search.controller?.abort();
+  Object.assign(search, { query: '', editions: [], works: [], total: 0, next: null });
+  $('#results').replaceChildren();
+  $('#moreBtn').hidden = true;
+  $('#searchStatus').classList.remove('error');
+  $('#searchStatus').textContent = DEFAULT_STATUS;
+  renderGenreChips();
+});
 
 // ---------- Barcode-Scan ----------
 $('#scanBtn').addEventListener('click', async () => {
@@ -293,6 +431,7 @@ $('#importInput').addEventListener('change', async (ev) => {
   try {
     const n = await importJson(await file.text());
     await loadLibrary();
+renderGenreChips();
     renderSub();
     alert(`${n} Einträge übernommen.`);
   } catch (err) {
@@ -309,6 +448,7 @@ function showView(name) {
     $(`#view-${btn.dataset.view}`).hidden = !active;
   }
   if (name === 'library') renderSub();
+  else if (browse.mode) renderBrowse();
   else if (search.query) renderResults();
   window.scrollTo(0, 0);
 }

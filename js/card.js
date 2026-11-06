@@ -5,6 +5,7 @@ import { entryFor, updateEntry, allTags } from './library.js';
 import { ownedIsbnsOf } from './store.js';
 import { formatIsbn } from './isbn.js';
 import { $, el, escapeHtml, today, haptic, pop, switchToggle } from './util.js';
+import { genreGroup } from './genres.js';
 
 // Untertitel wie „Roman“ oder „Thriller“ sind nur Gattungsangaben – die stehen schon beim Genre.
 const GENERIC_SUBTITLE = /^(ein(e|en)?\s+)?([\wäöüß-]+\s+)?[\wäöüß-]*(roman|thriller|krimi|kriminalroman|erzählung|erzählungen|novelle|geschichten|gedichte)(\s.*)?$/i;
@@ -286,17 +287,28 @@ function openSheet(ctx) {
   let entry = ctx.getEntry();
 
   // Kopf: Cover, voller Titel, Autor, alle Angaben
+  // Autor und Genre führen zum Stöbern (Autorenseite bzw. beliebteste Bücher des Genres), siehe js/app.js
+  const browseTo = (mode, value) => {
+    sheetClose?.();
+    document.dispatchEvent(new CustomEvent('browse', { detail: { mode, value } }));
+  };
+  const link = (text, mode, value) => el('button', { type: 'button', class: 'link-btn', text, onclick: () => browseTo(mode, value) });
+  const group = catalog.canBrowse ? genreGroup(work.genre) : '';
   const facts = [
     work.series ? `Reihe: ${work.series}${work.volume ? `, Band ${work.volume}` : ''}` : null,
     work.year ? `Erschienen: ${work.year}` : null,
-    work.genre ? `Genre: ${work.genre}` : null,
+    work.genre ? el('span', {}, `Genre: ${work.genre}`, group ? el('br') : null, group ? link(`Mehr ${group} ›`, 'genre', group) : null) : null,
   ].filter(Boolean);
+  const authors = work.authors || [];
+  const authorLine = el('p', { class: 'author' });
+  if (!authors.length) authorLine.textContent = 'Unbekannter Autor';
+  authors.forEach((a, i) => authorLine.append(i ? ', ' : '', link(`${a} ›`, 'author', a)));
   const head = el('div', { class: 'sheet-head' },
     el('div', { class: 'cover' }, el('span', { class: 'ph' }), el('img', { alt: '', decoding: 'async' })),
     el('div', {},
       el('h2', { class: 'sheet-title', text: fullTitle(work) }),
-      el('p', { class: 'author', text: (work.authors || []).join(', ') || 'Unbekannter Autor' }),
-      el('ul', { class: 'sheet-facts' }, ...facts.map((t) => el('li', { text: t })))));
+      authorLine,
+      el('ul', { class: 'sheet-facts' }, ...facts.map((t) => el('li', {}, t)))));
   setCover(head, coverUrls(ownedIsbnsOf(entry), work.coverIds, work.coverIsbns || []), work.title);
 
   // Dieselben drei Knöpfe, ausgeschrieben
