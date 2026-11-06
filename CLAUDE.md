@@ -14,7 +14,7 @@ Commits laufen mit der GitHub-noreply-Adresse (in der lokalen Git-Konfiguration 
 
 - Suchfeld nach Titel, Autor oder ISBN. Die Treffer kommen aus der **eigenen Katalog-Datenbank in Supabase** (ISBN-Suchen und Ausfälle: live von der DNB).
 - Trefferliste: **Bücher in meinem Besitz ganz oben**, darunter der Rest. Innerhalb beider Blöcke **A–Z nach Titel** sortiert.
-- Nicht besessene Bücher werden **ausgegraut** dargestellt.
+- **Nichts wird ausgegraut** (verworfen, wirkte wie „nicht verfügbar“). Stattdessen Abzeichen am Cover: **grünes ✓ rechts oben = im Besitz, goldenes ♥ links oben = gemerkt** (wie Kindle/Steam). Im Raster größer.
 - Jeder Eintrag zeigt **Cover, Titel, Autor**, dazu Genre, Jahr und Verlag, soweit vorhanden.
 - Pro Buch: Häkchen **„besitze ich“** und **„gelesen“**. Die **Bewertung** (1–5 Sterne) ist vorbereitet, aber noch nicht zwingend.
 - Ansicht **„Meine Bibliothek“**: alle eigenen Bücher, A–Z, durchsuchbar und sortierbar (Titel, Autor, Jahr).
