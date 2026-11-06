@@ -310,18 +310,3 @@ body.sheet-open { overflow: hidden; }
   background: #222; color: #fff; padding: 10px 14px; border-radius: 12px; box-shadow: 0 6px 20px rgba(0,0,0,.3); font-size: .9rem;
 }
 .toast button { border: 0; background: none; color: #9fd9c6; font-weight: 700; font-size: .9rem; cursor: pointer; padding: 4px 0; }
-
-/* ---------- Abzeichen am Cover: ✓ = im Besitz (grün, rechts oben), ♥ = gemerkt (gold, links oben) ---------- */
-.cover .badge {
-  position: absolute; top: 4px; z-index: 3; display: none; place-items: center;
-  width: 20px; height: 20px; border-radius: 50%; font-size: 12px; font-weight: 800; line-height: 1;
-  box-shadow: 0 1px 4px rgba(0,0,0,.45); border: 2px solid #fff;
-}
-.cover .badge-own { right: 4px; background: #2f8a5f; color: #fff; }
-.cover .badge-wish { left: 4px; background: var(--gold); color: #fff; font-size: 11px; }
-/* Vorerst nur im Cover-Raster (dort steht kein Text) – in der Liste reicht der grüne Knopf */
-body.grid-view :is(#results, #libList) > .book.owned .cover .badge-own, body.grid-view :is(#results, #libList) > .book.wished .cover .badge-wish { display: grid; }
-/* Im Raster sind die Cover größer – Abzeichen mitwachsen lassen */
-body.grid-view :is(#results, #libList) > .book .cover .badge { width: 30px; height: 30px; top: 7px; font-size: 17px; border-width: 2.5px; }
-body.grid-view :is(#results, #libList) > .book .cover .badge-own { right: 7px; }
-body.grid-view :is(#results, #libList) > .book .cover .badge-wish { left: 7px; font-size: 15px; }
