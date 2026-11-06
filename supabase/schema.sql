@@ -116,8 +116,9 @@ begin
       -- Bekanntheit einer Reihe = Summe über alle ihre Bände (Harry Potter ≫ Harry Dresden)
       select h.*, sum(h.pop) over (partition by h.series, h.author_sort) as series_pop from hits h
     )
-    -- Reihenfolge: passende Reihe (nach Bekanntheit, in Bandfolge) > Titeltreffer > Autortreffer,
-    -- innerhalb davon bekannteste zuerst, bei Gleichstand A–Z
+    -- Reihenfolge: passende Reihe (nach Bekanntheit, in Bandfolge) > alle übrigen Treffer nach Bekanntheit,
+    -- bei Gleichstand A–Z. Titel- und Autortreffer zählen gleich – sonst stünden bei „fitzek“ Bücher mit
+    -- „nach einer Idee von Sebastian Fitzek“ im Untertitel vor Fitzeks eigenen Romanen.
     select h.id, h.title, coalesce(h.sort_title, h.title), h.subtitle, h.authors, h.author_sort,
            h.series, h.volume, h.year, h.genre, h.is_comic, h.isbns, h.cover_ids,
            h.rnk, count(*) over ()
@@ -126,7 +127,7 @@ begin
              case when h.series_hit then h.series_pop end desc,
              case when h.series_hit then h.author_sort end, case when h.series_hit then h.series end,
              case when h.series_hit then h.volume end nulls last, case when h.series_hit then h.year end,
-             h.rnk, h.pop desc, lower(coalesce(h.sort_title, h.title)), h.author_sort
+             h.pop desc, lower(coalesce(h.sort_title, h.title)), h.author_sort
     limit greatest(1, least(lim, 100)) offset greatest(0, off);
 
   get diagnostics n_hits = row_count;
