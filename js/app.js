@@ -431,7 +431,6 @@ $('#importInput').addEventListener('change', async (ev) => {
   try {
     const n = await importJson(await file.text());
     await loadLibrary();
-renderGenreChips();
     renderSub();
     alert(`${n} Einträge übernommen.`);
   } catch (err) {
@@ -456,6 +455,7 @@ document.querySelectorAll('.tabs button').forEach((b) => b.addEventListener('cli
 
 // ---------- Start ----------
 await loadLibrary();
+renderGenreChips();
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('sw.js').catch(() => {});
 }
