@@ -47,6 +47,19 @@ create table if not exists works (
 alter table works add column if not exists bestseller boolean not null default false;
 alter table works add column if not exists ol_readers integer not null default 0;
 
+-- Reihenname wie normalizeText (js/works.js) vereinfachen und führenden Artikel entfernen:
+-- „Die Tribute von Panem“ → „tribute von panem“, „Märchenmond“ → „maerchenmond“
+create or replace function norm_series(s text)
+returns text
+language sql immutable
+as $$
+  select regexp_replace(
+           trim(regexp_replace(
+             replace(replace(replace(replace(lower(s), 'ä', 'ae'), 'ö', 'oe'), 'ü', 'ue'), 'ß', 'ss'),
+             '[^a-z0-9]+', ' ', 'g')),
+           '^(der|die|das|ein|eine|the) ', '');
+$$;
+
 -- Bekanntheit eines Werks für die Sortierung: Ausgaben ×2, Bestseller +20, Leser logarithmisch (1.000 Leser ≈ +41)
 create or replace function popularity(w works)
 returns numeric
@@ -91,7 +104,7 @@ declare
   qf tsquery;
   phrase text;
   n_hits int;
-  cap constant int := 3000;  -- höchstens so viele Treffer werden sortiert (sonst > 3 s)
+  cap constant int := 1000;  -- höchstens so viele Treffer werden sortiert (3.000 waren bei „kind“ > 3 s)
 begin
   t := array(select y from (select regexp_replace(x, '[^a-z0-9]', '', 'g') as y from unnest(tokens) x) s where length(y) >= 2);
   core := array(select x from unnest(t) x where not x = any(stop));
@@ -109,8 +122,12 @@ begin
     with hits as (
       select w.*, case when to_tsvector('simple', w.search_title) @@ q then 0 else 1 end as rnk,
              -- Suche passt zur Reihe („eragon“, „harry potter“) → diese Reihe zuerst, in Bandfolge
-             -- nur ganze Wörter: „zeh“ soll nicht die Reihe „Die Zehn Reiche“ nach vorne holen
-             (w.series is not null and to_tsvector('simple', w.series) @@ qx) as series_hit,
+             -- Reihen-Vorrang nur, wenn der Reihenname mit der Eingabe beginnt (ohne Artikel):
+             -- „harry“ → Harry Potter, „eragon“ → Eragon, aber nicht „drache“ → „Nepomuk, der kleine Drache“
+             (w.series is not null and norm_series(w.series)
+                like phrase || '%') as series_hit,
+             -- ganze Wörter vor bloßen Wortanfängen („zeh“ → Juli Zeh vor „zehn Dialoge“)
+             (to_tsvector('simple', w.search_title || ' ' || w.search_author) @@ qx) as exact,
              popularity(w) as pop
       from works w
       where to_tsvector('simple', w.search_title || ' ' || w.search_author) @@ q
@@ -130,7 +147,7 @@ begin
              case when h.series_hit then h.series_pop end desc,
              case when h.series_hit then h.author_sort end, case when h.series_hit then h.series end,
              case when h.series_hit then h.volume end nulls last, case when h.series_hit then h.year end,
-             h.pop desc, lower(coalesce(h.sort_title, h.title)), h.author_sort
+             h.exact desc, h.pop desc, lower(coalesce(h.sort_title, h.title)), h.author_sort
     limit greatest(1, least(lim, 100)) offset greatest(0, off);
 
   get diagnostics n_hits = row_count;
