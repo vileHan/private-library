@@ -34,7 +34,7 @@ Commits laufen mit der GitHub-noreply-Adresse (in der lokalen Git-Konfiguration 
 - **Suchvorschläge** ab 3 Buchstaben (350 ms Pause, 6 Treffer, DB-Funktion `suggest_works`: Titelanfang > alle Wörter im Titel > viele Ausgaben). Ressourcen geprüft: ~3 KB je Abfrage, Supabase Free = unbegrenzte Anfragen, 5 GB Datenverkehr im Monat.
 - **Reihen in der Suche**: Passt die Suche zu einer Reihe, steht sie ganz oben in Bandfolge (in `search_works` und in der App `orderSeries`).
 - **Vor Änderungen an Suchlogik/Datenbank** immer Ressourcen (500 MB, 3-s-Grenze, Datenverkehr) prüfen und bei größeren Änderungen vorher nachfragen.
-- Schema-Änderungen ohne Datenimport: Workflow **„Datenbankschema“** (~1 Minute, darf parallel zu einem Import laufen).
+- Schema-Änderungen ohne Datenimport: Workflow **„Datenbankschema“** (~1 Minute, darf parallel zu einem Import laufen). **Achtung:** Ein laufender Import spielt beim Schreiben das Schema aus seinem Startzeitpunkt ein. Wurde das Schema währenddessen geändert, danach „Datenbankschema“ noch einmal starten.
 
 ## Bewusst später
 
@@ -112,7 +112,7 @@ Ziel: Die Daten werden **einmal aufbereitet** und nicht bei jeder Suche neu.
   - **Eine Tabelle `works`**. Ausgaben stehen nur als `isbns bigint[]` darin. Details (Verlag, Bindung, Jahr) lädt die App beim Antippen von „N Ausgaben“ live von der DNB (`editionsByIsbns`).
   - **Volltextindex** (`to_tsvector('simple', search_title || ' ' || search_author)`) für die Suche nach Wortanfängen. **Kein Trigramm-Index**: der war ~4× größer und hätte die 500 MB gesprengt.
   - Tippfehler: `search_works` sucht nur bei **0 Treffern** per `word_similarity` (ohne Index).
-  - **Stand nach dem Vollimport (05.11.2026): 456.514 Werke, Datenbank 213 MB** von 500 MB. 51.813 Werke haben eine Open-Library-Cover-ID (~11 %), der Rest läuft über Google. Der Import dauert ~3,5 h (DNB ~1,5 h, Open-Library-Export ~2 h).
+  - **Stand nach dem Import mit Katalogregeln (06.11.2026): 400.279 Werke (58.226 Nicht-Bücher entfernt), Datenbank 284 MB** von 500 MB (inkl. Platz aus Aktualisierungen, den Postgres wiederverwendet). 51.813 Werke haben eine Open-Library-Cover-ID (~11 %), der Rest läuft über Google. Der Import dauert ~3,5 h (DNB ~1,5 h, Open-Library-Export ~2 h).
   - **Supabase bricht öffentliche Anfragen nach 3 s ab.** Deshalb ignoriert `search_works` Füllwörter (der, die, und …), deckelt die Treffermenge bei 3.000 und sucht Tippfehler nur unter Werken mit gleichen Wortanfängen (Index). Alle Testsuchen liegen bei 0,1–0,3 s.
   - Schema ändern ohne Daten neu zu laden: Import-Workflow mit „Nur das Datenbankschema aktualisieren“.
 - **Werke ohne ISBN** werden nicht importiert (~13 %: Buchclub-Ausgaben, Heftromane, Selbstverlage, Merchandise, Katalog-Sammeleinträge).
