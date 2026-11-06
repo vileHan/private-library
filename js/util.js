@@ -45,7 +45,23 @@ export function switchToggle(cls, text) {
   label.setAttribute('aria-pressed', 'false');
   label.innerHTML = '<input type="checkbox" switch class="haptic-switch"><span class="lbl"></span>';
   label.querySelector('.lbl').textContent = text;
-  label.querySelector('input').setAttribute('aria-label', text);
+  const input = label.querySelector('input');
+  input.setAttribute('aria-label', text);
+  // iOS-Schalter lassen sich auch durch Darüberwischen umlegen – dann ohne Haptik und ungewollt
+  // (z. B. beim Scrollen oder Herunterziehen des Detailblatts). Bewegt sich der Finger mehr als
+  // 10 px, wird die Änderung zurückgenommen. Dieser Lauscher kommt zuerst und stoppt die übrigen.
+  let x0 = 0, y0 = 0, moved = false;
+  label.addEventListener('touchstart', (e) => { const t = e.touches[0]; x0 = t.clientX; y0 = t.clientY; moved = false; }, { passive: true });
+  label.addEventListener('touchmove', (e) => {
+    const t = e.touches[0];
+    if (Math.hypot(t.clientX - x0, t.clientY - y0) > 10) moved = true;
+  }, { passive: true });
+  input.addEventListener('change', (e) => {
+    if (!moved) return;
+    moved = false;
+    input.checked = !input.checked;
+    e.stopImmediatePropagation();
+  });
   return label;
 }
 

@@ -359,19 +359,110 @@ function openSheet(ctx) {
   refresh(entry);
   ctx.onChange = refresh;
 
-  const close = () => {
-    sheet.hidden = true;
+  const close = (fromDrag = false) => {
+    if (sheetClose !== close) return;
+    sheetClose = null;
     ctx.onChange = null;
-    document.body.classList.remove('sheet-open');
     document.removeEventListener('keydown', onKey);
+    slideOut(sheet, fromDrag);
   };
   const onKey = (ev) => { if (ev.key === 'Escape') close(); };
-  sheet.querySelector('.sheet-backdrop').onclick = close;
-  sheet.querySelector('.sheet-close').onclick = close;
+  sheet.querySelector('.sheet-backdrop').onclick = () => close();
+  sheet.querySelector('.sheet-close').onclick = () => close();
   document.addEventListener('keydown', onKey);
+  sheetClose = close;
+  attachSheetDrag(sheet);
+  resetSheetStyles(sheet);
   document.body.classList.add('sheet-open');
   sheet.hidden = false;
   body.scrollTop = 0;
+}
+
+// ---------- Detailblatt herunterziehen (wie in üblichen Apps) ----------
+// Ziehen am Griff/Kopf schiebt das Blatt immer; im Inhalt nur, wenn er ganz oben steht und der Finger nach unten geht.
+// Loslassen: weiter als 30 % der Höhe oder schnell nach unten „geschnippt“ → schließen, sonst zurückfedern.
+let sheetClose = null;
+let sheetDragReady = false;
+
+function resetSheetStyles(sheet) {
+  const panel = sheet.querySelector('.sheet-panel');
+  const backdrop = sheet.querySelector('.sheet-backdrop');
+  panel.style.transition = panel.style.transform = backdrop.style.transition = backdrop.style.opacity = '';
+}
+
+function slideOut(sheet, fromDrag) {
+  const panel = sheet.querySelector('.sheet-panel');
+  const backdrop = sheet.querySelector('.sheet-backdrop');
+  const done = () => {
+    if (sheetClose) return; // inzwischen schon wieder geöffnet
+    sheet.hidden = true;
+    resetSheetStyles(sheet);
+    document.body.classList.remove('sheet-open');
+  };
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) { done(); return; }
+  panel.style.transition = `transform ${fromDrag ? 180 : 230}ms ${fromDrag ? 'ease-out' : 'cubic-bezier(.4,0,1,1)'}`;
+  backdrop.style.transition = 'opacity 200ms linear';
+  requestAnimationFrame(() => {
+    panel.style.transform = 'translateY(100%)';
+    backdrop.style.opacity = '0';
+  });
+  setTimeout(done, fromDrag ? 190 : 240);
+}
+
+function attachSheetDrag(sheet) {
+  if (sheetDragReady) return;
+  sheetDragReady = true;
+  const panel = sheet.querySelector('.sheet-panel');
+  const body = sheet.querySelector('.sheet-body');
+  const backdrop = sheet.querySelector('.sheet-backdrop');
+  let y0 = 0, x0 = 0, state = 'idle', dy = 0, samples = [];
+
+  panel.addEventListener('touchstart', (e) => {
+    if (e.touches.length !== 1 || !sheetClose) { state = 'idle'; return; }
+    const t = e.touches[0];
+    x0 = t.clientX; y0 = t.clientY; dy = 0; samples = [[t.clientY, e.timeStamp]];
+    // Mehrzeilige Notiz, die selbst gescrollt ist, behält ihre Wischgeste
+    const ta = e.target.closest('textarea');
+    state = ta && ta.scrollTop > 0 ? 'scroll' : 'maybe';
+  }, { passive: true });
+
+  panel.addEventListener('touchmove', (e) => {
+    if (state === 'idle' || state === 'scroll') return;
+    const t = e.touches[0];
+    const mx = t.clientX - x0, my = t.clientY - y0;
+    if (state === 'maybe') {
+      if (Math.abs(my) < 6 && Math.abs(mx) < 6) return;
+      const inContent = body.contains(e.target);
+      const atTop = body.scrollTop <= 0;
+      if (my > 0 && Math.abs(my) > Math.abs(mx) && (!inContent || atTop)) {
+        state = 'drag';
+        y0 = t.clientY; // ohne Sprung beginnen
+        panel.style.transition = backdrop.style.transition = 'none';
+      } else { state = 'scroll'; return; }
+    }
+    e.preventDefault(); // kein Scrollen/Gummiband, während das Blatt gezogen wird
+    const raw = t.clientY - y0;
+    dy = raw > 0 ? raw : raw / 4; // nach oben nur leicht nachgeben
+    panel.style.transform = `translateY(${dy}px)`;
+    backdrop.style.opacity = String(Math.max(0, 1 - Math.max(0, dy) / panel.offsetHeight));
+    samples.push([t.clientY, e.timeStamp]);
+    if (samples.length > 5) samples.shift();
+  }, { passive: false });
+
+  const end = () => {
+    if (state !== 'drag') { state = 'idle'; return; }
+    state = 'idle';
+    const [[ya, ta], [yb, tb]] = [samples[0], samples[samples.length - 1]];
+    const velocity = tb > ta ? (yb - ya) / (tb - ta) : 0; // Pixel pro Millisekunde, positiv = nach unten
+    const far = dy > panel.offsetHeight * 0.3;
+    if ((far && velocity > -0.3) || velocity > 0.5) { sheetClose?.(true); return; }
+    panel.style.transition = 'transform 260ms cubic-bezier(.2,.9,.3,1.15)';
+    backdrop.style.transition = 'opacity 200ms linear';
+    panel.style.transform = '';
+    backdrop.style.opacity = '';
+  };
+  panel.addEventListener('touchend', end);
+  panel.addEventListener('touchcancel', end);
 }
 
 function buildDetails(box, getEntry, change) {
