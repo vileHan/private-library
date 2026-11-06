@@ -131,6 +131,52 @@ begin
 end;
 $$;
 
+-- Vorschläge beim Tippen (höchstens 10). Andere Rangfolge als die Suche:
+-- Titel beginnt mit der Eingabe > alle Wörter im Titel > viele Ausgaben (= bekanntes Buch) > kurzer Titel.
+-- Kein zusätzlicher Index nötig; dieselbe Deckelung (3.000 Kandidaten) wie search_works wegen der 3-s-Grenze.
+drop function if exists suggest_works(text[], int);
+create function suggest_works(tokens text[], lim int default 6)
+returns table (
+  id text, title text, sort_title text, subtitle text, authors text[], author_sort text,
+  series text, volume smallint, year smallint, genre text, is_comic boolean,
+  isbns bigint[], cover_ids integer[], rank int, total bigint
+)
+language plpgsql stable
+set search_path = public
+as $$
+declare
+  stop text[] := array['der','die','das','des','dem','den','ein','eine','einer','eines','einem','einen',
+                       'und','oder','im','in','am','an','auf','aus','bei','mit','von','vom','zu','zum','zur',
+                       'fuer','ueber','unter','nach','vor','wie','ist','the','of','and','a'];
+  t text[];
+  core text[];
+  q tsquery;
+  phrase text;
+begin
+  t := array(select y from (select regexp_replace(x, '[^a-z0-9]', '', 'g') as y from unnest(tokens) x) s where length(y) >= 2);
+  core := array(select x from unnest(t) x where not x = any(stop));
+  if coalesce(array_length(core, 1), 0) > 0 then t := core; end if;
+  if coalesce(array_length(t, 1), 0) = 0 then return; end if;
+  q := to_tsquery('simple', array_to_string(array(select x || ':*' from unnest(t) x), ' & '));
+  phrase := array_to_string(t, ' ');
+  return query
+    with hits as (
+      select w.* from works w
+      where to_tsvector('simple', w.search_title || ' ' || w.search_author) @@ q
+      limit 3000
+    )
+    select h.id, h.title, coalesce(h.sort_title, h.title), h.subtitle, h.authors, h.author_sort,
+           h.series, h.volume, h.year, h.genre, h.is_comic, h.isbns, h.cover_ids, 0, 0::bigint
+    from hits h
+    order by (h.search_title like phrase || '%') desc,
+             (to_tsvector('simple', h.search_title) @@ q) desc,
+             cardinality(h.isbns) desc,
+             length(h.title)
+    limit greatest(1, least(lim, 10));
+end;
+$$;
+grant execute on function suggest_works(text[], int) to anon, authenticated;
+
 -- Alle Bände einer Reihe (für „Alle Bände laden“)
 drop function if exists series_works(text, text);
 create function series_works(series_name text, author text default null)
