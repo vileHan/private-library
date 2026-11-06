@@ -73,7 +73,7 @@ button, input, select { font: inherit; color: inherit; }
 .scanner video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .scan-frame { position: relative; width: min(78vw, 360px); aspect-ratio: 2 / 1; border: 3px solid #fff; border-radius: 12px; box-shadow: 0 0 0 100vmax rgba(0,0,0,.45); }
 .scan-hint { position: absolute; left: 16px; right: 16px; top: calc(16px + env(safe-area-inset-top)); color: #fff; text-align: center; font-weight: 600; text-shadow: 0 1px 3px #000; }
-.scan-close { position: absolute; bottom: calc(24px + env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%);
+.scan-close {
   border: 0; border-radius: 99px; padding: 12px 28px; font-weight: 700; background: #fff; color: #111; cursor: pointer; }
 
 /* ---------- Cover-Raster (Einstellung oben rechts) ---------- */
@@ -355,3 +355,11 @@ body.sheet-open { overflow: hidden; }
 @keyframes pop { 0% { transform: scale(1); } 40% { transform: scale(1.06); } 100% { transform: scale(1); } }
 .cover.pop { animation: pop .28s ease-out; }
 body.grid-view :is(#results, #libList) > .book .cover.pressing { transform: scale(.94); transition: transform .5s ease-in; }
+
+/* Scanner: Statuszeile und Knöpfe unten */
+.scan-engine { position: absolute; left: 16px; right: 16px; bottom: calc(92px + env(safe-area-inset-bottom)); margin: 0;
+  color: #fff; text-align: center; font-size: .8rem; opacity: .85; text-shadow: 0 1px 3px #000; }
+.scan-buttons { position: absolute; left: 16px; right: 16px; bottom: calc(24px + env(safe-area-inset-bottom));
+  display: flex; gap: 10px; justify-content: center; }
+.scan-btn-secondary { border: 2px solid #fff; border-radius: 99px; padding: 12px 20px; font-weight: 700; background: rgba(0,0,0,.35);
+  color: #fff; cursor: pointer; }
