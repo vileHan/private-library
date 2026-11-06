@@ -92,7 +92,9 @@ begin
 
   return query
     with hits as (
-      select w.*, case when to_tsvector('simple', w.search_title) @@ q then 0 else 1 end as rnk
+      select w.*, case when to_tsvector('simple', w.search_title) @@ q then 0 else 1 end as rnk,
+             -- Suche passt zur Reihe („eragon“, „harry potter“) → diese Reihe zuerst, in Bandfolge
+             (w.series is not null and to_tsvector('simple', w.series) @@ q) as series_hit
       from works w
       where to_tsvector('simple', w.search_title || ' ' || w.search_author) @@ q
       limit cap
@@ -101,7 +103,10 @@ begin
            h.series, h.volume, h.year, h.genre, h.is_comic, h.isbns, h.cover_ids,
            h.rnk, count(*) over ()
     from hits h
-    order by h.rnk, lower(coalesce(h.sort_title, h.title)), h.author_sort
+    order by h.series_hit desc,
+             case when h.series_hit then h.author_sort end, case when h.series_hit then h.series end,
+             case when h.series_hit then h.volume end nulls last, case when h.series_hit then h.year end,
+             h.rnk, lower(coalesce(h.sort_title, h.title)), h.author_sort
     limit greatest(1, least(lim, 100)) offset greatest(0, off);
 
   get diagnostics n_hits = row_count;
