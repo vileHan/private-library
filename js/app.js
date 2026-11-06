@@ -7,6 +7,8 @@ import { bookCard } from './card.js';
 import { renderSeries } from './series.js';
 import { renderStats } from './stats.js';
 import { $, el, fmt, plural } from './util.js';
+import { scanIsbn } from './scan.js';
+import { settings } from './settings.js';
 
 onLibraryChange(() => {
   const owned = [...library.byKey.values()].filter((e) => e.owned).length;
@@ -16,6 +18,30 @@ onLibraryChange(() => {
 function matchesTokens(entry, tokens, extra = '') {
   const hay = normalizeText([entry.title, searchableSubtitle(entry.subtitle), ...(entry.authors || []), entry.series, extra].join(' '));
   return tokens.every((t) => hay.includes(t));
+}
+
+/**
+ * Bände einer Reihe zusammenhalten und nach Bandnummer ordnen (Eragon 1, 2, 3 …), an der Stelle des
+ * ersten gefundenen Bandes. Bände ohne Nummer folgen nach Erscheinungsjahr. Ändert die Liste direkt.
+ */
+function orderSeries(list) {
+  const key = (w) => (w.series ? `${normalizeText(w.series)}|${normalizeText(w.authorSort || '')}` : null);
+  const groups = new Map();
+  for (const w of list) {
+    const k = key(w);
+    if (k) { if (!groups.has(k)) groups.set(k, []); groups.get(k).push(w); }
+  }
+  const byVolume = (a, b) => (Number(a.volume) || Infinity) - (Number(b.volume) || Infinity) || (a.year || 0) - (b.year || 0);
+  const out = [];
+  const placed = new Set();
+  for (const w of list) {
+    const k = key(w);
+    if (!k || groups.get(k).length < 2) { out.push(w); continue; }
+    if (placed.has(k)) continue;
+    placed.add(k);
+    out.push(...groups.get(k).sort(byVolume));
+  }
+  list.splice(0, list.length, ...out);
 }
 
 // ---------- Suche ----------
@@ -56,6 +82,14 @@ function renderResults() {
   owned.sort(byRelevance);
   // Die Datenbank liefert schon fertig sortiert (bei Tippfehlern: ähnlichste zuerst) – Reihenfolge behalten.
   if (!fromDb) others.sort(byRelevance);
+  orderSeries(owned);
+  orderSeries(others);
+  // Passt die Suche zu einer Reihe („Eragon“, „Harry Potter“), steht diese Reihe ganz oben – in Bandfolge.
+  const seriesHit = (w) => tokens.length > 0 && w.series && tokens.every((t) => normalizeText(w.series).includes(t));
+  for (const list of [owned, others]) {
+    const hits = list.filter(seriesHit);
+    if (hits.length) list.splice(0, list.length, ...hits, ...list.filter((w) => !seriesHit(w)));
+  }
 
   if (owned.length) {
     box.append(el('h2', { class: 'section-title', text: `In deinem Besitz (${owned.length})` }));
@@ -125,6 +159,110 @@ $('#searchForm').addEventListener('submit', (ev) => {
   runSearch(q);
 });
 $('#moreBtn').addEventListener('click', () => runSearch(search.query, true));
+
+// ---------- Suchvorschläge beim Tippen ----------
+// Ab 3 Buchstaben, 350 ms nach dem letzten Tastendruck, höchstens 6 Treffer aus der Datenbank.
+// Ressourcen: ~3 KB je Abfrage, Supabase Free hat unbegrenzte Anfragen und 5 GB Datenverkehr im Monat.
+const suggest = { timer: null, controller: null, items: [], active: -1 };
+
+function closeSuggestions() {
+  clearTimeout(suggest.timer);
+  suggest.controller?.abort();
+  suggest.items = [];
+  suggest.active = -1;
+  $('#suggestions').hidden = true;
+  $('#suggestions').replaceChildren();
+  $('#searchInput').setAttribute('aria-expanded', 'false');
+}
+
+function renderSuggestions() {
+  const ul = $('#suggestions');
+  ul.replaceChildren(...suggest.items.map((w, i) => {
+    const owned = entryFor(w)?.owned;
+    const cover = el('span', { class: 's-cover' });
+    if (w.coverIds?.[0]) cover.style.backgroundImage = `url("https://covers.openlibrary.org/b/id/${w.coverIds[0]}-S.jpg")`;
+    const li = el('li', { role: 'option', id: `sugg-${i}`, 'aria-selected': String(i === suggest.active) },
+      cover,
+      el('span', {},
+        el('span', { class: 's-title', text: w.title + (w.volume && w.series ? ` (${w.series} ${w.volume})` : '') }),
+        el('span', { class: 's-author' }, (w.authors || []).join(', ') || '', owned ? el('span', { class: 's-own', text: '  ● im Besitz' }) : null)));
+    // pointerdown statt click: sonst schließt das Verlassen des Eingabefelds die Liste vorher
+    li.addEventListener('pointerdown', (ev) => { ev.preventDefault(); pickSuggestion(i); });
+    return li;
+  }));
+  ul.hidden = !suggest.items.length;
+  $('#searchInput').setAttribute('aria-expanded', String(!ul.hidden));
+}
+
+/** Vorschlag gewählt: genau dieses Buch anzeigen (Enter im Suchfeld zeigt weiterhin alle Treffer). */
+function pickSuggestion(i) {
+  const w = suggest.items[i];
+  if (!w) return;
+  closeSuggestions();
+  $('#searchInput').value = w.title;
+  $('#searchInput').blur();
+  search.controller?.abort();
+  Object.assign(search, { query: w.title, editions: [], works: [w], total: 1, next: null });
+  renderResults();
+  $('#searchStatus').textContent = 'Vorschlag ausgewählt – „Suchen“ zeigt alle Treffer.';
+}
+
+$('#searchInput').addEventListener('input', () => {
+  const q = $('#searchInput').value.trim();
+  clearTimeout(suggest.timer);
+  if (q.length < 3 || normalizeIsbn(q) || /^\d+$/.test(q)) { closeSuggestions(); return; }
+  suggest.timer = setTimeout(async () => {
+    suggest.controller?.abort();
+    suggest.controller = new AbortController();
+    try {
+      suggest.items = await catalog.suggest(q, suggest.controller.signal);
+      orderSeries(suggest.items); // Harry Potter 1, 2, 3 … statt bunt gemischt
+      suggest.active = -1;
+      if ($('#searchInput').value.trim() === q) renderSuggestions();
+    } catch { /* abgebrochen oder offline – dann eben ohne Vorschläge */ }
+  }, 350);
+});
+$('#searchInput').addEventListener('keydown', (ev) => {
+  if ($('#suggestions').hidden) return;
+  if (ev.key === 'ArrowDown' || ev.key === 'ArrowUp') {
+    ev.preventDefault();
+    // -1 = nichts markiert; nach dem letzten bzw. vor dem ersten Eintrag geht es zurück ins Eingabefeld
+    const n = suggest.items.length;
+    if (ev.key === 'ArrowDown') suggest.active = suggest.active + 1 >= n ? -1 : suggest.active + 1;
+    else suggest.active = suggest.active - 1 < -1 ? n - 1 : suggest.active - 1;
+    renderSuggestions();
+  } else if (ev.key === 'Enter' && suggest.active >= 0) {
+    ev.preventDefault();
+    pickSuggestion(suggest.active);
+  } else if (ev.key === 'Escape') {
+    closeSuggestions();
+  }
+});
+$('#searchInput').addEventListener('blur', () => setTimeout(closeSuggestions, 150));
+$('#searchForm').addEventListener('submit', closeSuggestions);
+
+// ---------- Barcode-Scan ----------
+$('#scanBtn').addEventListener('click', async () => {
+  closeSuggestions();
+  const isbn = await scanIsbn();
+  if (!isbn) return;
+  showView('search');
+  $('#searchInput').value = isbn;
+  runSearch(isbn);
+});
+
+// ---------- Ansicht: Liste oder Cover-Raster (pro Gerät gespeichert) ----------
+function applyViewMode(grid) {
+  document.body.classList.toggle('grid-view', grid);
+  $('#viewToggle').setAttribute('aria-pressed', String(grid));
+  $('#viewToggle').title = grid ? 'Zur Listenansicht' : 'Zum Cover-Raster';
+}
+applyViewMode(settings.get('grid', false));
+$('#viewToggle').addEventListener('click', () => {
+  const grid = !document.body.classList.contains('grid-view');
+  settings.set('grid', grid);
+  applyViewMode(grid);
+});
 
 // ---------- Meine Bücher ----------
 const libView = { sub: 'list', filter: 'owned', tag: '' };

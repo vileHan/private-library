@@ -16,7 +16,12 @@
 </head>
 <body>
   <header class="top">
-    <h1>Meine Bibliothek</h1>
+    <div class="top-row">
+      <h1>Meine Bibliothek</h1>
+      <button id="viewToggle" class="icon-btn" type="button" aria-pressed="false" aria-label="Cover-Raster ein/aus" title="Cover-Raster ein/aus">
+        <span class="ico-grid" aria-hidden="true"></span>
+      </button>
+    </div>
     <nav class="tabs" role="tablist">
       <button role="tab" id="tab-search" aria-controls="view-search" aria-selected="true" data-view="search">Suche</button>
       <button role="tab" id="tab-library" aria-controls="view-library" aria-selected="false" data-view="library">
@@ -28,7 +33,14 @@
   <main>
     <section id="view-search" role="tabpanel" aria-labelledby="tab-search">
       <form id="searchForm" class="searchbar" role="search">
-        <input id="searchInput" type="search" name="q" placeholder="Titel, Autor oder ISBN" autocomplete="off" enterkeyhint="search" aria-label="Suchbegriff">
+        <div class="search-wrap">
+          <input id="searchInput" type="search" name="q" placeholder="Titel, Autor oder ISBN" autocomplete="off" enterkeyhint="search"
+                 aria-label="Suchbegriff" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="suggestions">
+          <ul id="suggestions" class="suggestions" role="listbox" hidden></ul>
+        </div>
+        <button id="scanBtn" class="scan-btn" type="button" aria-label="Barcode scannen" title="Barcode scannen">
+          <span class="ico-scan" aria-hidden="true"></span>
+        </button>
         <button type="submit">Suchen</button>
       </form>
       <p class="status" id="searchStatus" aria-live="polite">Suche nach einem Buch – deine eigenen Bücher erscheinen immer oben.</p>
@@ -95,9 +107,9 @@
         <p class="author"></p>
         <p class="meta"></p>
         <div class="actions">
-          <button class="toggle own" type="button" aria-pressed="false">Besitze ich</button>
-          <button class="toggle read" type="button" aria-pressed="false">Gelesen</button>
-          <button class="toggle wish" type="button" aria-pressed="false">Merken</button>
+          <button class="toggle own" type="button" aria-pressed="false" aria-label="Besitze ich"><span class="lbl">Besitze ich</span></button>
+          <button class="toggle read" type="button" aria-pressed="false" aria-label="Gelesen"><span class="lbl">Gelesen</span></button>
+          <button class="toggle wish" type="button" aria-pressed="false" aria-label="Merken"><span class="lbl">Merken</span></button>
         </div>
         <div class="links">
           <button class="link editions-btn" type="button" aria-expanded="false" hidden></button>
@@ -108,5 +120,12 @@
       </div>
     </article>
   </template>
+
+  <div id="scanner" class="scanner" role="dialog" aria-modal="true" aria-label="Barcode scannen" hidden>
+    <video id="scanVideo" playsinline muted></video>
+    <div class="scan-frame" aria-hidden="true"></div>
+    <p id="scanHint" class="scan-hint">Halte den Barcode auf der Buchrückseite in den Rahmen.</p>
+    <button id="scanClose" class="scan-close" type="button">Abbrechen</button>
+  </div>
 </body>
 </html>

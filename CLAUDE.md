@@ -27,6 +27,12 @@ Commits laufen mit der GitHub-noreply-Adresse (in der lokalen Git-Konfiguration 
 - **Meine Bücher**: Unteransichten *Liste* (Filter Besitze/Gelesen/Ungelesen/Merkliste/Alle + Regal, Sortierungen inkl. Bewertung und Lesedatum), *Reihen* (eigene Bände, „Alle Bände laden“ zeigt fehlende Bände von der DNB), *Statistik*.
 - **Reihe** kommt aus 245 `$a`/`$p` oder aus 490/830/800, aber nur mit Bandnummer bis 3 Ziffern (so fallen Verlagsreihen mit Bestellnummer heraus).
 - Bewusst **nicht** gewünscht: „Verliehen an“.
+- **Cover-Raster** (Schalter oben rechts, pro Gerät gespeichert in `js/settings.js`): 2 Cover pro Reihe, keine Titel, Knöpfe nur als Symbole. **Symbole überall: Besitz ○/●, Gelesen □/■, Merken ♡/♥.** Antippen des Covers blendet Titel und Autor ein.
+- **Barcode-Scan** (`js/scan.js`): Kamera-Knopf neben dem Suchfeld. Android/Chrome nutzt `BarcodeDetector`, sonst wird ZXing (`@zxing/browser@0.1.5` von jsDelivr) beim ersten Scan nachgeladen. Ergebnis = ISBN-Suche.
+- **Suchvorschläge** ab 3 Buchstaben (350 ms Pause, 6 Treffer, DB-Funktion `suggest_works`: Titelanfang > alle Wörter im Titel > viele Ausgaben). Ressourcen geprüft: ~3 KB je Abfrage, Supabase Free = unbegrenzte Anfragen, 5 GB Datenverkehr im Monat.
+- **Reihen in der Suche**: Passt die Suche zu einer Reihe, steht sie ganz oben in Bandfolge (in `search_works` und in der App `orderSeries`).
+- **Vor Änderungen an Suchlogik/Datenbank** immer Ressourcen (500 MB, 3-s-Grenze, Datenverkehr) prüfen und bei größeren Änderungen vorher nachfragen.
+- Schema-Änderungen ohne Datenimport: Workflow **„Datenbankschema“** (~1 Minute, darf parallel zu einem Import laufen).
 
 ## Bewusst später
 
@@ -138,5 +144,6 @@ Ziel: Die Daten werden **einmal aufbereitet** und nicht bei jeder Suche neu.
 - `js/card.js`: Buchkarte inkl. Ausgaben-Häkchen und Detailbereich
 - `js/series.js`, `js/stats.js`: Reihen- und Statistik-Ansicht
 - `js/util.js`: kleine Helfer
+- `js/scan.js`: Barcode-Scanner, `js/settings.js`: Geräte-Einstellungen (Raster/Liste)
 - `js/app.js`: Suche, Meine Bücher, Tabs, Sicherung
 - Mobil zuerst (Handy-Breite), muss aber auch am PC gut nutzbar sein.

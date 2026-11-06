@@ -82,6 +82,17 @@ export function bookCard(work, opts = {}) {
   const mine = ownedIsbnsOf(entry);
   setCover(card, coverUrls(mine, work.coverIds, work.coverIsbns || []), work.title);
 
+  // Cover-Raster: Antippen des Covers blendet Titel und Autor ein bzw. wieder aus.
+  const coverEl = card.querySelector('.cover');
+  coverEl.addEventListener('click', () => {
+    if (!document.body.classList.contains('grid-view')) return;
+    const open = coverEl.querySelector('.peek');
+    if (open) { open.remove(); return; }
+    coverEl.append(el('div', { class: 'peek' },
+      el('strong', { text: card.querySelector('.title').textContent }),
+      el('span', { text: card.querySelector('.author').textContent })));
+  });
+
   const own = card.querySelector('.toggle.own');
   const read = card.querySelector('.toggle.read');
   const wish = card.querySelector('.toggle.wish');
