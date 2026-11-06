@@ -163,8 +163,9 @@ function attachGridGestures(card, ctx) {
   let lastTap = 0;
   const isGrid = () => document.body.classList.contains('grid-view');
 
-  const apply = async (kind) => {
-    haptic(); // sofort, noch in der Berührung – nötig für den iPhone-Umweg
+  const apply = async (kind, { tapHaptic = false } = {}) => {
+    // Doppeltipp: Haptik im folgenden „click“ (zuverlässigster Moment für den iPhone-Umweg), Wischen: sofort
+    if (tapHaptic) pendingHaptic = true; else haptic();
     const before = snapshot(ctx.getEntry());
     await ctx.change(actions[kind](ctx.work));
     toast(() => ctx.change((x) => Object.assign(x, before)));
@@ -186,6 +187,8 @@ function attachGridGestures(card, ctx) {
 
   // Langes Drücken soll kein Bild-/Kontextmenü öffnen
   cover.addEventListener('contextmenu', (ev) => { if (isGrid()) ev.preventDefault(); });
+  let pendingHaptic = false;
+  cover.addEventListener('click', () => { if (pendingHaptic) { pendingHaptic = false; haptic(); } });
 
   cover.addEventListener('pointerdown', (ev) => {
     if (!isGrid()) return;
@@ -233,7 +236,7 @@ function attachGridGestures(card, ctx) {
       clearTimeout(tapTimer);
       lastTap = 0;
       cover.querySelector('.peek')?.remove();
-      apply('own');
+      apply('own', { tapHaptic: true });
     } else {
       lastTap = now;
       tapTimer = setTimeout(peek, DOUBLE);

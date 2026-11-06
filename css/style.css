@@ -30,7 +30,8 @@
 
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
-html { -webkit-text-size-adjust: 100%; }
+/* Kein Doppeltipp-Zoom (stört Doppeltipp = Besitze und Knöpfe) – Zoomen mit zwei Fingern bleibt erlaubt */
+html { -webkit-text-size-adjust: 100%; touch-action: manipulation; }
 body {
   margin: 0;
   background: var(--bg);
@@ -222,6 +223,7 @@ input[type="search"]:focus, select:focus { outline: 2px solid var(--accent); out
 .details .lbl { color: var(--muted); min-width: 82px; }
 .details input[type="date"], .details input[type="text"], .details textarea {
   border: 1px solid var(--line); border-radius: 8px; background: var(--bg); padding: 6px 8px; min-width: 0;
+  font-size: 16px; /* unter 16 px zoomt das iPhone beim Antippen automatisch heran */
 }
 .details textarea { width: 100%; resize: vertical; font: inherit; }
 .stars-input { display: inline-flex; }
@@ -235,7 +237,7 @@ input[type="search"]:focus, select:focus { outline: 2px solid var(--accent); out
 .segmented { display: flex; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 3px; margin-bottom: 12px; }
 .segmented button { flex: 1; border: 0; background: none; padding: 8px; border-radius: 9px; cursor: pointer; font-weight: 600; color: var(--muted); }
 .segmented button[aria-pressed="true"] { background: var(--accent); color: var(--accent-text); }
-.chip-select { border-radius: 99px; padding: 5px 10px; font-size: .9rem; max-width: 100%; }
+.chip-select { border-radius: 99px; padding: 5px 10px; font-size: 16px; max-width: 100%; } /* 16 px: kein Auto-Zoom am iPhone */
 
 .series { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px; }
 .series + .series { margin-top: 4px; }

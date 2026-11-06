@@ -30,24 +30,24 @@ export function today() {
  * (unsichtbaren) iOS-Schalters `<input type="checkbox" switch>` das System-Haptik-Tippen aus. Inoffizieller Umweg;
  * funktioniert er nicht, passiert einfach nichts.
  */
-let hapticLabel = null;
+// Muster wie in verbreiteten iOS-Haptik-Helfern: Schalter frisch anlegen, versteckt einhängen, „klicken“, entfernen.
+// Muss innerhalb einer echten Berührung (Klick/Loslassen) passieren, sonst bleibt iOS still.
+// Voraussetzung am iPhone: Einstellungen → Töne & Haptik → „System-Haptik“ an.
 export function haptic(ms = 15) {
   if (typeof navigator.vibrate === 'function') {
     try { if (navigator.vibrate(ms)) return; } catch { /* weiter mit dem iOS-Umweg */ }
   }
   try {
-    if (!hapticLabel) {
-      hapticLabel = document.createElement('label');
-      hapticLabel.setAttribute('aria-hidden', 'true');
-      hapticLabel.style.cssText = 'position:fixed;width:1px;height:1px;opacity:0;pointer-events:none;overflow:hidden;left:-10px;top:0;';
-      const input = document.createElement('input');
-      input.type = 'checkbox';
-      input.setAttribute('switch', '');
-      input.tabIndex = -1;
-      hapticLabel.append(input);
-      document.body.append(hapticLabel);
-    }
-    hapticLabel.click();
+    const label = document.createElement('label');
+    label.setAttribute('aria-hidden', 'true');
+    label.style.display = 'none';
+    const input = document.createElement('input');
+    input.type = 'checkbox';
+    input.setAttribute('switch', '');
+    label.append(input);
+    document.head.append(label);
+    label.click();
+    label.remove();
   } catch { /* egal */ }
 }
 
