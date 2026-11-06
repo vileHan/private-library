@@ -189,6 +189,15 @@ function attachGridGestures(card, ctx) {
 
   // Langes Drücken soll kein Bild-/Kontextmenü öffnen
   cover.addEventListener('contextmenu', (ev) => { if (isGrid()) ev.preventDefault(); });
+  // Safari: den zweiten Tipp eines Doppeltipps „verschlucken“, damit er nicht als Zoom-Befehl gilt.
+  // Unsere Geste läuft über Pointer-Events und bekommt den Tipp trotzdem.
+  let lastTouchEnd = 0;
+  cover.addEventListener('touchend', (ev) => {
+    if (!isGrid()) return;
+    const now = Date.now();
+    if (now - lastTouchEnd < 350) ev.preventDefault();
+    lastTouchEnd = now;
+  }, { passive: false });
   cover.addEventListener('pointerdown', (ev) => {
     if (!isGrid()) return;
     start = { x: ev.clientX, y: ev.clientY, id: ev.pointerId, swiping: false, held: false };
