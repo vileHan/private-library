@@ -239,6 +239,8 @@ export function parseRecord(rec) {
     extent,
     leader19: leader.charAt(19),
     hasAuthor: authorsRaw.some(Boolean),
+    // Beliebtheit: Der Buchhandel kennzeichnet Bestseller in den Schlagwörtern („spiegel bestseller“, „Bestsellerliste Spiegel“)
+    isBestseller: keywords653.some((k) => /bestseller/i.test(k)),
     isEbook,
     isPrintText,
     isComic: subjectGroups.some((g) => g.startsWith('741.5')),

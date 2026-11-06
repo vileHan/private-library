@@ -160,101 +160,27 @@ $('#searchForm').addEventListener('submit', (ev) => {
 });
 $('#moreBtn').addEventListener('click', () => runSearch(search.query, true));
 
-// ---------- Suchvorschläge beim Tippen ----------
-// Ab 3 Buchstaben, 350 ms nach dem letzten Tastendruck, höchstens 6 Treffer aus der Datenbank.
-// Ressourcen: ~3 KB je Abfrage, Supabase Free hat unbegrenzte Anfragen und 5 GB Datenverkehr im Monat.
-const suggest = { timer: null, controller: null, items: [], active: -1 };
-
-function closeSuggestions() {
-  clearTimeout(suggest.timer);
-  suggest.controller?.abort();
-  suggest.items = [];
-  suggest.active = -1;
-  $('#suggestions').hidden = true;
-  $('#suggestions').replaceChildren();
-  $('#searchInput').setAttribute('aria-expanded', 'false');
-}
-
-function renderSuggestions() {
-  const ul = $('#suggestions');
-  ul.replaceChildren(...suggest.items.map((w, i) => {
-    const owned = entryFor(w)?.owned;
-    const cover = el('span', { class: 's-cover' });
-    if (w.coverIds?.[0]) cover.style.backgroundImage = `url("https://covers.openlibrary.org/b/id/${w.coverIds[0]}-S.jpg")`;
-    const li = el('li', { role: 'option', id: `sugg-${i}`, 'aria-selected': String(i === suggest.active) },
-      cover,
-      el('span', {},
-        el('span', { class: 's-title', text: w.title + (w.volume && w.series ? ` (${w.series} ${w.volume})` : '') }),
-        el('span', { class: 's-author' }, (w.authors || []).join(', ') || '', owned ? el('span', { class: 's-own', text: '  ● im Besitz' }) : null)));
-    // Erst ein echter Tipp (Finger drauf und wieder los, ohne zu wischen) wählt aus – Scrollen bleibt möglich.
-    li.addEventListener('click', () => pickSuggestion(i));
-    return li;
-  }));
-  ul.hidden = !suggest.items.length;
-  $('#searchInput').setAttribute('aria-expanded', String(!ul.hidden));
-}
-
-/** Vorschlag gewählt: genau dieses Buch anzeigen (Enter im Suchfeld zeigt weiterhin alle Treffer). */
-function pickSuggestion(i) {
-  const w = suggest.items[i];
-  if (!w) return;
-  closeSuggestions();
-  $('#searchInput').value = w.title;
-  $('#searchInput').blur();
-  search.controller?.abort();
-  Object.assign(search, { query: w.title, editions: [], works: [w], total: 1, next: null });
-  renderResults();
-  $('#searchStatus').textContent = 'Vorschlag ausgewählt – „Suchen“ zeigt alle Treffer.';
-}
+// ---------- Live-Suche: Treffer erscheinen beim Tippen ----------
+// Ab 3 Buchstaben, 500 ms nach dem letzten Tastendruck, dieselbe Suche wie mit der Lupe (ohne Tastatur zu schließen).
+// Ressourcen geprüft: ~20 KB je Trefferseite, bei ~4 Zwischenständen je Suche und 50 Suchen am Tag ≈ 120 MB im Monat
+// von 5 GB (Supabase Free, Anfragen unbegrenzt). Die Pause verhindert, dass bei jedem Buchstaben Cover geladen werden.
+const live = { timer: null };
+const cancelLive = () => clearTimeout(live.timer);
 
 $('#searchInput').addEventListener('input', () => {
   const q = $('#searchInput').value.trim();
-  clearTimeout(suggest.timer);
-  if (q.length < 3 || normalizeIsbn(q) || /^\d+$/.test(q)) { closeSuggestions(); return; }
-  suggest.timer = setTimeout(async () => {
-    suggest.controller?.abort();
-    suggest.controller = new AbortController();
-    try {
-      suggest.items = await catalog.suggest(q, suggest.controller.signal);
-      orderSeries(suggest.items); // Harry Potter 1, 2, 3 … statt bunt gemischt
-      suggest.active = -1;
-      if ($('#searchInput').value.trim() === q) renderSuggestions();
-    } catch { /* abgebrochen oder offline – dann eben ohne Vorschläge */ }
-  }, 350);
+  cancelLive();
+  // ISBNs (Ziffern) erst mit der Lupe/Enter suchen – halbe ISBNs ergeben keinen Sinn
+  if (q.length < 3 || /^[\d\s-]+x?$/i.test(q)) return;
+  live.timer = setTimeout(() => {
+    if ($('#searchInput').value.trim() === q && q !== search.query) runSearch(q);
+  }, 500);
 });
-$('#searchInput').addEventListener('keydown', (ev) => {
-  if ($('#suggestions').hidden) return;
-  if (ev.key === 'ArrowDown' || ev.key === 'ArrowUp') {
-    ev.preventDefault();
-    // -1 = nichts markiert; nach dem letzten bzw. vor dem ersten Eintrag geht es zurück ins Eingabefeld
-    const n = suggest.items.length;
-    if (ev.key === 'ArrowDown') suggest.active = suggest.active + 1 >= n ? -1 : suggest.active + 1;
-    else suggest.active = suggest.active - 1 < -1 ? n - 1 : suggest.active - 1;
-    renderSuggestions();
-  } else if (ev.key === 'Enter' && suggest.active >= 0) {
-    ev.preventDefault();
-    pickSuggestion(suggest.active);
-  } else if (ev.key === 'Escape') {
-    closeSuggestions();
-  }
-});
-// Liste offen halten, solange der Finger/die Maus in der Liste ist (Scrollen, Tippen). Sonst würde das
-// Verlassen des Eingabefelds die Liste schließen, bevor der Tipp ankommt.
-let pointerInList = false;
-$('#suggestions').addEventListener('pointerdown', (ev) => {
-  pointerInList = true;
-  if (ev.pointerType === 'mouse') ev.preventDefault(); // Maus: Fokus im Suchfeld behalten
-});
-document.addEventListener('pointerup', () => setTimeout(() => { pointerInList = false; }, 400));
-document.addEventListener('pointerdown', (ev) => {
-  if (!$('#suggestions').hidden && !ev.target.closest('#suggestions, #searchInput')) closeSuggestions();
-});
-$('#searchInput').addEventListener('blur', () => setTimeout(() => { if (!pointerInList) closeSuggestions(); }, 150));
-$('#searchForm').addEventListener('submit', closeSuggestions);
+$('#searchForm').addEventListener('submit', cancelLive);
 
 // ---------- Barcode-Scan ----------
 $('#scanBtn').addEventListener('click', async () => {
-  closeSuggestions();
+  cancelLive();
   const isbn = await scanIsbn();
   if (!isbn) return;
   showView('search');

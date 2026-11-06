@@ -166,6 +166,7 @@ function buildWork(editions) {
     series: mostCommon(editions.map((e) => e.series)),
     volume: mostCommon(editions.map((e) => e.volume)),
     isComic: main.isComic,
+    bestseller: editions.some((e) => e.isBestseller),
     isbns,
     coverIsbns: sorted.filter((e) => !e.isEbook).flatMap((e) => e.isbns).concat(sorted.filter((e) => e.isEbook).flatMap((e) => e.isbns)),
     editions: uniqueEditions.map((e) => ({

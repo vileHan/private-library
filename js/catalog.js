@@ -71,14 +71,6 @@ export const catalog = {
     return searchDnb(query, cursor ?? 1, signal);
   },
 
-  /** Vorschläge beim Tippen: höchstens 6 Werke aus der Datenbank (ohne Datenbank: keine Vorschläge). */
-  async suggest(query, signal) {
-    if (!useDb()) return [];
-    const tokens = normalizeText(query).split(' ').filter(Boolean);
-    const rows = await rpc('suggest_works', { tokens, lim: 6 }, signal);
-    return rows.map(toWork);
-  },
-
   /** Ausgaben-Details zu ISBNs (live von der DNB). */
   editionDetails: (isbns) => editionsByIsbns(isbns),
 

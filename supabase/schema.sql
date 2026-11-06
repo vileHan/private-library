@@ -42,6 +42,19 @@ create table if not exists works (
   search_author text not null default ''         -- normalisiert: Autoren
 );
 
+-- Beliebtheit (seit 11/2026): Bestseller-Kennzeichen der DNB (Import) und Zahl der Open-Library-Leselisten-
+-- Einträge (Workflow „Cover-IDs“). Neue Spalten mit Standardwert kosten in Postgres keinen Umbau der Tabelle.
+alter table works add column if not exists bestseller boolean not null default false;
+alter table works add column if not exists ol_readers integer not null default 0;
+
+-- Bekanntheit eines Werks für die Sortierung: Ausgaben ×2, Bestseller +20, Leser logarithmisch (1.000 Leser ≈ +41)
+create or replace function popularity(w works)
+returns numeric
+language sql immutable
+as $$
+  select cardinality(w.isbns) * 2 + case when w.bestseller then 20 else 0 end + ln(1 + w.ol_readers) * 6;
+$$;
+
 create index if not exists works_fts_idx on works
   using gin (to_tsvector('simple', search_title || ' ' || search_author));
 create index if not exists works_series_idx on works (series) where series is not null;
@@ -94,14 +107,17 @@ begin
     with hits as (
       select w.*, case when to_tsvector('simple', w.search_title) @@ q then 0 else 1 end as rnk,
              -- Suche passt zur Reihe („eragon“, „harry potter“) → diese Reihe zuerst, in Bandfolge
-             (w.series is not null and to_tsvector('simple', w.series) @@ q) as series_hit
+             (w.series is not null and to_tsvector('simple', w.series) @@ q) as series_hit,
+             popularity(w) as pop
       from works w
       where to_tsvector('simple', w.search_title || ' ' || w.search_author) @@ q
       limit cap
     ), ranked as (
-      -- Bekanntheit einer Reihe = Summe der Ausgaben aller ihrer Bände (Harry Potter ≫ Harry Dresden)
-      select h.*, sum(cardinality(h.isbns)) over (partition by h.series, h.author_sort) as series_pop from hits h
+      -- Bekanntheit einer Reihe = Summe über alle ihre Bände (Harry Potter ≫ Harry Dresden)
+      select h.*, sum(h.pop) over (partition by h.series, h.author_sort) as series_pop from hits h
     )
+    -- Reihenfolge: passende Reihe (nach Bekanntheit, in Bandfolge) > Titeltreffer > Autortreffer,
+    -- innerhalb davon bekannteste zuerst, bei Gleichstand A–Z
     select h.id, h.title, coalesce(h.sort_title, h.title), h.subtitle, h.authors, h.author_sort,
            h.series, h.volume, h.year, h.genre, h.is_comic, h.isbns, h.cover_ids,
            h.rnk, count(*) over ()
@@ -110,7 +126,7 @@ begin
              case when h.series_hit then h.series_pop end desc,
              case when h.series_hit then h.author_sort end, case when h.series_hit then h.series end,
              case when h.series_hit then h.volume end nulls last, case when h.series_hit then h.year end,
-             h.rnk, lower(coalesce(h.sort_title, h.title)), h.author_sort
+             h.rnk, h.pop desc, lower(coalesce(h.sort_title, h.title)), h.author_sort
     limit greatest(1, least(lim, 100)) offset greatest(0, off);
 
   get diagnostics n_hits = row_count;
@@ -207,14 +223,17 @@ grant execute on function series_works(text, text) to anon, authenticated;
 
 -- ISBN → Open-Library-Cover-ID (nur deutsche ISBNs 978-3…), gefüllt vom Workflow „Cover-IDs“ (scripts/covers.mjs).
 -- Getrennt vom Katalog-Import, weil der Open-Library-Export je nach Server 2–5 Stunden zum Herunterladen braucht.
+-- Seit 11/2026 auch die Zahl der Open-Library-Leselisten-Einträge des zugehörigen Werks (Beliebtheit).
 create table if not exists cover_map (
   isbn     bigint primary key,
-  cover_id integer not null
+  cover_id integer
 );
+alter table cover_map alter column cover_id drop not null;
+alter table cover_map add column if not exists readers integer not null default 0;
 alter table cover_map enable row level security; -- keine Policy: für die App unsichtbar
 
--- Cover-IDs aus cover_map in die Werke übernehmen (höchstens 3, in Cover-Reihenfolge der ISBNs).
--- Ändert nur Werke, bei denen sich etwas ändert.
+-- Cover-IDs (höchstens 3, in Cover-Reihenfolge der ISBNs) und Leser-Zahl (Maximum über die Ausgaben)
+-- aus cover_map in die Werke übernehmen. Ändert nur Werke, bei denen sich etwas ändert.
 create or replace function apply_cover_map()
 returns integer
 language plpgsql
@@ -222,15 +241,17 @@ set search_path = public
 as $$
 declare n integer;
 begin
-  update works w set cover_ids = x.ids
+  update works w set cover_ids = x.ids, ol_readers = x.readers
   from (
-    select w2.id, (array_agg(c.cover_id order by u.ord))[1:3] as ids
+    select w2.id,
+           coalesce((array_agg(c.cover_id order by u.ord) filter (where c.cover_id is not null))[1:3], '{}') as ids,
+           coalesce(max(c.readers), 0) as readers
     from works w2
     cross join lateral unnest(w2.isbns) with ordinality as u(isbn, ord)
     join cover_map c on c.isbn = u.isbn
     group by w2.id
   ) x
-  where w.id = x.id and w.cover_ids is distinct from x.ids;
+  where w.id = x.id and (w.cover_ids, w.ol_readers) is distinct from (x.ids, x.readers);
   get diagnostics n = row_count;
   return n;
 end;

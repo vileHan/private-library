@@ -55,7 +55,7 @@ function slim(e) {
     isbns: e.isbns, authors: e.authors, authorsSort: e.authorsSort.slice(0, 1), title: e.title, sortTitle: e.sortTitle,
     subtitle: e.subtitle, series: e.series, volume: e.volume, publisher: e.publisher, year: e.year,
     genres: e.genres.slice(0, 2), themes: e.themes.slice(0, 1), isComic: e.isComic, isEbook: e.isEbook,
-    binding: e.binding, edition: '', pages: '', relatedIsbns: [],
+    binding: e.binding, edition: '', pages: '', relatedIsbns: [], isBestseller: !!e.isBestseller,
   }));
 }
 
@@ -112,6 +112,7 @@ function toRows(works, coverIds) {
       year: smallint(w.year),
       genre: w.genre || null,
       is_comic: !!w.isComic,
+      bestseller: !!w.bestseller,
       isbns,
       cover_ids: [...new Set(isbns.map((i) => coverIds.get(i)).filter(Boolean))].slice(0, 3),
       search_title: normalizeText([w.title, searchableSubtitle(w.subtitle), w.series].filter(Boolean).join(' ')),
@@ -122,9 +123,9 @@ function toRows(works, coverIds) {
 
 // ---------- 4. In die Datenbank schreiben ----------
 const COLS = ['title', 'sort_title', 'subtitle', 'authors', 'author_sort', 'series', 'volume', 'year', 'genre',
-  'is_comic', 'isbns', 'search_title', 'search_author']; // cover_ids setzt apply_cover_map() (bleibt sonst erhalten)
+  'is_comic', 'bestseller', 'isbns', 'search_title', 'search_author']; // cover_ids setzt apply_cover_map() (bleibt sonst erhalten)
 const TYPES = 'id text, title text, sort_title text, subtitle text, authors text[], author_sort text, series text, volume smallint, '
-  + 'year smallint, genre text, is_comic boolean, isbns bigint[], search_title text, search_author text';
+  + 'year smallint, genre text, is_comic boolean, bestseller boolean, isbns bigint[], search_title text, search_author text';
 
 // Nur geänderte Zeilen werden aktualisiert – das hält die Datenbank klein (500-MB-Grenze).
 const UPSERT = `
