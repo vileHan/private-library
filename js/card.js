@@ -4,7 +4,7 @@ import { catalog } from './catalog.js';
 import { entryFor, updateEntry, allTags } from './library.js';
 import { ownedIsbnsOf } from './store.js';
 import { formatIsbn } from './isbn.js';
-import { $, el, escapeHtml, today } from './util.js';
+import { $, el, escapeHtml, today, haptic } from './util.js';
 
 // Untertitel wie „Roman“ oder „Thriller“ sind nur Gattungsangaben – die stehen schon beim Genre.
 const GENERIC_SUBTITLE = /^(ein(e|en)?\s+)?([\wäöüß-]+\s+)?[\wäöüß-]*(roman|thriller|krimi|kriminalroman|erzählung|erzählungen|novelle|geschichten|gedichte)(\s.*)?$/i;
@@ -164,6 +164,7 @@ function attachGridGestures(card, ctx) {
   const isGrid = () => document.body.classList.contains('grid-view');
 
   const apply = async (kind) => {
+    haptic(); // sofort, noch in der Berührung – nötig für den iPhone-Umweg
     const before = snapshot(ctx.getEntry());
     await ctx.change(actions[kind](ctx.work));
     toast(() => ctx.change((x) => Object.assign(x, before)));
@@ -193,7 +194,7 @@ function attachGridGestures(card, ctx) {
     holdTimer = setTimeout(() => {
       if (!start || start.swiping) return;
       start.held = true;
-      navigator.vibrate?.(20);
+      haptic(20);
       details();
     }, HOLD);
   });

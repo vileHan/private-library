@@ -2,7 +2,7 @@
 // Android/Chrome: eingebaute BarcodeDetector-Schnittstelle. iPhone/Safari & Co.: freie Bibliothek ZXing (wird nur
 // beim ersten Scan nachgeladen). Kamera geht nur über HTTPS – GitHub Pages und localhost passen.
 import { normalizeIsbn } from './isbn.js';
-import { $ } from './util.js';
+import { $, haptic } from './util.js';
 
 const ZXING_URL = 'https://cdn.jsdelivr.net/npm/@zxing/browser@0.1.5/+esm';
 
@@ -32,7 +32,7 @@ export function scanIsbn() {
     const onKey = (ev) => { if (ev.key === 'Escape') finish(null); };
     const found = (raw) => {
       const isbn = normalizeIsbn(raw);
-      if (isbn) { navigator.vibrate?.(60); finish(isbn); }
+      if (isbn) { haptic(60); finish(isbn); }
       else hint.textContent = 'Das ist keine Buch-ISBN – bitte den Barcode mit 978… scannen.';
     };
 
