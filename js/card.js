@@ -155,12 +155,6 @@ const SWIPE = 70;    // Pixel, ab denen ein Wisch zählt
 const DOUBLE = 280;  // Millisekunden für einen Doppeltipp
 const HOLD = 500;    // Millisekunden für „gedrückt halten“
 
-const GESTURE_TEXT = {
-  own: (e) => (e?.owned ? 'Als „besitze ich“ markiert' : '„Besitze ich“ entfernt'),
-  wish: (e) => (e?.wish ? 'Gemerkt' : 'Von der Merkliste entfernt'),
-  read: (e) => (e?.read ? 'Als gelesen markiert' : '„Gelesen“ entfernt'),
-};
-
 function attachGridGestures(card, ctx) {
   const cover = card.querySelector('.cover');
   let start = null;
@@ -171,8 +165,8 @@ function attachGridGestures(card, ctx) {
 
   const apply = async (kind) => {
     const before = snapshot(ctx.getEntry());
-    const e = await ctx.change(actions[kind](ctx.work));
-    toast(GESTURE_TEXT[kind](e), () => ctx.change((x) => Object.assign(x, before)));
+    await ctx.change(actions[kind](ctx.work));
+    toast(() => ctx.change((x) => Object.assign(x, before)));
   };
   const details = () => { cover.querySelector('.peek')?.remove(); openSheet(ctx); };
 
@@ -256,16 +250,16 @@ function snapshot(e) {
 }
 
 let toastTimer;
-/** Kurze Meldung unten mit optionalem „Rückgängig“. */
-export function toast(message, undo) {
+/** Kleiner „Rückgängig“-Knopf unten nach einer Geste – verschwindet nach 2,5 Sekunden. */
+export function toast(undo) {
   const box = $('#toast');
   clearTimeout(toastTimer);
-  box.replaceChildren(el('span', { text: message }), undo ? el('button', {
-    type: 'button', text: 'Rückgängig',
+  box.replaceChildren(el('button', {
+    type: 'button', text: '↶ Rückgängig',
     onclick: () => { box.hidden = true; undo(); },
-  }) : null);
+  }));
   box.hidden = false;
-  toastTimer = setTimeout(() => { box.hidden = true; }, 4000);
+  toastTimer = setTimeout(() => { box.hidden = true; }, 2500);
 }
 
 // ---------- Detailblatt („⋯“ bzw. Doppeltippen im Raster) ----------
@@ -302,8 +296,9 @@ function openSheet(ctx) {
   let editions = (work.editions || []).filter((ed) => ed.isbn);
   const isbnCount = editions.length || (work.isbns || []).length;
   const edList = el('ul', { class: 'editions' });
-  const edSection = el('section', { class: 'sheet-section' },
-    el('h3', { text: isbnCount === 1 ? 'Ausgabe' : `${isbnCount} Ausgaben – welche besitzt du?` }), edList);
+  // Ganz unten und zugeklappt – Bewertung, Notiz usw. sind wichtiger. Details werden erst beim Aufklappen geladen.
+  const edSection = el('details', { class: 'sheet-section editions-box' },
+    el('summary', { text: isbnCount === 1 ? 'Ausgabe' : `${isbnCount} Ausgaben – welche besitzt du?` }), edList);
   const renderEditions = () => {
     const mine = ownedIsbnsOf(entry);
     edList.replaceChildren(...editions.map((ed) => {
@@ -326,16 +321,19 @@ function openSheet(ctx) {
   };
   if (isbnCount && !editions.length) {
     edList.replaceChildren(el('li', { text: 'Lade Ausgaben …' }));
-    catalog.editionDetails(work.isbns)
-      .catch(() => work.isbns.map((isbn) => ({ isbn })))
-      .then((list) => { editions = list; renderEditions(); });
+    edSection.addEventListener('toggle', () => {
+      if (!edSection.open || editions.length) return;
+      catalog.editionDetails(work.isbns)
+        .catch(() => work.isbns.map((isbn) => ({ isbn })))
+        .then((list) => { editions = list; renderEditions(); });
+    });
   } else renderEditions();
 
   // Bewertung, Lesedatum, Regale, Notiz
   const detBox = el('section', { class: 'sheet-section details' }, el('h3', { text: 'Meine Angaben' }));
   const details = buildDetails(detBox, () => entry, ctx.change);
 
-  body.replaceChildren(...[head, bar, isbnCount ? edSection : null, detBox].filter(Boolean));
+  body.replaceChildren(...[head, bar, detBox, isbnCount ? edSection : null].filter(Boolean));
   const refresh = (e) => {
     entry = e;
     paintToggles(bar, e);
