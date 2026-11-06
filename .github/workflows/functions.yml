@@ -20,7 +20,7 @@ jobs:
           version: latest
       # --no-verify-jwt: Die App schickt nur den öffentlichen Publishable-Key, kein Anmelde-Token.
       # --use-api: ohne Docker bündeln
-      - run: supabase functions deploy blurb --project-ref vdkobcydrflzamrqrwtu --no-verify-jwt --use-api
+      - run: supabase functions deploy blurb --project-ref vdkobcydrflzamrqrwtu --no-verify-jwt --use-api --yes
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
       - name: Probeabruf (Unterleuten)
