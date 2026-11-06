@@ -4,7 +4,7 @@ import { catalog } from './catalog.js';
 import { entryFor, updateEntry, allTags } from './library.js';
 import { ownedIsbnsOf } from './store.js';
 import { formatIsbn } from './isbn.js';
-import { $, el, escapeHtml, today, haptic } from './util.js';
+import { $, el, escapeHtml, today, haptic, pop, switchToggle } from './util.js';
 
 // Untertitel wie „Roman“ oder „Thriller“ sind nur Gattungsangaben – die stehen schon beim Genre.
 const GENERIC_SUBTITLE = /^(ein(e|en)?\s+)?([\wäöüß-]+\s+)?[\wäöüß-]*(roman|thriller|krimi|kriminalroman|erzählung|erzählungen|novelle|geschichten|gedichte)(\s.*)?$/i;
@@ -137,9 +137,11 @@ export function bookCard(work, opts = {}) {
     onChange: null, // setzt das Detailblatt, solange es offen ist
   };
 
-  card.querySelector('.toggle.own').addEventListener('click', () => ctx.change(actions.own(work)));
-  card.querySelector('.toggle.read').addEventListener('click', () => ctx.change(actions.read()));
-  card.querySelector('.toggle.wish').addEventListener('click', () => ctx.change(actions.wish()));
+  // „change“ des echten Schalters im Label (siehe switchToggle in util.js) – sorgt am iPhone für Haptik
+  const onToggle = (cls, fn) => card.querySelector(`.toggle.${cls} input`).addEventListener('change', () => { haptic(); ctx.change(fn()); });
+  onToggle('own', () => actions.own(work));
+  onToggle('read', () => actions.read());
+  onToggle('wish', () => actions.wish());
   card.querySelector('.more-btn').addEventListener('click', () => openSheet(ctx));
   attachGridGestures(card, ctx);
 
@@ -163,9 +165,9 @@ function attachGridGestures(card, ctx) {
   let lastTap = 0;
   const isGrid = () => document.body.classList.contains('grid-view');
 
-  const apply = async (kind, { tapHaptic = false } = {}) => {
-    // Doppeltipp: Haptik im folgenden „click“ (zuverlässigster Moment für den iPhone-Umweg), Wischen: sofort
-    if (tapHaptic) pendingHaptic = true; else haptic();
+  const apply = async (kind) => {
+    haptic(); // Android vibriert; am iPhone gibt es für Gesten keine Haptik – dafür hüpft das Cover sichtbar
+    pop(cover);
     const before = snapshot(ctx.getEntry());
     await ctx.change(actions[kind](ctx.work));
     toast(() => ctx.change((x) => Object.assign(x, before)));
@@ -187,17 +189,17 @@ function attachGridGestures(card, ctx) {
 
   // Langes Drücken soll kein Bild-/Kontextmenü öffnen
   cover.addEventListener('contextmenu', (ev) => { if (isGrid()) ev.preventDefault(); });
-  let pendingHaptic = false;
-  cover.addEventListener('click', () => { if (pendingHaptic) { pendingHaptic = false; haptic(); } });
-
   cover.addEventListener('pointerdown', (ev) => {
     if (!isGrid()) return;
     start = { x: ev.clientX, y: ev.clientY, id: ev.pointerId, swiping: false, held: false };
     clearTimeout(holdTimer);
+    cover.classList.add('pressing'); // sichtbar: Cover drückt sich während des Haltens langsam ein
     holdTimer = setTimeout(() => {
       if (!start || start.swiping) return;
       start.held = true;
       haptic(20);
+      cover.classList.remove('pressing');
+      pop(cover);
       details();
     }, HOLD);
   });
@@ -205,7 +207,7 @@ function attachGridGestures(card, ctx) {
     if (!start || ev.pointerId !== start.id) return;
     const dx = ev.clientX - start.x;
     const dy = ev.clientY - start.y;
-    if (Math.abs(dx) > 10 || Math.abs(dy) > 10) clearTimeout(holdTimer); // Bewegung = kein Gedrückthalten
+    if (Math.abs(dx) > 10 || Math.abs(dy) > 10) { clearTimeout(holdTimer); cover.classList.remove('pressing'); } // Bewegung = kein Halten
     if (!start.swiping && Math.abs(dx) > 12 && Math.abs(dx) > Math.abs(dy) * 1.5) {
       start.swiping = true;
       cover.setPointerCapture?.(ev.pointerId);
@@ -216,6 +218,7 @@ function attachGridGestures(card, ctx) {
     }
   });
   const end = async (ev) => {
+    cover.classList.remove('pressing');
     clearTimeout(holdTimer);
     if (!start || ev.pointerId !== start.id) return;
     const dx = ev.clientX - start.x;
@@ -236,7 +239,7 @@ function attachGridGestures(card, ctx) {
       clearTimeout(tapTimer);
       lastTap = 0;
       cover.querySelector('.peek')?.remove();
-      apply('own', { tapHaptic: true });
+      apply('own');
     } else {
       lastTap = now;
       tapTimer = setTimeout(peek, DOUBLE);
@@ -289,8 +292,8 @@ function openSheet(ctx) {
 
   // Dieselben drei Knöpfe, ausgeschrieben
   const toggle = (cls, label, fn) => {
-    const b = el('button', { class: `toggle ${cls}`, type: 'button', 'aria-pressed': 'false' }, el('span', { class: 'lbl', text: label }));
-    b.addEventListener('click', () => ctx.change(fn));
+    const b = switchToggle(cls, label); // echter iOS-Schalter im Knopf → Haptik am iPhone
+    b.querySelector('input').addEventListener('change', () => { haptic(); ctx.change(fn); });
     return b;
   };
   const bar = el('div', { class: 'actions sheet-actions' },
