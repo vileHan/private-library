@@ -35,12 +35,20 @@ const years = parseYears(env.YEARS);
 const groups = env.GROUPS?.trim() ? env.GROUPS.split(',').map((g) => g.trim()) : CONFIG.catalogFilter.subjectGroups;
 const fullRun = !env.YEARS?.trim() && !env.GROUPS?.trim();
 
+// Bremst die DNB („Fehler 429 – zu viele Anfragen“, erstmals 11/2026 nach ~1 h Import), pausieren ALLE
+// Teilabfragen gemeinsam: 1, 2, 3 … Minuten, bis zu 15 Versuche (~2 h). Andere Fehler: 5 Versuche.
+let pauseUntil = 0;
 async function withRetry(fn, label) {
   for (let attempt = 1; ; attempt++) {
+    const wait = pauseUntil - Date.now();
+    if (wait > 0) await sleep(wait);
     try { return await fn(); } catch (err) {
-      if (attempt >= 5) throw new Error(`${label}: ${err.message}`);
-      log(`  Fehler (${label}), Versuch ${attempt}: ${err.message} – warte …`);
-      await sleep(5000 * attempt);
+      const limited = /\b429\b/.test(err.message);
+      if (attempt >= (limited ? 15 : 5)) throw new Error(`${label}: ${err.message}`);
+      const ms = limited ? 60000 * attempt : 5000 * attempt;
+      if (limited) pauseUntil = Math.max(pauseUntil, Date.now() + ms);
+      log(`  Fehler (${label}), Versuch ${attempt}: ${err.message} – warte ${Math.round(ms / 1000)} s …`);
+      await sleep(ms);
     }
   }
 }
@@ -69,7 +77,7 @@ async function harvestPartition(year, group) {
     if (total > 100000) throw new Error(`${year}/${group}: ${total} Treffer – mehr als die DNB blättern lässt. Partition verkleinern.`);
     for (const e of res.editions) out.push(slim(e));
     start = res.next;
-    await sleep(250); // höflich bleiben
+    await sleep(500); // höflich bleiben (DNB bremst sonst mit 429)
   }
   const mem = Math.round(process.memoryUsage().heapUsed / 1024 / 1024);
   log(`  ${year} ${group}: ${total} Datensätze → ${out.length} gedruckte Ausgaben (Speicher ${mem} MB)`);
@@ -87,7 +95,7 @@ async function harvestAll() {
       for (const e of await harvestPartition(y, g)) editions.push(e);
     }
   };
-  await Promise.all(Array.from({ length: 3 }, worker)); // max. 3 gleichzeitige Anfragen
+  await Promise.all(Array.from({ length: 2 }, worker)); // max. 2 gleichzeitige Anfragen (3 lösten 11/2026 Fehler 429 aus)
   log(`DNB fertig: ${editions.length} Ausgaben`);
   return editions;
 }
