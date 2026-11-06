@@ -147,70 +147,98 @@ export function bookCard(work, opts = {}) {
   return card;
 }
 
-// ---------- Cover-Raster: Tippen, Doppeltippen, Wischen ----------
+// ---------- Cover-Raster: Gesten ----------
+// einmal tippen = Titel einblenden (mit „Details ›“), doppelt tippen = Besitze ich,
+// nach rechts wischen = Merken, nach links wischen = Gelesen, gedrückt halten = Detailblatt.
+// Jede Änderung per Geste zeigt kurz „Rückgängig“.
 const SWIPE = 70;    // Pixel, ab denen ein Wisch zählt
 const DOUBLE = 280;  // Millisekunden für einen Doppeltipp
+const HOLD = 500;    // Millisekunden für „gedrückt halten“
+
+const GESTURE_TEXT = {
+  own: (e) => (e?.owned ? 'Als „besitze ich“ markiert' : '„Besitze ich“ entfernt'),
+  wish: (e) => (e?.wish ? 'Gemerkt' : 'Von der Merkliste entfernt'),
+  read: (e) => (e?.read ? 'Als gelesen markiert' : '„Gelesen“ entfernt'),
+};
 
 function attachGridGestures(card, ctx) {
   const cover = card.querySelector('.cover');
   let start = null;
   let tapTimer = null;
+  let holdTimer = null;
   let lastTap = 0;
   const isGrid = () => document.body.classList.contains('grid-view');
+
+  const apply = async (kind) => {
+    const before = snapshot(ctx.getEntry());
+    const e = await ctx.change(actions[kind](ctx.work));
+    toast(GESTURE_TEXT[kind](e), () => ctx.change((x) => Object.assign(x, before)));
+  };
+  const details = () => { cover.querySelector('.peek')?.remove(); openSheet(ctx); };
 
   const peek = () => {
     const open = cover.querySelector('.peek');
     if (open) { open.remove(); return; }
+    const btn = el('button', { type: 'button', class: 'peek-details', text: 'Details ›' });
+    // Eigene Behandlung, damit der Tipp auf den Knopf nicht als Cover-Tipp zählt
+    btn.addEventListener('pointerdown', (ev) => ev.stopPropagation());
+    btn.addEventListener('pointerup', (ev) => ev.stopPropagation());
+    btn.addEventListener('click', (ev) => { ev.stopPropagation(); details(); });
     cover.append(el('div', { class: 'peek' },
       el('strong', { text: card.querySelector('.title').textContent }),
-      el('span', { text: card.querySelector('.author').textContent })));
+      el('span', { text: card.querySelector('.author').textContent }), btn));
   };
+
+  // Langes Drücken soll kein Bild-/Kontextmenü öffnen
+  cover.addEventListener('contextmenu', (ev) => { if (isGrid()) ev.preventDefault(); });
 
   cover.addEventListener('pointerdown', (ev) => {
     if (!isGrid()) return;
-    start = { x: ev.clientX, y: ev.clientY, id: ev.pointerId, swiping: false };
+    start = { x: ev.clientX, y: ev.clientY, id: ev.pointerId, swiping: false, held: false };
+    clearTimeout(holdTimer);
+    holdTimer = setTimeout(() => {
+      if (!start || start.swiping) return;
+      start.held = true;
+      navigator.vibrate?.(20);
+      details();
+    }, HOLD);
   });
   cover.addEventListener('pointermove', (ev) => {
     if (!start || ev.pointerId !== start.id) return;
     const dx = ev.clientX - start.x;
     const dy = ev.clientY - start.y;
+    if (Math.abs(dx) > 10 || Math.abs(dy) > 10) clearTimeout(holdTimer); // Bewegung = kein Gedrückthalten
     if (!start.swiping && Math.abs(dx) > 12 && Math.abs(dx) > Math.abs(dy) * 1.5) {
       start.swiping = true;
       cover.setPointerCapture?.(ev.pointerId);
     }
     if (start.swiping) {
       cover.style.transform = `translateX(${Math.max(-90, Math.min(90, dx))}px) rotate(${dx / 30}deg)`;
-      cover.dataset.swipe = dx > SWIPE ? 'own' : dx < -SWIPE ? 'wish' : '';
+      cover.dataset.swipe = dx > SWIPE ? 'wish' : dx < -SWIPE ? 'read' : '';
     }
   });
   const end = async (ev) => {
+    clearTimeout(holdTimer);
     if (!start || ev.pointerId !== start.id) return;
     const dx = ev.clientX - start.x;
     const dy = ev.clientY - start.y;
-    const swiping = start.swiping;
+    const { swiping, held } = start;
     start = null;
     cover.style.transform = '';
     delete cover.dataset.swipe;
+    if (held) return; // Detailblatt ist schon offen
     if (swiping) {
       if (Math.abs(dx) < SWIPE || ev.type === 'pointercancel') return;
-      const kind = dx > 0 ? 'own' : 'wish';
-      const before = snapshot(ctx.getEntry());
-      const e = await ctx.change(actions[kind](ctx.work));
-      const on = kind === 'own' ? e?.owned : e?.wish;
-      const label = kind === 'own'
-        ? (on ? 'Als „besitze ich“ markiert' : '„Besitze ich“ entfernt')
-        : (on ? 'Gemerkt' : 'Von der Merkliste entfernt');
-      toast(label, () => ctx.change((x) => Object.assign(x, before)));
+      apply(dx > 0 ? 'wish' : 'read');
       return;
     }
     if (ev.type === 'pointercancel' || Math.abs(dx) > 10 || Math.abs(dy) > 10) return; // war Scrollen
-    // Tippen: einfach = Titel einblenden, doppelt = Detailblatt
     const now = Date.now();
     if (now - lastTap < DOUBLE) {
       clearTimeout(tapTimer);
       lastTap = 0;
       cover.querySelector('.peek')?.remove();
-      openSheet(ctx);
+      apply('own');
     } else {
       lastTap = now;
       tapTimer = setTimeout(peek, DOUBLE);

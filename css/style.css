@@ -86,9 +86,9 @@ body.grid-view :is(#results, #libList) > .book .actions { display: flex; margin:
 body.grid-view :is(#results, #libList) > .book .toggle { width: 42px; height: 42px; min-height: 0; padding: 0; justify-content: center; font-size: 1.25rem;
   border: 1px solid var(--line); border-radius: 12px; }
 /* Wischen im Raster: Cover folgt dem Finger, Rahmen zeigt, was passieren wird */
-body.grid-view :is(#results, #libList) > .book .cover { touch-action: pan-y; transition: transform .15s ease-out; user-select: none; -webkit-user-select: none; }
+body.grid-view :is(#results, #libList) > .book .cover { touch-action: pan-y; transition: transform .15s ease-out; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
 body.grid-view :is(#results, #libList) > .book .cover[data-swipe] { transition: none; }
-body.grid-view :is(#results, #libList) > .book .cover[data-swipe="own"] { outline: 4px solid var(--accent); }
+body.grid-view :is(#results, #libList) > .book .cover[data-swipe="read"] { outline: 4px solid var(--accent); }
 body.grid-view :is(#results, #libList) > .book .cover[data-swipe="wish"] { outline: 4px solid var(--gold); }
 body.grid-view :is(#results, #libList) > .book .toggle .lbl { display: none; }
 body.grid-view :is(#results, #libList) > .book .toggle::before { font-size: 1.25rem; }
@@ -316,4 +316,10 @@ body.sheet-open { overflow: hidden; }
   .book > .cover { width: 72px; height: 108px; }
   .book > .actions { gap: 4px; }
   .book > .actions .toggle { padding: 3px 6px; font-size: .72rem; gap: 3px; }
+}
+
+/* „Details ›“ in der Titel-Einblendung (Cover-Raster) */
+.peek-details {
+  align-self: flex-start; margin-top: 8px; border: 1px solid rgba(255,255,255,.7); background: rgba(255,255,255,.12);
+  color: #fff; border-radius: 99px; padding: 5px 12px; font-size: .8rem; font-weight: 700; cursor: pointer;
 }
