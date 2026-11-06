@@ -289,7 +289,10 @@ $$;
 
 -- Index für „beliebteste zuerst“ je Genre. Ohne ihn liest jede Stöber-Seite die ganze Tabelle (> 3 s, gemessen).
 -- Größe ~15–25 MB (400.000 Einträge à ~40 Byte).
-create index if not exists works_genre_pop_idx on works (genre_group(genre), popularity(works) desc);
+-- Die Formel steht ausgeschrieben (wie popularity()), weil Postgres einen Index über popularity(works) nicht nutzte (> 3 s).
+drop index if exists works_genre_pop_idx;
+create index if not exists works_genre_pop2_idx on works
+  (genre_group(genre), (cardinality(isbns) * 2 + case when bestseller then 20 else 0 end + ln(1 + ol_readers) * 6) desc);
 
 drop function if exists browse_genre(text, int, int);
 create function browse_genre(grp text, lim int default 50, off int default 0)
@@ -299,7 +302,7 @@ set search_path = public
 as $$
   select * from works w
   where genre_group(w.genre) = grp
-  order by popularity(w) desc
+  order by (cardinality(w.isbns) * 2 + case when w.bestseller then 20 else 0 end + ln(1 + w.ol_readers) * 6) desc
   limit least(lim, 100) offset off;
 $$;
 
