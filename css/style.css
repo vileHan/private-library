@@ -69,7 +69,7 @@ button, input, select { font: inherit; color: inherit; }
 .suggestions {
   position: absolute; z-index: 20; top: calc(100% + 4px); left: 0; right: 0; margin: 0; padding: 4px 0; list-style: none;
   background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: 0 8px 24px rgba(0,0,0,.18);
-  max-height: 60vh; overflow-y: auto;
+  max-height: 60vh; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch;
 }
 .suggestions li { display: grid; grid-template-columns: 34px 1fr; gap: 10px; align-items: center; padding: 6px 10px; cursor: pointer; }
 .suggestions li[aria-selected="true"], .suggestions li:hover { background: var(--accent-soft); }

@@ -76,5 +76,16 @@ export async function runAll() {
   results.push({ name: 'Kein Werk heißt nur „Eragon“', ok: plain.length === 0, detail: plain.map((w) => `${w.title} / ${w.authors.join(', ') || 'ohne Autor'}`).join('; ') });
   const noAuthor = works.filter((w) => !w.authors.length);
   results.push({ name: 'Keine Eragon-Treffer ohne Autor', ok: noAuthor.length === 0, detail: noAuthor.map((w) => w.title).join('; ') });
+
+  // Harry Dresden: Übersetzerangabe im Bandtitel („Sturmnacht / [Dt. von: …“) darf keine Doppel-Einträge erzeugen
+  const dresden = [];
+  for (let cursor = 1, i = 0; cursor && i < 3; i++) {
+    const res = await searchDnb('Sturmnacht Butcher', cursor);
+    dresden.push(...res.editions);
+    cursor = res.next;
+  }
+  const dWorks = groupEditions(dresden).filter((w) => /Sturmnacht/.test(w.title));
+  results.push({ name: '„Sturmnacht“ (Harry Dresden 1) ist genau ein Werk, ohne Übersetzerangabe im Titel',
+    ok: dWorks.length === 1 && !dWorks[0].title.includes('/'), detail: dWorks.map((w) => `${w.title} (${w.editions.length})`).join('; ') });
   return results;
 }

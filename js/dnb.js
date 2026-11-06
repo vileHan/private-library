@@ -147,7 +147,8 @@ export function parseRecord(rec) {
   // Mehrbändige Werke: $a = Reihe („Eragon“), $n = Bandzählung („Bd. 2“ oder „...“), $p = eigentlicher Titel.
   // Ältere Datensätze haben die Verfasserangabe im Titel: „Matt, der Herzensbrecher / aus dem Amerikan. von …“
   const rawMain = (t ? sub(t, 'a') : '').split(/\s+\/\s+/)[0];
-  const partName = t ? subs(t, 'p').at(-1) || '' : '';
+  // Auch hier steckt bei älteren Datensätzen die Verfasserangabe drin: „Sturmnacht / [Dt. von: Jürgen Langowski“
+  const partName = (t ? subs(t, 'p').at(-1) || '' : '').split(/\s+\/\s+/)[0];
   const partNumber = t ? subs(t, 'n').map(tidy).find((n) => /\d/.test(n)) || '' : '';
   const stripNonSort = (s) => tidy(s.replace(/\u0098[^\u009C]*\u009C\s*/g, ''));
   let title, sortTitle, seriesFromTitle = '', volume = '';

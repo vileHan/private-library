@@ -186,8 +186,8 @@ function renderSuggestions() {
       el('span', {},
         el('span', { class: 's-title', text: w.title + (w.volume && w.series ? ` (${w.series} ${w.volume})` : '') }),
         el('span', { class: 's-author' }, (w.authors || []).join(', ') || '', owned ? el('span', { class: 's-own', text: '  ● im Besitz' }) : null)));
-    // pointerdown statt click: sonst schließt das Verlassen des Eingabefelds die Liste vorher
-    li.addEventListener('pointerdown', (ev) => { ev.preventDefault(); pickSuggestion(i); });
+    // Erst ein echter Tipp (Finger drauf und wieder los, ohne zu wischen) wählt aus – Scrollen bleibt möglich.
+    li.addEventListener('click', () => pickSuggestion(i));
     return li;
   }));
   ul.hidden = !suggest.items.length;
@@ -238,7 +238,18 @@ $('#searchInput').addEventListener('keydown', (ev) => {
     closeSuggestions();
   }
 });
-$('#searchInput').addEventListener('blur', () => setTimeout(closeSuggestions, 150));
+// Liste offen halten, solange der Finger/die Maus in der Liste ist (Scrollen, Tippen). Sonst würde das
+// Verlassen des Eingabefelds die Liste schließen, bevor der Tipp ankommt.
+let pointerInList = false;
+$('#suggestions').addEventListener('pointerdown', (ev) => {
+  pointerInList = true;
+  if (ev.pointerType === 'mouse') ev.preventDefault(); // Maus: Fokus im Suchfeld behalten
+});
+document.addEventListener('pointerup', () => setTimeout(() => { pointerInList = false; }, 400));
+document.addEventListener('pointerdown', (ev) => {
+  if (!$('#suggestions').hidden && !ev.target.closest('#suggestions, #searchInput')) closeSuggestions();
+});
+$('#searchInput').addEventListener('blur', () => setTimeout(() => { if (!pointerInList) closeSuggestions(); }, 150));
 $('#searchForm').addEventListener('submit', closeSuggestions);
 
 // ---------- Barcode-Scan ----------

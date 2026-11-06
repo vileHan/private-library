@@ -98,12 +98,16 @@ begin
       from works w
       where to_tsvector('simple', w.search_title || ' ' || w.search_author) @@ q
       limit cap
+    ), ranked as (
+      -- Bekanntheit einer Reihe = Summe der Ausgaben aller ihrer Bände (Harry Potter ≫ Harry Dresden)
+      select h.*, sum(cardinality(h.isbns)) over (partition by h.series, h.author_sort) as series_pop from hits h
     )
     select h.id, h.title, coalesce(h.sort_title, h.title), h.subtitle, h.authors, h.author_sort,
            h.series, h.volume, h.year, h.genre, h.is_comic, h.isbns, h.cover_ids,
            h.rnk, count(*) over ()
-    from hits h
+    from ranked h
     order by h.series_hit desc,
+             case when h.series_hit then h.series_pop end desc,
              case when h.series_hit then h.author_sort end, case when h.series_hit then h.series end,
              case when h.series_hit then h.volume end nulls last, case when h.series_hit then h.year end,
              h.rnk, lower(coalesce(h.sort_title, h.title)), h.author_sort
