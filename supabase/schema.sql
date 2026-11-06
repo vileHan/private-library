@@ -87,6 +87,7 @@ declare
   t text[];
   core text[];
   q tsquery;
+  qx tsquery; -- dieselben Wörter, aber nur ganz (für den Reihen-Vorrang)
   qf tsquery;
   phrase text;
   n_hits int;
@@ -101,13 +102,15 @@ begin
     return;
   end if;
   q := to_tsquery('simple', array_to_string(array(select x || ':*' from unnest(t) x), ' & '));
+  qx := to_tsquery('simple', array_to_string(t, ' & '));
   phrase := array_to_string(t, ' ');
 
   return query
     with hits as (
       select w.*, case when to_tsvector('simple', w.search_title) @@ q then 0 else 1 end as rnk,
              -- Suche passt zur Reihe („eragon“, „harry potter“) → diese Reihe zuerst, in Bandfolge
-             (w.series is not null and to_tsvector('simple', w.series) @@ q) as series_hit,
+             -- nur ganze Wörter: „zeh“ soll nicht die Reihe „Die Zehn Reiche“ nach vorne holen
+             (w.series is not null and to_tsvector('simple', w.series) @@ qx) as series_hit,
              popularity(w) as pop
       from works w
       where to_tsvector('simple', w.search_title || ' ' || w.search_author) @@ q
