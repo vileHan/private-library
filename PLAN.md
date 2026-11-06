@@ -37,4 +37,11 @@ Die Entscheidungen und Details stehen in [CLAUDE.md](CLAUDE.md).
 - ✅ Suche verfeinert: Initialen werden ignoriert, lange Werbe-Untertitel zählen nicht (George R R Martin).
 - Barcode-Scan mit der Handykamera.
 - Abgleich der Markierungen zwischen Geräten über Supabase mit Anmeldung.
+- **Überlegung Konten (06.11.2026)**: Konten für mich, Familie und Freunde (10–20 Personen). Machbar und kostenlos:
+  - Supabase Auth (Gratis-Tarif bis 50.000 aktive Nutzer/Monat). Anmeldung per E-Mail-Link oder E-Mail + Passwort.
+  - Achtung: Der eingebaute E-Mail-Versand von Supabase schafft nur wenige Mails pro Stunde. Für 20 Personen reicht das meist. Sonst einen kostenlosen Mail-Dienst anbinden (z. B. Brevo, 300 Mails/Tag).
+  - Neue Tabelle `user_books` (Werk, Besitz, gelesen, Merken, Bewertung, Notiz …) mit Row Level Security: jeder sieht nur seine eigenen Einträge. Platz: 20 Personen × ~500 Bücher ≈ 3 MB.
+  - Bringt automatisch den Abgleich zwischen Handy, Laptop usw. Bestehende Daten werden beim ersten Anmelden aus IndexedDB hochgeladen. Ohne Anmeldung funktioniert die App weiter wie bisher.
+  - Später möglich: Familie/Freunde sehen gegenseitig ihre Bibliothek (z. B. „Wer hat das Buch schon?“).
+  - Aufwand: ca. 4–6 Stunden. Offene Fragen: Wer darf sich registrieren (nur auf Einladung?), Anmeldung per Link oder Passwort?
 - Weitere Sachgruppen freischalten, z. B. Geschichte (`900`): Konfiguration ergänzen und den Import für diesen Bereich laufen lassen.
