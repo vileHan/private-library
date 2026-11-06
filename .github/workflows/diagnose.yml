@@ -1,0 +1,25 @@
+name: Diagnose
+
+# Abfragepläne und Indexgrößen anzeigen (nur lesend). Dauer: ~1 Minute.
+on:
+  workflow_dispatch:
+    inputs:
+      sql:
+        description: 'Eigene SELECT-Abfragen (je Zeile eine, leer = Standardprüfungen)'
+        required: false
+        default: ''
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install --no-audit --no-fund
+      - run: node scripts/diagnose.mjs
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          SQL: ${{ inputs.sql }}
