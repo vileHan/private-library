@@ -122,10 +122,11 @@ begin
     with hits as (
       select w.*, case when to_tsvector('simple', w.search_title) @@ q then 0 else 1 end as rnk,
              -- Suche passt zur Reihe („eragon“, „harry potter“) → diese Reihe zuerst, in Bandfolge
-             -- Reihen-Vorrang nur, wenn der Reihenname mit der Eingabe beginnt (ohne Artikel):
-             -- „harry“ → Harry Potter, „eragon“ → Eragon, aber nicht „drache“ → „Nepomuk, der kleine Drache“
-             (w.series is not null and norm_series(w.series)
-                like phrase || '%') as series_hit,
+             -- Reihen-Vorrang nur, wenn die Eingabe der Reihenname ist oder ihn (als ganze Wörter, ohne Artikel)
+             -- mindestens zur Hälfte abdeckt:
+             -- „harry“ → Harry Potter, „eragon“ → Eragon; nicht „liebe“ → „Liebe auf Schwedisch“, nicht „zeh“ → „Zehn Reiche“
+             (w.series is not null and (norm_series(w.series) = phrase or (norm_series(w.series) like phrase || ' %'
+                 and array_length(t, 1) * 2 >= array_length(string_to_array(norm_series(w.series), ' '), 1)))) as series_hit,
              -- ganze Wörter vor bloßen Wortanfängen („zeh“ → Juli Zeh vor „zehn Dialoge“)
              (to_tsvector('simple', w.search_title || ' ' || w.search_author) @@ qx) as exact,
              popularity(w) as pop
