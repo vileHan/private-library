@@ -1,0 +1,21 @@
+name: Datenbankschema
+
+# Wendet nur supabase/schema.sql an (Suchfunktionen usw.), ohne Daten zu laden. Dauer: ~1 Minute.
+# Darf parallel zu einem laufenden Import laufen – das Schema ist wiederholbar und ändert keine Buchdaten.
+on:
+  workflow_dispatch:
+
+jobs:
+  schema:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install --no-audit --no-fund
+      - run: node scripts/import.mjs
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          SCHEMA_ONLY: 'true'
