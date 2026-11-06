@@ -143,7 +143,7 @@ input[type="search"]:focus, select:focus { outline: 2px solid var(--accent); out
 
 /* Buch-Slot (Variante B): Cover | Titel, Autor, Infozeile – darunter eine feste Knopfleiste */
 .book {
-  display: grid; grid-template-columns: 64px 1fr; grid-template-areas: "cover info" "actions actions"; gap: 10px 12px;
+  display: grid; grid-template-columns: 64px 1fr; grid-template-areas: "cover info" "actions actions"; gap: 8px 12px;
   background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
   padding: 10px 10px 0; overflow: hidden;
 }
@@ -155,10 +155,10 @@ input[type="search"]:focus, select:focus { outline: 2px solid var(--accent); out
 }
 .book > .actions > * + * { border-left: 1px solid var(--line); }
 .book > .actions .toggle, .more-btn {
-  border: 0; border-radius: 0; background: transparent; justify-content: center; min-height: 44px; padding: 8px 4px;
-  font-size: .85rem; cursor: pointer; color: inherit;
+  border: 0; border-radius: 0; background: transparent; justify-content: center; min-height: 34px; padding: 3px 4px;
+  font-size: .8rem; line-height: 1.2; cursor: pointer; color: inherit;
 }
-.more-btn { font-size: 1.3rem; line-height: 1; font-weight: 700; color: var(--muted); }
+.more-btn { font-size: 1.1rem; line-height: 1; font-weight: 700; color: var(--muted); }
 .book .title { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .book .author, .book .meta { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .book.owned { border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); }
@@ -240,7 +240,7 @@ input[type="search"]:focus, select:focus { outline: 2px solid var(--accent); out
 .series .list { gap: 6px; }
 .book.compact { grid-template-columns: 44px 1fr; padding: 8px 8px 0; background: var(--bg); }
 .book.compact > .actions { margin: 0 -8px; }
-.book.compact > .actions .toggle, .book.compact .more-btn { min-height: 38px; font-size: .8rem; }
+.book.compact > .actions .toggle, .book.compact .more-btn { min-height: 30px; font-size: .78rem; }
 .book.compact .cover { width: 44px; height: 66px; }
 .book.compact .title { font-size: .92rem; }
 .book.compact .author { display: none; } /* steht schon im Reihenkopf */
@@ -319,7 +319,8 @@ body.sheet-open { overflow: hidden; }
 }
 .cover .badge-own { right: 4px; background: #2f8a5f; color: #fff; }
 .cover .badge-wish { left: 4px; background: var(--gold); color: #fff; font-size: 11px; }
-.book.owned .cover .badge-own, .book.wished .cover .badge-wish { display: grid; }
+/* Vorerst nur im Cover-Raster (dort steht kein Text) – in der Liste reicht der grüne Knopf */
+body.grid-view :is(#results, #libList) > .book.owned .cover .badge-own, body.grid-view :is(#results, #libList) > .book.wished .cover .badge-wish { display: grid; }
 /* Im Raster sind die Cover größer – Abzeichen mitwachsen lassen */
 body.grid-view :is(#results, #libList) > .book .cover .badge { width: 30px; height: 30px; top: 7px; font-size: 17px; border-width: 2.5px; }
 body.grid-view :is(#results, #libList) > .book .cover .badge-own { right: 7px; }
