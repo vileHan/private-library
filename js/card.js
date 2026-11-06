@@ -59,7 +59,8 @@ export function shortGenre(g = '') {
 /** Eine Zeile unter dem Autor: Reihe Band · Jahr · Genre (kurz) · ★ · ✎ – wird bei Platzmangel abgeschnitten. */
 function metaLine(work, entry) {
   const parts = [];
-  if (work.series) parts.push(work.volume ? `${work.series} ${work.volume}` : work.series);
+  // Nur „Band 2“ statt „Eragon 2“ – lange Reihennamen würden die Zeile sprengen (voller Name im Detailblatt)
+  if (work.series) parts.push(work.volume ? `Band ${work.volume}` : work.series);
   if (work.year) parts.push(String(work.year));
   if (work.genre) parts.push(shortGenre(work.genre));
   if (entry?.rating) parts.push(`★${entry.rating}`);
