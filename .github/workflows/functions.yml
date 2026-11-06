@@ -1,0 +1,29 @@
+name: Supabase-Funktionen
+
+# Veröffentlicht die Edge Functions aus supabase/functions (z. B. „blurb“ = Klappentexte). Dauer: ~1 Minute.
+# Läuft bei Änderungen an supabase/functions und per Hand.
+# Braucht das GitHub-Secret SUPABASE_ACCESS_TOKEN (Supabase → Account → Access Tokens). Nie in Code oder Chat!
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['supabase/functions/**']
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      # --no-verify-jwt: Die App schickt nur den öffentlichen Publishable-Key, kein Anmelde-Token.
+      # --use-api: ohne Docker bündeln
+      - run: supabase functions deploy blurb --project-ref vdkobcydrflzamrqrwtu --no-verify-jwt --use-api
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      - name: Probeabruf (Unterleuten)
+        run: |
+          sleep 5
+          curl -s "https://vdkobcydrflzamrqrwtu.supabase.co/functions/v1/blurb?isbn=9783630874876" | head -c 400; echo

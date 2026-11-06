@@ -361,3 +361,15 @@ body.grid-view :is(#results, #libList) > .book .cover.pressing { transform: scal
   color: #fff; text-align: center; font-size: .8rem; opacity: .85; text-shadow: 0 1px 3px #000; }
 .scan-buttons { position: absolute; left: 16px; right: 16px; bottom: calc(24px + env(safe-area-inset-bottom));
   display: flex; gap: 10px; justify-content: center; }
+
+/* Klappentext im Detailblatt: 5 Zeilen, „Mehr lesen“ klappt den Rest auf */
+.sheet-section.blurb { margin-top: 14px; }
+.blurb-text { margin: 0; font-size: .92rem; line-height: 1.5; white-space: pre-line; color: var(--text, inherit);
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 5; line-clamp: 5; overflow: hidden; }
+.blurb.open .blurb-text { display: block; -webkit-line-clamp: unset; line-clamp: none; }
+.blurb-more { border: 0; background: none; padding: 6px 0 0; font: inherit; font-size: .88rem; font-weight: 600;
+  color: var(--accent); cursor: pointer; touch-action: manipulation; }
+.blurb.loading .blurb-text { display: grid; gap: 7px; }
+.blurb .skel { display: block; height: .8em; border-radius: 4px; background: var(--line); animation: skel 1.2s ease-in-out infinite alternate; }
+.blurb .skel.short { width: 60%; }
+@keyframes skel { from { opacity: .45; } to { opacity: 1; } }

@@ -349,7 +349,30 @@ function openSheet(ctx) {
   const detBox = el('section', { class: 'sheet-section details' }, el('h3', { text: 'Meine Angaben' }));
   const details = buildDetails(detBox, () => entry, ctx.change);
 
-  body.replaceChildren(...[head, bar, detBox, isbnCount ? edSection : null].filter(Boolean));
+  // Klappentext (Verlagstext über die DNB): erst Platzhalterzeilen, dann 5 Zeilen mit „Mehr lesen“; ohne Text verschwindet der Abschnitt
+  const blurbText = el('p', { class: 'blurb-text' });
+  const blurbMore = el('button', { type: 'button', class: 'blurb-more', text: 'Mehr lesen', hidden: true });
+  const blurbBox = el('section', { class: 'sheet-section blurb loading' },
+    el('h3', { text: 'Klappentext' }), blurbText, blurbMore);
+  blurbText.append(el('span', { class: 'skel' }), el('span', { class: 'skel' }), el('span', { class: 'skel short' }));
+  const toggleBlurb = () => {
+    if (blurbMore.hidden && !blurbBox.classList.contains('open')) return;
+    const open = blurbBox.classList.toggle('open');
+    blurbMore.hidden = false;
+    blurbMore.textContent = open ? 'Weniger' : 'Mehr lesen';
+  };
+  blurbMore.addEventListener('click', toggleBlurb);
+  blurbText.addEventListener('click', toggleBlurb);
+  catalog.blurb([...ownedIsbnsOf(entry), ...(work.isbns || [])])
+    .catch(() => '')
+    .then((text) => {
+      if (!text) { blurbBox.remove(); return; }
+      blurbBox.classList.remove('loading');
+      blurbText.textContent = text;
+      requestAnimationFrame(() => { blurbMore.hidden = blurbText.scrollHeight <= blurbText.clientHeight + 2; });
+    });
+
+  body.replaceChildren(...[head, bar, blurbBox, detBox, isbnCount ? edSection : null].filter(Boolean));
   const refresh = (e) => {
     entry = e;
     paintToggles(bar, e);

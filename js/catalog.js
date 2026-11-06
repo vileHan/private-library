@@ -47,6 +47,7 @@ function toWork(r) {
 }
 
 const PAGE = 50;
+const blurbCache = new Map();
 
 export const catalog = {
   get name() { return useDb() ? 'Datenbank' : 'DNB live'; },
@@ -73,6 +74,19 @@ export const catalog = {
 
   /** Ausgaben-Details zu ISBNs (live von der DNB). */
   editionDetails: (isbns) => editionsByIsbns(isbns),
+
+  /** Klappentext von der DNB über die Supabase-Funktion „blurb“ (die DNB erlaubt keinen Direktabruf). '' = keiner. */
+  async blurb(isbns) {
+    const list = [...new Set(isbns)].filter(Boolean).slice(0, 12);
+    if (!sb.url || !list.length) return '';
+    const key = list.join(',');
+    if (blurbCache.has(key)) return blurbCache.get(key);
+    const res = await fetch(`${sb.url}/functions/v1/blurb?isbn=${key}`); // ohne Kopfzeilen → keine Vorab-Anfrage
+    if (!res.ok) throw new Error(`Klappentext: Fehler ${res.status}`);
+    const { text = '' } = await res.json();
+    blurbCache.set(key, text);
+    return text;
+  },
 
   /** Alle Bände einer Reihe als Werke. */
   async seriesWorks(series, authorSort) {
