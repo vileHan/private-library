@@ -1,0 +1,27 @@
+name: Cover-IDs
+
+# Open-Library-Cover-IDs für deutsche ISBNs sammeln (scripts/covers.mjs). Getrennt vom Katalog-Import,
+# weil der Download des Open-Library-Exports je nach Server 2–5 Stunden dauert.
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 2 15 * *' # monatlich am 15. (der Katalog-Import läuft am 1.)
+
+concurrency:
+  group: cover-ids
+  cancel-in-progress: false
+
+jobs:
+  covers:
+    runs-on: ubuntu-latest
+    timeout-minutes: 355
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install --no-audit --no-fund
+      - run: node scripts/covers.mjs
+        env:
+          NODE_OPTIONS: --max-old-space-size=4096
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}

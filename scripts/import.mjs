@@ -5,12 +5,9 @@
 //   SUPABASE_DB_URL  Postgres-Verbindung (Session pooler), nur als GitHub Secret!
 //   YEARS            z. B. "2024" oder "2019-2021" oder "2010,2012" (leer = alle ab fromYear)
 //   GROUPS           z. B. "B" oder "B,K" (leer = Konfiguration)
-//   COVERS           "true" lädt Cover-IDs aus dem Open-Library-Datenexport (dauert ~20–40 min)
+//   (Cover-IDs kommen aus der Tabelle cover_map, gefüllt vom Workflow „Cover-IDs“ – siehe scripts/covers.mjs)
 //   DRY_RUN          "true" = nichts in die Datenbank schreiben
 import { DOMParser } from '@xmldom/xmldom';
-import { createGunzip } from 'node:zlib';
-import { Readable } from 'node:stream';
-import { createInterface } from 'node:readline';
 import { readFile } from 'node:fs/promises';
 import pg from 'pg';
 
@@ -95,32 +92,6 @@ async function harvestAll() {
   return editions;
 }
 
-// ---------- 2. Open-Library-Cover-IDs ----------
-async function loadCoverIds(neededIsbns) {
-  const url = 'https://openlibrary.org/data/ol_dump_editions_latest.txt.gz';
-  log(`Open Library: lade Datenexport (${neededIsbns.size} gesuchte ISBNs) …`);
-  const res = await fetch(url, { redirect: 'follow' });
-  if (!res.ok) throw new Error(`Open-Library-Export: HTTP ${res.status}`);
-  const lines = createInterface({ input: Readable.fromWeb(res.body).pipe(createGunzip()), crlfDelay: Infinity });
-  const covers = new Map();
-  let n = 0;
-  for await (const line of lines) {
-    if (++n % 5_000_000 === 0) log(`  ${n / 1e6} Mio. Zeilen, ${covers.size} Treffer`);
-    if (!line.includes('"covers"')) continue;
-    const json = line.slice(line.indexOf('{'));
-    let rec;
-    try { rec = JSON.parse(json); } catch { continue; }
-    const id = (rec.covers || []).find((c) => c > 0);
-    if (!id) continue;
-    for (const raw of [...(rec.isbn_13 || []), ...(rec.isbn_10 || [])]) {
-      const isbn = normalizeIsbn(raw);
-      if (isbn && neededIsbns.has(isbn) && !covers.has(isbn)) covers.set(isbn, id);
-    }
-  }
-  log(`Open Library fertig: ${covers.size} Cover-IDs`);
-  return covers;
-}
-
 // ---------- 3. Zeilen bauen ----------
 const smallint = (v) => { const n = Number(v); return Number.isInteger(n) && n > 0 && n < 32767 ? n : null; };
 
@@ -151,9 +122,9 @@ function toRows(works, coverIds) {
 
 // ---------- 4. In die Datenbank schreiben ----------
 const COLS = ['title', 'sort_title', 'subtitle', 'authors', 'author_sort', 'series', 'volume', 'year', 'genre',
-  'is_comic', 'isbns', 'cover_ids', 'search_title', 'search_author'];
+  'is_comic', 'isbns', 'search_title', 'search_author']; // cover_ids setzt apply_cover_map() (bleibt sonst erhalten)
 const TYPES = 'id text, title text, sort_title text, subtitle text, authors text[], author_sort text, series text, volume smallint, '
-  + 'year smallint, genre text, is_comic boolean, isbns bigint[], cover_ids integer[], search_title text, search_author text';
+  + 'year smallint, genre text, is_comic boolean, isbns bigint[], search_title text, search_author text';
 
 // Nur geänderte Zeilen werden aktualisiert – das hält die Datenbank klein (500-MB-Grenze).
 const UPSERT = `
@@ -190,6 +161,9 @@ async function writeDb(rows) {
       const d = await client.query('delete from works w where not exists (select 1 from seen s where s.id = w.id)');
       log(`  entfernt: ${d.rowCount} Werke`);
     }
+    // Cover-IDs aus der Tabelle cover_map (Workflow „Cover-IDs“) übernehmen – auch für neue Werke.
+    const covered = await client.query('select apply_cover_map() as n');
+    log(`Cover-IDs bei ${covered.rows[0].n} Werken aktualisiert`);
     await client.query(`insert into import_state (key, value, updated_at) values ('last_import', $1, now())
       on conflict (key) do update set value = excluded.value, updated_at = now()`,
       [JSON.stringify({ years: env.YEARS || 'alle', groups, works: rows.length })]);
@@ -221,10 +195,7 @@ const editions = await harvestAll();
 const allWorks = groupEditions(editions);
 const works = allWorks.filter((w) => w.isbns.length > 0);
 log(`Zusammengefasst: ${allWorks.length} Werke, davon ${works.length} mit ISBN`);
-let coverIds = new Map();
-if (env.COVERS === 'true') {
-  coverIds = await withRetry(() => loadCoverIds(new Set(works.flatMap((w) => w.isbns))), 'Open Library');
-}
+const coverIds = new Map(); // nicht mehr hier geladen
 const rows = toRows(works, coverIds);
 log(`Zeilen: ${rows.length} Werke, ${rows.reduce((n, r) => n + r.isbns.length, 0)} ISBNs, ${rows.filter((r) => r.cover_ids.length).length} mit Cover-ID`);
 if (DRY) {

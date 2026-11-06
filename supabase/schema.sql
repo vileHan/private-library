@@ -150,6 +150,38 @@ grant select on works to anon, authenticated;
 grant execute on function search_works(text[], int, int) to anon, authenticated;
 grant execute on function series_works(text, text) to anon, authenticated;
 
+-- ISBN → Open-Library-Cover-ID (nur deutsche ISBNs 978-3…), gefüllt vom Workflow „Cover-IDs“ (scripts/covers.mjs).
+-- Getrennt vom Katalog-Import, weil der Open-Library-Export je nach Server 2–5 Stunden zum Herunterladen braucht.
+create table if not exists cover_map (
+  isbn     bigint primary key,
+  cover_id integer not null
+);
+alter table cover_map enable row level security; -- keine Policy: für die App unsichtbar
+
+-- Cover-IDs aus cover_map in die Werke übernehmen (höchstens 3, in Cover-Reihenfolge der ISBNs).
+-- Ändert nur Werke, bei denen sich etwas ändert.
+create or replace function apply_cover_map()
+returns integer
+language plpgsql
+set search_path = public
+as $$
+declare n integer;
+begin
+  update works w set cover_ids = x.ids
+  from (
+    select w2.id, (array_agg(c.cover_id order by u.ord))[1:3] as ids
+    from works w2
+    cross join lateral unnest(w2.isbns) with ordinality as u(isbn, ord)
+    join cover_map c on c.isbn = u.isbn
+    group by w2.id
+  ) x
+  where w.id = x.id and w.cover_ids is distinct from x.ids;
+  get diagnostics n = row_count;
+  return n;
+end;
+$$;
+revoke all on function apply_cover_map() from public, anon, authenticated;
+
 -- Fortschritt/Protokoll des Imports
 create table if not exists import_state (
   key   text primary key,

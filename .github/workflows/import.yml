@@ -13,10 +13,6 @@ on:
         description: 'DNB-Sachgruppen, z. B. B oder B,K (leer = laut js/config.js)'
         required: false
         default: ''
-      covers:
-        description: 'Cover-IDs aus dem Open-Library-Export laden (dauert länger)'
-        type: boolean
-        default: true
       dry_run:
         description: 'Nur testen, nichts in die Datenbank schreiben'
         type: boolean
@@ -53,7 +49,6 @@ jobs:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
           YEARS: ${{ github.event.inputs.years }}
           GROUPS: ${{ github.event.inputs.groups }}
-          COVERS: ${{ github.event_name == 'schedule' && 'true' || github.event.inputs.covers }}
           DRY_RUN: ${{ github.event.inputs.dry_run }}
           RESET: ${{ github.event.inputs.reset }}
           SCHEMA_ONLY: ${{ github.event.inputs.schema_only }}
