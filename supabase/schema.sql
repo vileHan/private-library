@@ -298,6 +298,9 @@ drop function if exists browse_genre(text, int, int);
 create function browse_genre(grp text, lim int default 50, off int default 0)
 returns setof works
 language sql stable
+-- security definer: Mit Row Level Security nutzt Postgres den Genre-Index für den öffentlichen Zugang nicht
+-- (genre_group ist nicht „leakproof“) → > 3 s. Die Funktion liest nur, der Katalog ist ohnehin öffentlich.
+security definer
 set search_path = public
 as $$
   select * from works w
