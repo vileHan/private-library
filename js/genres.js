@@ -1,9 +1,10 @@
-// Stöber-Genres: fassen die ~150 DNB-Gattungsbegriffe zu 14 Gruppen zusammen.
+// Stöber-Genres: fassen die ~150 DNB-Gattungsbegriffe zu 15 Gruppen zusammen.
 // MUSS zur SQL-Funktion genre_group() in supabase/schema.sql passen (gleiche Reihenfolge, gleiche Muster).
 export const GENRES = [
   ['Krimis & Thriller', /\bkrimi|thriller|spannung|spionage|mystery|detektiv|noir/i],
-  ['Fantasy', /fantasy|fantastisch|märchen|mythen|sagen|magisch/i],
+  ['Fantasy', /fantasy|fantastisch|magisch/i],
   ['Science-Fiction', /science.?fiction|dystop|cyberpunk|space opera/i],
+  ['Märchen & Sagen', /märchen|\bsagen|mythen|legende/i],
   ['Romane & Erzählungen', /erzähl|gegenwart|belletristik|roman|klassi|unterhaltung|anthologie|literatur|novelle|kurzgeschicht|zweisprachig/i],
   ['Liebesromane', /liebes|romance|erotik|erotisch|romantisch|new adult/i],
   ['Historische Romane', /histori/i],
@@ -18,7 +19,7 @@ export const GENRES = [
 ];
 
 // Reihenfolge der Prüfung wie in SQL (die Anzeige-Reihenfolge oben ist nach Beliebtheit fürs Stöbern sortiert)
-const ORDER = ['Comics & Manga', 'Krimis & Thriller', 'Science-Fiction', 'Fantasy', 'Horror', 'Liebesromane',
+const ORDER = ['Comics & Manga', 'Krimis & Thriller', 'Science-Fiction', 'Märchen & Sagen', 'Fantasy', 'Horror', 'Liebesromane',
   'Historische Romane', 'Humor & Satire', 'Abenteuer', 'Lyrik & Drama', 'Biografische Romane', 'Kinderbücher',
   'Jugendbücher', 'Romane & Erzählungen'];
 const BY_NAME = new Map(GENRES);

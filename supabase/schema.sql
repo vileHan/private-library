@@ -261,7 +261,7 @@ end;
 $$;
 
 -- Stöbern nach Genre (11/2026): Die DNB kennt ~150 Gattungsbegriffe („Fantasy“, „Fantastische Literatur“,
--- „Epische Fantasy (High Fantasy)“ …). Sie werden zu 14 Stöber-Genres zusammengefasst – dieselbe Liste steht
+-- „Epische Fantasy (High Fantasy)“ …). Sie werden zu 15 Stöber-Genres zusammengefasst – dieselbe Liste steht
 -- in js/genres.js (Reihenfolge zählt: „Historische Kriminalromane“ → Krimis). Stichprobe 12.000 Werke: 0,5 % „Sonstiges“.
 create or replace function genre_group(g text)
 returns text
@@ -272,7 +272,8 @@ as $$
     when g ~* 'comic|manga|graphic novel|bildergeschichte' then 'Comics & Manga'
     when g ~* '\mkrimi|thriller|spannung|spionage|mystery|detektiv|noir' then 'Krimis & Thriller'
     when g ~* 'science.?fiction|dystop|cyberpunk|space opera' then 'Science-Fiction'
-    when g ~* 'fantasy|fantastisch|märchen|mythen|sagen|magisch' then 'Fantasy'
+    when g ~* 'märchen|\msagen|mythen|legende' then 'Märchen & Sagen'
+    when g ~* 'fantasy|fantastisch|magisch' then 'Fantasy'
     when g ~* 'horror|grusel|unheimlich|gothic' then 'Horror'
     when g ~* 'liebes|romance|erotik|erotisch|romantisch|new adult' then 'Liebesromane'
     when g ~* 'histori' then 'Historische Romane'
@@ -290,8 +291,10 @@ $$;
 -- Index für „beliebteste zuerst“ je Genre. Ohne ihn liest jede Stöber-Seite die ganze Tabelle (> 3 s, gemessen).
 -- Größe ~15–25 MB (400.000 Einträge à ~40 Byte).
 -- Die Formel steht ausgeschrieben (wie popularity()), weil Postgres einen Index über popularity(works) nicht nutzte (> 3 s).
+-- Ändert sich genre_group(), muss der Index neu gebaut werden (neuer Name, alten löschen).
 drop index if exists works_genre_pop_idx;
-create index if not exists works_genre_pop2_idx on works
+drop index if exists works_genre_pop2_idx;
+create index if not exists works_genre_pop3_idx on works
   (genre_group(genre), (cardinality(isbns) * 2 + case when bestseller then 20 else 0 end + ln(1 + ol_readers) * 6) desc);
 
 drop function if exists browse_genre(text, int, int);
