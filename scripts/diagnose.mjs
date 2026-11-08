@@ -1,5 +1,6 @@
 // Diagnose: zeigt Abfragepläne (EXPLAIN ANALYZE) und Indexgrößen – nur lesend (Transaktion READ ONLY).
-// Workflow „Diagnose“ (.github/workflows/diagnose.yml). Eigene Abfragen über die Eingabe „sql“ (je Zeile eine).
+// Workflow „Diagnose“ (.github/workflows/diagnose.yml). Eigene Abfragen über die Eingabe „sql“ (je Zeile eine;
+// „explain …“ zeigt den Abfrageplan, sonst das Ergebnis).
 import pg from 'pg';
 
 const client = new pg.Client({ connectionString: process.env.SUPABASE_DB_URL, ssl: { rejectUnauthorized: false } });
@@ -18,18 +19,20 @@ console.log(`Datenbank: ${(await client.query('select pg_size_pretty(pg_database
 const queries = (process.env.SQL || '').split('\n').map((s) => s.trim()).filter(Boolean);
 if (!queries.length) {
   queries.push(
-    "select id, title from browse_genre('Fantasy', 50, 0)",
-    "select id, title from browse_genre('Krimis & Thriller', 50, 0)",
+    "explain select id, title from browse_genre('Fantasy', 50, 0)",
     "select genre_group(genre) g, count(*) from works group by 1 order by 2 desc",
   );
 }
 for (const q of queries) {
   console.log(`\n=== ${q}`);
   try {
-    if (/^\s*select genre_group|count\(/i.test(q)) {
-      for (const r of (await client.query(q)).rows) console.log('  ' + Object.values(r).join(' | '));
+    if (/^\s*explain\s/i.test(q)) {
+      const plan = await client.query(`explain (analyze, buffers, verbose) ${q.replace(/^\s*explain\s+/i, '')}`);
+      for (const r of plan.rows) console.log('  ' + r['QUERY PLAN']);
     } else {
-      for (const r of (await client.query(`explain (analyze, buffers, verbose) ${q}`)).rows) console.log('  ' + r['QUERY PLAN']);
+      const res = await client.query(q);
+      console.log('  ' + res.fields.map((f) => f.name).join(' | '));
+      for (const r of res.rows) console.log('  ' + Object.values(r).map((v) => (Array.isArray(v) ? v.join(',') : v)).join(' | '));
     }
   } catch (err) {
     console.log(`  Fehler: ${err.message}`);
