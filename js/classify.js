@@ -67,30 +67,6 @@ const NON_BOOK_TITLE_WEAK = words([
 ]);
 const NON_NARRATIVE_GENRE = /Sachb|Spiel|Lernen|Geschenk|Kalender|Ratgeber|Bildung|Nachschlage/;
 
-// Sachliches, das die DNB oft als „Romanhafte Biographien“ oder „Erzählende Literatur“ führt (Stichprobe 300 Werke 11/2026:
-// ~6 % keine Belletristik – Memoiren, „wahre Geschichten“, „Ein Notarzt erzählt“, Gebete, Kolumnen, Reiseberichte).
-// Greift NUR bei allgemeiner oder fehlender Gattung und NIE, wenn Titel/Untertitel ein Erzählwort tragen (Roman, Erzählung …).
-// Gegenprobe 08.11.2026: Fiktive Memoiren sind eine Romanform („Felix Krull – der Memoiren erster Teil“, „Malina – imaginäre
-// Autobiographie“, „Käpt'n Blaubär – die halben Lebenserinnerungen“, „Venus im Pelz : Mit Autobiografie des Autors“) → zwei Stufen:
-// Stufe A (auch bei „Erzählende Literatur“, aber nicht Gegenwartsliteratur/Hauptwerk/Anthologien): nur eindeutige Formen,
-//   (Auto-)Biografie/Erfahrungsbericht nur am Anfang eines Titelteils oder nach Artikel („Die Biografie“, „Eine Autobiografie“).
-// Stufe B (nur ohne Gattung oder „Romanhafte Biographien“): Memoiren, Gebete, Kolumnen, Reiseberichte, Ratgeber.
-const SEG = '(?:^|[:;.,–—-]\\s*|(?:ein|eine|die|der|meine|mein)\\s+(?:\\p{L}+\\s+)?)';
-// „… des/der/eines/einer X“ zählt nicht: fiktive Ich-Erzähler („Die Autobiographie des Daidalos“, „Autobiografie eines
-// Serienkillers“, „Die Memoiren der Fanny Hill“) – lieber ein paar echte Memoiren behalten als Romane verlieren.
-const NOT_OF = '(?![\\p{L}])(?!\\s+(?:des|der|eines|einer)(?![\\p{L}]))';
-const NONFICTION_A = new RegExp(`${SEG}(?:auto)?biogra(?:f|ph)ie${NOT_OF}|${SEG}(?:erfahrungs|tatsachen|lebens)bericht(?![\\p{L}])`
-  + '|(?:^|[^\\p{L}])(eine wahre geschichte|wahre geschichten|(?:ein|eine) \\p{L}+ erzählt|sachbuch)(?![\\p{L}])', 'iu');
-const NONFICTION_B = new RegExp(`(?:^|[^\\p{L}])(?:memoiren|lebenserinnerungen)${NOT_OF}`
-  + '|(?:^|[^\\p{L}])(?:gebete|gebetbuch|andachten|andachtsbuch|kolumnen|glossen|reisebericht|reisetagebuch|reisereportage|(?<!mit )ratgeber|leitfaden)(?![\\p{L}])', 'iu');
-const GENERIC_GENRE = /^(Erzählende Literatur|Belletristik|Unterhaltung|Moderne und zeitgenössische Belletristik|Romanhafte Biographien|Biogra|Autobiogra|Memoiren)/;
-const LITERARY_SUBGENRE = /Gegenwartsliteratur|Hauptwerk|Anthologie/;
-const BIO_GENRE = /^(Romanhafte Biographien|Biogra|Autobiogra|Memoiren)/;
-const FICTION_WORD = words(['roman', 'romane', 'romanbiografie', 'romanbiographie', 'kriminalroman', 'krimi', 'thriller', 'novelle',
-  'erzählung', 'erzählungen', 'kurzgeschichten', 'gedichte', 'märchen', 'fiktion', 'satire', 'satiren', 'satirisch(e|en|er)?',
-  'prosa', 'erzählprosa', 'versepen', 'poeme',
-  '(utopisch|märchenhaft|fiktiv|imaginär|erfunden|phantastisch|fantastisch)(e|er|en|es)?']);
-
 /**
  * @param e  ausgewertete Ausgabe aus parseRecord (js/dnb.js)
  * @param opts.excludeGenreGroups  Liste von Schlüsseln aus GENRE_GROUPS
@@ -141,13 +117,6 @@ export function classify(e, { excludeGenreGroups = Object.keys(GENRE_GROUPS) } =
   if (!narrativeGenre && !narrativeSubtitle) {
     const w = text.match(NON_BOOK_TITLE_WEAK);
     if (w) return { keep: false, reason: `Titel (ohne erzählende Gattung): „${w[0].trim()}“` };
-  }
-  // Sachliches (Memoiren, Gebete, Kolumnen …) – nur bei allgemeiner/fehlender Gattung, ohne Erzählwort, ohne „Fiktionale Darstellung“
-  if (!FICTION_WORD.test(text) && !terms.some((t) => FICTION_TERMS.has(t))) {
-    const stageA = genres.every((g) => GENERIC_GENRE.test(g) && !LITERARY_SUBGENRE.test(g));
-    const stageB = genres.every((g) => BIO_GENRE.test(g));
-    const s = (stageA && text.match(NONFICTION_A)) || (stageB && text.match(NONFICTION_B));
-    if (s) return { keep: false, reason: `Sachliches: „${s[0].replace(/^[\s:;.,–—-]+/, '').trim()}“` };
   }
   return { keep: true };
 }
