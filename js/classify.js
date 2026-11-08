@@ -55,7 +55,7 @@ const NON_BOOK_TITLE = words([
   'rätsel und (spiele|aufgaben)', 'mit über \\d+ rätseln', 'konzentration fördern', 'spielerisch fördern',
   'übungsbuch', '\\p{L}+-übungsbuch', '\\d+ übungen', 'mit übungen', 'handbuch für lehrer', 'lehrerhandbuch',
   'kreativbuch', 'ausmal-?(panorama|block|heft|spaß|buch)', '(buchstaben|zahlen) schreiben', 'schreiben ab \\d',
-  'erstes sachwissen',
+  'erstes sachwissen', 'verkaufs-?kassette', 'jahresheft',
 ]);
 // Nur verdächtig, wenn die Gattung nicht erzählend ist oder fehlt
 // (sonst flöge z. B. Arno Geigers Roman „Alles über Sally“ raus):
@@ -104,8 +104,13 @@ export function classify(e, { excludeGenreGroups = Object.keys(GENRE_GROUPS) } =
   if (m) return { keep: false, reason: `Titel: „${m[0].trim()}“` };
   // Ohne Gattung entscheidet der Untertitel: „Tödliches Sudoku : Kriminalroman“, „Sudoku für Männer : Kurzgeschichten“
   // sind erzählend – schwache Wörter greifen dann nicht (Prüfrunde 08.11.2026).
-  const narrativeSubtitle = /(^|[^\p{L}])(roman|kriminalroman|krimi|thriller|erzählung|erzählungen|kurzgeschichten|geschichten|gedichte|novelle|märchen)($|[^\p{L}])/iu
-    .test(e.subtitle || '');
+  // Aber nicht bei Aufzählungen mit Beschäftigungswörtern: „Weihnachten : Geschichten, Gedichte, Bastelideen und Rezepte“,
+  // „Der Hai im Strandkorb : Geschichten, Bilderrätsel, Spiele, Postkarten“, „Sticker-Geschichten“ (Prüfrunde 2, 08.11.2026).
+  const sub = e.subtitle || '';
+  const activityList = /bastel|rätsel|spiele|sticker|weitermal|malbild|wissenswert|tipps|rezepte|postkarte|poster/i.test(sub)
+    && (/,/.test(sub) || /(sticker|rätsel|bastel)-?geschichten/i.test(sub));
+  const narrativeSubtitle = !activityList
+    && /(^|[^\p{L}])(roman|kriminalroman|krimi|thriller|erzählung|erzählungen|kurzgeschichten|geschichten|gedichte|novelle|märchen)($|[^\p{L}])/iu.test(sub);
   if (!narrativeGenre && !narrativeSubtitle) {
     const w = text.match(NON_BOOK_TITLE_WEAK);
     if (w) return { keep: false, reason: `Titel (ohne erzählende Gattung): „${w[0].trim()}“` };
