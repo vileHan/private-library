@@ -202,6 +202,42 @@ export async function runAll() {
     sub('Sonnewalder Heimatblätter', 'Jahresheft zur Geschichte', false),
     sub('Die drei ??? Kids - Diebstahl im Eiscafé', 'das große Rätselbuch', false, ['Kinderbücher bis 11 Jahre']),
   ].filter(Boolean));
+  // Sachliches (Stichprobe 300 Werke 11/2026): nur bei allgemeiner/fehlender Gattung, Erzählwörter schützen
+  const sach = [
+    sub('Versuche des Seins', 'Eine Autobiographie der deutschen Einheit', true, ['Romanhafte Biographien']), // „der …“ zählt bewusst nicht
+    sub('Die geheimnisvolle Frau hinter den Zäunen', 'eine wahre Geschichte', false, ['Erzählende Literatur']),
+    sub('Retten mit Herz – für das Leben', 'Ein Notarzt erzählt', false, ['Erzählende Literatur']),
+    sub('Passato e futuro', 'mein Weg in ein neues Leben ; Biografie', false, ['Romanhafte Biographien']),
+    sub('Mit dir durch den Tag', 'Gebete für Kindergartenkinder', false),
+    sub('Mayer meint: Heute kam Gott zu mir in den Laden', 'Matthias Mayers beste BuchMarkt-Kolumnen', false),
+    // … bleiben: Romane über echte Menschen, fiktive Memoiren, Kinderbücher, konkrete Gattungen
+    sub('Beethovn', 'Roman', true, ['Romanhafte Biographien']), sub('Tochter des Geldes', 'Mentona Moser - die reichste Revolutionärin Europas', true, ['Romanhafte Biographien']),
+    sub('Wie ich lernte, bei mir selbst Kind zu sein', 'eine Erzählung', true),
+    sub('Die Memoiren des Sherlock Holmes', '', true, ['Krimis, Thriller, Spionage']),
+    sub('Ein Hund erzählt', '', true, ['Kinderbücher bis 11 Jahre']),
+    sub('Gebete für die Verschwundenen', 'Roman', true, ['Erzählende Literatur']),
+    sub('Biografie eines Mörders', 'Thriller', true),
+    // Gegenprobe 08.11.2026: fiktive Memoiren und Bücher mit Anhang bleiben
+    sub('Bekenntnisse des Hochstaplers Felix Krull', 'der Memoiren erster Teil', true, ['Erzählende Literatur: Hauptwerk vor 1945']),
+    sub('Salzburger Bachmann Edition : Malina', 'Die »imaginäre Autobiographie« einer Frau', true, ['Erzählende Literatur: Gegenwartsliteratur ab 1945']),
+    sub("Die 13 1/2 Leben des Käpt'n Blaubär", 'die halben Lebenserinnerungen eines Blaubären', true, ['Erzählende Literatur']),
+    sub('Venus im Pelz', 'Mit Autobiografie des Autors', true, ['Erzählende Literatur']),
+    sub('Lebensansichten des Katers Murr', 'nebst fragmentarischer Biographie des Kapellmeisters', true, ['Erzählende Literatur']),
+    sub('Loslassen lernen (Dies ist kein Ratgeber)', '', true, ['Erzählende Literatur']),
+    sub('Mecki bei Frau Holle', 'sein dreizehnter märchenhafter Reisebericht', true),
+    sub('Gegen den Wind', 'Memoiren eines deutschen Einwanderers', true, ['Romanhafte Biographien']), // „eines …“ zählt bewusst nicht
+    sub('Beraubte Wut', 'Memoiren', false, ['Romanhafte Biographien']),
+    sub('DRIVE', 'Die Autobiografie', false, ['Romanhafte Biographien']),
+    sub('Christus, du Sonne', 'Gebete, Meditationen, Lieder', false),
+    sub('Ich erbaute das Labyrinth', 'Die Autobiographie des Daidalos', true, ['Erzählende Literatur']),
+    sub('Israel Rank', 'Die Autobiografie eines Serienkillers', true, ['Erzählende Literatur']),
+    sub('Die Memoiren der Fanny Hill, 1. Band', '', true),
+    sub('Der Kummerkönig', 'mit Ratgeber', true),
+    sub('Alles wird gut', 'satirische Kolumnen', true),
+    sub('Versepen, Erzählprosa und Memoiren', '', true),
+  ].filter(Boolean);
+  results.push({ name: 'Sachliches (Memoiren, „wahre Geschichte“, „Ein Notarzt erzählt“, Gebete, Kolumnen) raus; Romane und konkrete Gattungen bleiben',
+    ok: sach.length === 0, detail: sach.join('; ') });
   results.push({ name: 'Titelwörter: Lernblöcke, „Lernen ab N Jahren“, Freundebuch, DSA raus; ähnliche Romantitel bleiben',
     ok: wordFails.length === 0, detail: wordFails.join('; ') });
 
