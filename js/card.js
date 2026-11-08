@@ -11,14 +11,21 @@ import { genreGroup } from './genres.js';
 const GENERIC_SUBTITLE = /^(ein(e|en)?\s+)?([\wäöüß-]+\s+)?[\wäöüß-]*(roman|thriller|krimi|kriminalroman|erzählung|erzählungen|novelle|geschichten|gedichte)(\s.*)?$/i;
 
 /** Reihenfolge: Cover der eigenen Ausgabe(n), dann Cover-IDs aus der Datenbank, dann die übrigen ISBNs. */
-function coverUrls(ownIsbns, coverIds, otherIsbns) {
+/**
+ * Reihenfolge der Cover-Quellen: eigene Ausgabe (Google) → Open-Library-Cover-IDs → weitere Ausgaben (Google) →
+ * nur außerhalb des Katalogs: Open Library per ISBN. Für Katalog-Werke kennt die Datenbank alle Open-Library-Cover
+ * schon (Workflow „Cover-IDs“) – die langsame Open-Library-ISBN-Abfrage (max. 100 pro 5 min) wäre dort überflüssig.
+ * DNB-Cover bewusst NICHT (Bot-Prüfung von portal.dnb.de wird nicht umgangen, auch nicht über einen Server).
+ */
+function coverUrls(ownIsbns, coverIds, otherIsbns, fromDb = false) {
   const byIsbn = (i) => CONFIG.covers.sources.map((src) => src(i));
   const others = otherIsbns.filter((i) => !ownIsbns.includes(i)).slice(0, CONFIG.covers.maxIsbns);
+  const first = [...ownIsbns.slice(0, 1), ...others.slice(0, 1)];
   return [
     ...ownIsbns.slice(0, 2).flatMap(byIsbn),
     ...(coverIds || []).map(CONFIG.covers.byId),
     ...others.flatMap(byIsbn),
-    ...[...ownIsbns.slice(0, 1), ...others.slice(0, 1)].map(CONFIG.covers.lastResort),
+    ...(fromDb ? [] : first.map(CONFIG.covers.lastResort)),
   ];
 }
 
@@ -114,7 +121,7 @@ export function bookCard(work, opts = {}) {
   card.querySelector('.title').textContent = (opts.prefix || '') + fullTitle(work);
   card.querySelector('.author').textContent = (work.authors || []).join(', ') || 'Unbekannter Autor';
   const meta = card.querySelector('.meta');
-  setCover(card, coverUrls(ownedIsbnsOf(entry), work.coverIds, work.coverIsbns || []), work.title);
+  setCover(card, coverUrls(ownedIsbnsOf(entry), work.coverIds, work.coverIsbns || [], !!(work.fromDb || entry?.fromDb)), work.title);
 
   const paint = (e) => {
     entry = e;
@@ -309,7 +316,7 @@ function openSheet(ctx) {
       el('h2', { class: 'sheet-title', text: fullTitle(work) }),
       authorLine,
       el('ul', { class: 'sheet-facts' }, ...facts.map((t) => el('li', {}, t)))));
-  setCover(head, coverUrls(ownedIsbnsOf(entry), work.coverIds, work.coverIsbns || []), work.title);
+  setCover(head, coverUrls(ownedIsbnsOf(entry), work.coverIds, work.coverIsbns || [], !!(work.fromDb || entry?.fromDb)), work.title);
 
   // Dieselben drei Knöpfe, ausgeschrieben
   const toggle = (cls, label, fn) => {

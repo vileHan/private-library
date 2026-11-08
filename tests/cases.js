@@ -2,10 +2,10 @@
 // Die Daten werden live von der DNB geholt – so testen wir gegen echte Datensätze.
 // Ausführen: im Browser tests/index.html (lokaler Server), in GitHub Actions Workflow „Tests“.
 import { CONFIG } from '../js/config.js';
-import { fetchRecords, searchDnb } from '../js/dnb.js';
+import { fetchRecords, searchDnb, displayName } from '../js/dnb.js';
 import { classify } from '../js/classify.js';
 import { groupEditions, normalizeText } from '../js/works.js';
-import { cleanTitle, splitVolumePrefix, isPublisherSeries } from '../js/titles.js';
+import { cleanTitle, splitVolumePrefix, isPublisherSeries, cleanSeriesName, splitTitleSubtitle, plausibleYear } from '../js/titles.js';
 
 // Muss im Katalog bleiben (ISBN → Titel zur Lesbarkeit)
 export const KEEP = {
@@ -126,6 +126,29 @@ export async function runAll() {
   results.push({ name: 'Biss: Verlagsreihe „Carlsen“ gilt nicht als Buchreihe', ok: biss.length >= 1 && biss.every((w) => !/carlsen/i.test(w.series)),
     detail: biss.map((w) => `${w.title} / ${w.series || '–'}`).join('; ') });
 
+  // ---------- Stichprobe 11/2026: neue Bücher, Reihen ohne Nummer, Verlagsreihen ----------
+  const wood = (await grouped('Lucy Jane Wood', 1)).filter((w) => /Wood/.test(w.authors.join()));
+  const rew = wood.find((w) => w.title === 'Rewitched');
+  results.push({ name: 'Rewitched: Reihe „Selcouth“ ohne Bandnummer erkannt, beide Ausgaben in einem Werk, Jahr 2025',
+    ok: !!rew && rew.series === 'Selcouth' && rew.isbns.length >= 2 && rew.year === 2025,
+    detail: wood.map((w) => `${w.title} / ${w.series || '–'} / ${w.year} / ${w.isbns.length} ISBN`).join('; ') });
+
+  const syn = (series, author, title, extra = {}) => ({ isbns: [], authors: [author], authorsSort: [author], title, sortTitle: title,
+    subtitle: '', series, volume: series ? '1' : '', looseSeries: '', year: 2020, genres: [], themes: [], ...extra });
+  const many = Array.from({ length: 26 }, (_, i) => syn('Testreihe Taschenbuch', `Autor${i}`, `Buch ${i}`));
+  const few = Array.from({ length: 5 }, (_, i) => syn('Echte Reihe', `Autor${i}`, `Band ${i}`));
+  const checked = groupEditions([...many, ...few]);
+  results.push({ name: 'Reihe mit ≥ 25 Autoren gilt als Verlagsreihe, mit 5 Autoren bleibt sie',
+    ok: checked.filter((w) => w.series === 'Testreihe Taschenbuch').length === 0 && checked.filter((w) => w.series === 'Echte Reihe').length === 5,
+    detail: '' });
+  const loose = groupEditions([syn('', 'Wood, Lucy', 'A', { looseSeries: 'Selcouth' }), syn('', 'Wood, Lucy', 'B', { looseSeries: 'Selcouth' }),
+    syn('', 'Muster, Max', 'C', { looseSeries: 'Einzelstück' })]);
+  results.push({ name: 'Reihe ohne Nummer nur bei ≥ 2 Büchern desselben Autors',
+    ok: loose.filter((w) => w.series === 'Selcouth').length === 2 && !loose.find((w) => w.title === 'C').series, detail: '' });
+
+  const amazon = classify({ publisher: 'Independently published', isbns: ['9798287560898'], genres: ['Fantasy'] }, opts);
+  results.push({ name: 'Selbstverlag über Amazon fällt raus', ok: !amazon.keep, detail: amazon.reason || '' });
+
   // ---------- Ohne Netz: Titel-Helfer ----------
   const unit = [
     [cleanTitle('Harry Potter und der Stein der Weisen - Ausgabe zur TV-Serie'), 'Harry Potter und der Stein der Weisen'],
@@ -138,6 +161,21 @@ export async function runAll() {
     [String(normalizeText('Die drei ???').includes('fragezeichen')), 'true'],
     [String(isPublisherSeries('Carlsen', 'Hamburg : Carlsen')), 'true'],
     [String(isPublisherSeries('Eragon', 'München : cbj')), 'false'],
+    [String(isPublisherSeries('Unionsverlag Taschenbuch', 'Zürich : Unionsverlag')), 'true'],
+    [String(isPublisherSeries('Maxi Pixi', 'Hamburg : Carlsen')), 'true'],
+    [String(isPublisherSeries('Die Bibliothek der flüsternden Schatten', 'Berlin : Ueberreuter')), 'false'],
+    [String(isPublisherSeries('Selcouth', 'Köln : Lübbe')), 'false'],
+    [cleanSeriesName('Band ... der "Children of blood and bone"-Trilogie'), 'Children of blood and bone'],
+    [cleanSeriesName('Selcouth-Reihe'), 'Selcouth'],
+    [cleanSeriesName('Die Underworld-Saga'), 'Die Underworld-Saga'],
+    [JSON.stringify(splitTitleSubtitle('Katzenjagd : Roman')), JSON.stringify({ title: 'Katzenjagd', subtitle: 'Roman' })],
+    [JSON.stringify(splitTitleSubtitle('Star Wars : Das Erwachen der Macht')), 'null'],
+    [cleanTitle('Kommissar Kugelblitz, Sammelbd. 8. / Ill. von Hannes Gerber'), 'Kommissar Kugelblitz, Sammelbd. 8.'],
+    [displayName('Rowling, J. K'), 'J. K. Rowling'],
+    [displayName('Tolkien, J. R. R'), 'J. R. R. Tolkien'],
+    [displayName('Zeh, Juli'), 'Juli Zeh'],
+    [String(plausibleYear('3013')), 'null'],
+    [String(plausibleYear('2025')), '2025'],
   ];
   const wrong = unit.filter(([got, want]) => got !== want);
   results.push({ name: `Titel-Helfer (${unit.length} Einzelprüfungen)`, ok: wrong.length === 0, detail: wrong.map(([g, w]) => `„${g}“ statt „${w}“`).join('; ') });

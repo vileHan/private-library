@@ -102,9 +102,50 @@ export function fixSeriesTitles(editions) {
   return out;
 }
 
+// Ab so vielen verschiedenen Autoren ist eine „Reihe“ eine Verlags- oder Sammelreihe (Maxi Pixi 138, Unionsverlag
+// Taschenbuch 168, Lesemaus 25). Echte Mehr-Autoren-Reihen liegen darunter: Das schwarze Auge 23, Warhammer 40,000 21,
+// Die drei ??? Kids 4 (gezählt 11/2026 im Katalog).
+const SERIES_MAX_AUTHORS = 25;
+
+/**
+ * Reihen über alle Ausgaben prüfen:
+ * 1. Reihen mit ≥ 25 Autoren sind Verlagsreihen → entfernen.
+ * 2. Reihen ohne Bandnummer (looseSeries, z. B. „Selcouth“ bei Rewitched/Uncharmed) gelten, wenn derselbe Autor
+ *    mindestens 2 verschiedene Bücher darin hat. Reihenfolge dann nach Erscheinungsjahr.
+ */
+export function checkSeries(editions) {
+  const authorsPerSeries = new Map();
+  const titlesPerAuthorSeries = new Map();
+  for (const e of editions) {
+    const a = authorKey(e);
+    for (const s of [e.series, e.looseSeries]) {
+      if (!s) continue;
+      const k = titleKey(s);
+      if (!authorsPerSeries.has(k)) authorsPerSeries.set(k, new Set());
+      authorsPerSeries.get(k).add(a);
+      if (a) {
+        const ak = `${a}|${k}`;
+        if (!titlesPerAuthorSeries.has(ak)) titlesPerAuthorSeries.set(ak, new Set());
+        titlesPerAuthorSeries.get(ak).add(titleKey(e.title));
+      }
+    }
+  }
+  const tooMany = (s) => (authorsPerSeries.get(titleKey(s))?.size || 0) >= SERIES_MAX_AUTHORS;
+  return editions.map((e) => {
+    if (e.series && tooMany(e.series)) return { ...e, series: '', volume: '' };
+    if (!e.series && e.looseSeries && !tooMany(e.looseSeries)) {
+      const a = authorKey(e);
+      if (a && (titlesPerAuthorSeries.get(`${a}|${titleKey(e.looseSeries)}`)?.size || 0) >= 2) {
+        return { ...e, series: e.looseSeries, volume: '' };
+      }
+    }
+    return e;
+  });
+}
+
 /** Gruppiert Ausgaben zu Werken: gleicher Werkschlüssel oder gleiche ISBN. */
 export function groupEditions(editions) {
-  editions = fixSeriesTitles(editions);
+  editions = fixSeriesTitles(checkSeries(editions));
   const parent = editions.map((_, i) => i);
   // Iterativ statt rekursiv – beim Import laufen hier Hunderttausende Ausgaben durch.
   const find = (i) => {

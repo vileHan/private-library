@@ -43,6 +43,7 @@ function toWork(r) {
     coverIds: r.cover_ids || [],
     coverIsbns: isbns.slice(0, 3),
     editions: [],
+    fromDb: true, // Cover-IDs aus dem Open-Library-Export sind bekannt (siehe coverUrls in card.js)
   };
 }
 

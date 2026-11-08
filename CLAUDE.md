@@ -101,6 +101,17 @@ Zusätzlich zum DNB-Filter fliegen beim Import (und in der DNB-Live-Suche) herau
 - **„Die drei ???“**: `normalizeText` macht aus „???“ das Wort „fragezeichen“ (sonst nicht suchbar).
 - Gegenprobe an 1.779 Ausgaben: nur 4 zusätzliche Ausschlüsse (Geschenk-Boxen, Sammelband), kein Roman. Tests: 36.
 
+## Stichprobe 11/2026: neue Bücher, Reihen, Selbstverlag
+
+- **Reihen ohne Bandnummer** (490 ohne $v, z. B. „Selcouth-Reihe“ bei Rewitched/Uncharmed) gelten, wenn derselbe Autor ≥ 2 Bücher darin hat (`checkSeries` in works.js, Feld `looseSeries`). Reihenfolge nach Jahr. Namen aufgeräumt (`cleanSeriesName`: „-Reihe“, „-Trilogie“, „Band ... der …“).
+- **Verlagsreihen**: Reihen mit **≥ 25 verschiedenen Autoren** fallen weg (Maxi Pixi, Unionsverlag Taschenbuch, Lesemaus …); echte Mehr-Autoren-Reihen liegen darunter (Das schwarze Auge 23, Warhammer 40,000 21). Dazu Namensmuster in `isPublisherSeries` (…taschenbuch/…bibliothek am Ende, Reihe …, Edition …, Lesestufe, Pixi …).
+- **Selbstverlag über Amazon** raus (Verlag „Independently published“, CreateSpace; ISBN 979-8).
+- **Initialen**: „Rowling, J. K“ → „J. K. Rowling“ (`displayName`).
+- **Untertitel im Titel** („Katzenjagd : Roman“, „… : basierend auf …“) abgetrennt, aber nicht „Star Wars : Das …“ (`splitTitleSubtitle`); „ / Ill. von …“ abgeschnitten.
+- Lernblöcke, „Lernen ab 3 Jahren“, Freundebücher, DSA5-Rollenspiel raus; unplausible Jahre (1072, 3013) → leer.
+- **Cover neuer Bücher**: ab 2020 haben nur ~15 % ein Cover über Google/Open Library. Die DNB hätte fast alle, ist aber durch eine Bot-Prüfung geschützt – **auch nicht über einen eigenen Server abrufen** (verworfen 08.11.2026). Für Katalog-Werke entfällt die langsame Open-Library-ISBN-Abfrage (Cover-IDs kennt die Datenbank, `fromDb`).
+- Tests: 40.
+
 ## Werke statt Ausgaben
 
 Hardcover, Taschenbuch, Lizenzausgaben (z. B. Weltbild) und E-Book haben jeweils eine eigene ISBN, sollen aber **als ein Buch** zählen.

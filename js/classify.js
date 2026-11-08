@@ -41,6 +41,10 @@ const NON_BOOK_TITLE = words([
   'hinter den kulissen', 'making of', '\\p{L}+-(lexikon|enzyklopädie)', '(lexikon|enzyklopädie) (der|des|zu|über|für|von|aller)',
   // Boxen und Schuber (mehrere Bücher in einer Verpackung)
   'schuber', 'geschenkschuber', '\\p{L}*-?box',
+  // Lern- und Beschäftigungsmaterial, Rollenspiel-Abenteuer (Stichprobe 11/2026: „Mein rabenstarker Vorschulblock - Rechnen“,
+  // „Die Biene Maja - Lernen ab 3 Jahren“, „Juli Löwenzahn - Mein Kindergarten-Album“, „DSA5 - In den Fängen des Dämons“)
+  'vorschulblock', 'lernblock', 'rechenblock', 'übungsblock', 'rätselspaß', 'lernen ab \\d+( jahren)?', 'kindergarten-album',
+  'freundebuch', 'dsa\\d',
 ]);
 // Nur verdächtig, wenn die Gattung nicht erzählend ist oder fehlt
 // (sonst flöge z. B. Arno Geigers Roman „Alles über Sally“ raus):
@@ -57,6 +61,10 @@ const NON_NARRATIVE_GENRE = /Sachb|Spiel|Lernen|Geschenk|Kalender|Ratgeber|Bildu
  */
 export function classify(e, { excludeGenreGroups = Object.keys(GENRE_GROUPS) } = {}) {
   if (e.leader19 === 'a' || /^\d+\s+Bände/.test(e.extent || '')) return { keep: false, reason: 'Sammelaufnahme/Paket' };
+  // Selbstverlag über Amazon (KDP/CreateSpace): Verlag „Independently published“ o. ä., ISBNs 979-8 (US-Kontingent von Amazon).
+  // Ergänzt den DNB-Filter gegen Selfpublishing (epubli, BoD, tredition, Neopubli) – Stichprobe 11/2026: ~3.900 Werke.
+  if (/independently published|createspace|kindle direct|amazon/i.test(e.publisher || '')
+    || (e.isbns?.length && e.isbns.every((i) => i.startsWith('9798')))) return { keep: false, reason: 'Selbstverlag (Amazon)' };
   const genres = e.genres || [];
   // Erzählend, sobald mindestens eine Gattung erzählend ist („Jugendbücher ab 12“ + „Spielerisches Lernen“ → erzählend)
   const narrativeGenre = genres.some((g) => !NON_NARRATIVE_GENRE.test(g));

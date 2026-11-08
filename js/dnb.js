@@ -2,7 +2,7 @@
 import { CONFIG } from './config.js';
 import { normalizeIsbn } from './isbn.js';
 import { classify } from './classify.js';
-import { cleanTitle, splitVolumePrefix, sameSeries, isPublisherSeries, capitalize } from './titles.js';
+import { cleanTitle, splitVolumePrefix, sameSeries, isPublisherSeries, capitalize, cleanSeriesName, splitTitleSubtitle, plausibleYear } from './titles.js';
 
 const MARC_NS = 'http://www.loc.gov/MARC21/slim';
 
@@ -117,10 +117,10 @@ function tidy(s) {
   // \u0098 … \u009C markieren Nichtsortierzeichen (z. B. Artikel „Der“) – für die Anzeige nur die Marker entfernen.
   return s.replace(/[\u0098\u009C]/g, '').replace(/[\s:;,/=.]+$/, '').replace(/^\s*[\[]|[\]]\s*$/g, '').trim();
 }
-/** „Zeh, Juli“ → „Juli Zeh“ */
-function displayName(n) {
+/** „Zeh, Juli“ → „Juli Zeh“; „Rowling, J. K“ → „J. K. Rowling“ (tidy() schneidet den Punkt der letzten Initiale ab) */
+export function displayName(n) {
   const m = n.match(/^([^,]+),\s*(.+)$/);
-  return m ? `${m[2]} ${m[1]}` : n;
+  return m ? `${m[2].replace(/(^|[\s.])(\p{Lu})$/u, '$1$2.')} ${m[1]}` : n;
 }
 
 export function parseRecord(rec) {
@@ -163,17 +163,21 @@ export function parseRecord(rec) {
     sortTitle = stripNonSort(rawMain);
     if (partNumber) { title = `${title}, ${partNumber}`; sortTitle = `${sortTitle}, ${partNumber}`; }
   }
-  const subtitle = t ? tidy(sub(t, 'b')) : '';
+  let subtitle = t ? tidy(sub(t, 'b')) : '';
   const uniform = fields(rec, '240')[0];
   const workTitle = uniform ? tidy(sub(uniform, 'a')) : '';
 
   // Reihe aus den Reihenfeldern (490/830/800), wenn der Titel keine liefert. Nur mit kleiner Bandnummer –
   // so fallen Verlagsreihen mit Bestellnummern („Blanvalet ; 37122“) heraus.
+  // Reihen OHNE Bandnummer („Selcouth-Reihe“ bei Rewitched) merken wir nur vor: Ob es eine echte Reihe ist,
+  // entscheidet groupEditions (js/works.js) – derselbe Autor muss mindestens 2 Bücher darin haben.
+  let looseSeries = '';
   if (!seriesFromTitle) {
     for (const f of [...fields(rec, '490'), ...fields(rec, '830'), ...fields(rec, '800')]) {
       const name = tidy(f.getAttribute('tag') === '800' ? sub(f, 't') : sub(f, 'a'));
       const num = sub(f, 'v').match(/^\D{0,8}?(\d{1,3})(?!\d)/)?.[1];
       if (name && num) { seriesFromTitle = name; volume = num; break; }
+      if (name && !sub(f, 'v') && !looseSeries) looseSeries = name;
     }
     // „Harry Potter und der Stein der Weisen (Harry Potter 1)“ → Zusatz in Klammern entfernen
     if (seriesFromTitle) {
@@ -190,7 +194,15 @@ export function parseRecord(rec) {
   const titleRaw = title;
   title = cleanTitle(title);
   sortTitle = cleanTitle(sortTitle);
-  seriesFromTitle = cleanTitle(seriesFromTitle);
+  seriesFromTitle = cleanSeriesName(cleanTitle(seriesFromTitle));
+  looseSeries = cleanSeriesName(cleanTitle(looseSeries));
+  // Untertitel, der im Titel steckt: „Katzenjagd : Roman“ → Titel „Katzenjagd“
+  const split = splitTitleSubtitle(title);
+  if (split) {
+    title = split.title;
+    sortTitle = splitTitleSubtitle(sortTitle)?.title || sortTitle;
+    subtitle = subtitle || split.subtitle;
+  }
   const pre = splitVolumePrefix(title);
   if (pre && (!seriesFromTitle || sameSeries(pre.series, seriesFromTitle))) {
     seriesFromTitle = seriesFromTitle || pre.series;
@@ -200,8 +212,9 @@ export function parseRecord(rec) {
   }
   // Verlagsreihen („Carlsen 690“, „Reclams Universal-Bibliothek“) sind keine Buchreihen
   if (isPublisherSeries(seriesFromTitle, publisher)) { seriesFromTitle = ''; volume = ''; }
-  let year = Number((pub ? sub(pub, 'c') : '').match(/\d{4}/)?.[0] || 0);
-  if (!year) year = Number(control(rec, '008').slice(7, 11)) || null;
+  if (isPublisherSeries(looseSeries, publisher)) looseSeries = '';
+  let year = plausibleYear((pub ? sub(pub, 'c') : '').match(/\d{4}/)?.[0]);
+  if (!year) year = plausibleYear(control(rec, '008').slice(7, 11));
 
   const subjectGroups = [];
   for (const tag of ['082', '083', '084']) {
@@ -247,6 +260,7 @@ export function parseRecord(rec) {
     // Nur die Reihe aus dem Titel – Feld 490 enthält oft bloß Verlagsreihen wie „cbj Fantasy“.
     series: seriesFromTitle,
     volume,
+    looseSeries, // Reihe ohne Bandnummer, nur ein Kandidat (siehe groupEditions)
     subjectGroups,
     genres,
     themes,

@@ -61,7 +61,7 @@ async function withRetry(fn, label) {
 function slim(e) {
   return JSON.parse(JSON.stringify({
     isbns: e.isbns, authors: e.authors, authorsSort: e.authorsSort.slice(0, 1), title: e.title, sortTitle: e.sortTitle,
-    subtitle: e.subtitle, series: e.series, volume: e.volume, publisher: e.publisher, year: e.year,
+    subtitle: e.subtitle, series: e.series, volume: e.volume, looseSeries: e.looseSeries, publisher: e.publisher, year: e.year,
     genres: e.genres.slice(0, 2), themes: e.themes.slice(0, 1), isComic: e.isComic, isEbook: e.isEbook,
     binding: e.binding, edition: '', pages: '', relatedIsbns: [], isBestseller: !!e.isBestseller,
   }));
