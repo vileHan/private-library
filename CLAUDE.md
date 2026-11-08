@@ -103,7 +103,7 @@ Zusätzlich zum DNB-Filter fliegen beim Import (und in der DNB-Live-Suche) herau
 
 ## Stichprobe 11/2026: neue Bücher, Reihen, Selbstverlag
 
-- **Reihen ohne Bandnummer** (490 ohne $v, z. B. „Selcouth-Reihe“ bei Rewitched/Uncharmed) gelten, wenn derselbe Autor ≥ 2 Bücher darin hat (`checkSeries` in works.js, Feld `looseSeries`). Reihenfolge nach Jahr. Namen aufgeräumt (`cleanSeriesName`: „-Reihe“, „-Trilogie“, „Band ... der …“).
+- **Reihen ohne Bandnummer** (490 ohne $v, z. B. „Selcouth-Reihe“ bei Rewitched/Uncharmed) gelten, wenn derselbe Autor ≥ 2 Bücher darin hat (`checkSeries` in works.js, Feld `looseSeries`). Hat kein Band der Reihe eine Nummer, zählt `numberSeries` (works.js) nach Erscheinungsjahr durch – **überall soll „Band 1“, „Band 2“ stehen** (nur bis 10 Bände; größere ungezählte Reihen wie Barbapapa behalten den Reihennamen). Reihenfolge nach Jahr. Namen aufgeräumt (`cleanSeriesName`: „-Reihe“, „-Trilogie“, „Band ... der …“).
 - **Verlagsreihen**: Reihen mit **≥ 25 verschiedenen Autoren** fallen weg (Maxi Pixi, Unionsverlag Taschenbuch, Lesemaus …); echte Mehr-Autoren-Reihen liegen darunter (Das schwarze Auge 23, Warhammer 40,000 21). Dazu Namensmuster in `isPublisherSeries` (…taschenbuch/…bibliothek am Ende, Reihe …, Edition …, Lesestufe, Pixi …).
 - **Selbstverlag über Amazon** raus (Verlag „Independently published“, CreateSpace; ISBN 979-8).
 - **Initialen**: „Rowling, J. K“ → „J. K. Rowling“ (`displayName`).

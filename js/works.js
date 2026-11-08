@@ -195,7 +195,31 @@ export function groupEditions(editions) {
     if (!groups.has(r)) groups.set(r, []);
     groups.get(r).push(e);
   });
-  return [...groups.values()].map(buildWork);
+  return numberSeries([...groups.values()].map(buildWork));
+}
+
+// Bis zu so vielen Bänden wird eine Reihe ohne Nummern selbst durchgezählt. Größere (z. B. Barbapapa-Bilderbücher,
+// viele Titel im selben Jahr) behalten den Reihennamen – dort wäre eine erfundene Reihenfolge eher irreführend.
+const NUMBER_MAX = 10;
+
+/**
+ * Reihen, in denen KEIN Band eine Nummer hat (z. B. „Selcouth“: Rewitched 2025, Uncharmed 2026), nach Erscheinungsjahr
+ * durchzählen – überall soll „Band 1“, „Band 2“ stehen. Hat auch nur ein Band eine Nummer, bleibt alles, wie die DNB es angibt.
+ */
+export function numberSeries(works) {
+  const bySeries = new Map();
+  for (const w of works) {
+    if (!w.series) continue;
+    const k = `${normalizeText(w.authorSort || '')}|${titleKey(w.series)}`;
+    if (!bySeries.has(k)) bySeries.set(k, []);
+    bySeries.get(k).push(w);
+  }
+  for (const list of bySeries.values()) {
+    if (list.length > NUMBER_MAX || list.some((w) => w.volume)) continue;
+    list.sort((a, b) => (a.year || 9999) - (b.year || 9999) || compareTitle(a, b));
+    list.forEach((w, i) => { w.volume = String(i + 1); });
+  }
+  return works;
 }
 
 function mostCommon(values) {

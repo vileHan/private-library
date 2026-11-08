@@ -129,9 +129,10 @@ export async function runAll() {
   // ---------- Stichprobe 11/2026: neue Bücher, Reihen ohne Nummer, Verlagsreihen ----------
   const wood = (await grouped('Lucy Jane Wood', 1)).filter((w) => /Wood/.test(w.authors.join()));
   const rew = wood.find((w) => w.title === 'Rewitched');
-  results.push({ name: 'Rewitched: Reihe „Selcouth“ ohne Bandnummer erkannt, beide Ausgaben in einem Werk, Jahr 2025',
-    ok: !!rew && rew.series === 'Selcouth' && rew.isbns.length >= 2 && rew.year === 2025,
-    detail: wood.map((w) => `${w.title} / ${w.series || '–'} / ${w.year} / ${w.isbns.length} ISBN`).join('; ') });
+  const unch = wood.find((w) => w.title === 'Uncharmed');
+  results.push({ name: 'Rewitched/Uncharmed: Reihe „Selcouth“ erkannt und nach Jahr durchgezählt (Band 1, Band 2), Rewitched 2025',
+    ok: !!rew && rew.series === 'Selcouth' && rew.volume === '1' && unch?.volume === '2' && rew.isbns.length >= 2 && rew.year === 2025,
+    detail: wood.map((w) => `${w.title} / ${w.series || '–'} ${w.volume || ''} / ${w.year} / ${w.isbns.length} ISBN`).join('; ') });
 
   const syn = (series, author, title, extra = {}) => ({ isbns: [], authors: [author], authorsSort: [author], title, sortTitle: title,
     subtitle: '', series, volume: series ? '1' : '', looseSeries: '', year: 2020, genres: [], themes: [], ...extra });
