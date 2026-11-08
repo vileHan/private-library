@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Oberflächen-Tests</title>
+  <style>
+    body { font: 15px/1.5 system-ui, sans-serif; margin: 16px; background: #fff; color: #222; display: flex; gap: 24px; flex-wrap: wrap; }
+    li.ok::marker { content: "✓ "; color: #1a7f37; }
+    li.fail::marker { content: "✗ "; color: #b3261e; }
+    li.fail { color: #b3261e; }
+    small { color: #666; }
+    iframe { width: 360px; height: 740px; border: 1px solid #ccc; flex: none; }
+    #out { flex: 1; min-width: 300px; }
+  </style>
+</head>
+<body>
+  <!-- Oberflächen-Tests: laden die App in einem 360 px breiten Rahmen (kleinstes übliches Handy) und klicken sie durch.
+       Ändern KEINE eigenen Daten (keine Besitz-/Gelesen-Knöpfe). Ergebnis auch in window.__uiResults (für den Prüfer-Agenten).
+       Aufruf: http://localhost:8080/tests/ui.html – Anforderungen siehe ANFORDERUNGEN.md (IDs in Klammern). -->
+  <iframe id="app" src="../index.html"></iframe>
+  <div id="out">
+    <h1>Oberflächen-Tests</h1>
+    <p id="status">Läuft …</p>
+    <ul id="list"></ul>
+  </div>
+  <script type="module">
+    const frame = document.getElementById('app');
+    const results = [];
+    const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+    const add = (name, ok, detail = '') => results.push({ name, ok: !!ok, detail });
+    const doc = () => frame.contentDocument;
+    const $ = (s) => doc().querySelector(s);
+    const $$ = (s) => [...doc().querySelectorAll(s)];
+    /** wartet, bis cond() wahr ist (max. ms), liefert die gebrauchte Zeit oder -1 */
+    async function until(cond, ms = 8000) {
+      const t0 = performance.now();
+      while (performance.now() - t0 < ms) { try { if (cond()) return Math.round(performance.now() - t0); } catch {} await sleep(50); }
+      return -1;
+    }
+    const noOverflow = () => doc().documentElement.scrollWidth <= frame.clientWidth + 1;
+    async function search(q) {
+      const inp = $('#searchInput');
+      inp.value = q;
+      inp.form.requestSubmit();
+      await sleep(30);
+      return until(() => !/läuft/i.test($('#searchStatus').textContent) && $$('#results .book').length > 0);
+    }
+
+    await new Promise((r) => frame.addEventListener('load', r, { once: true }));
+    const errors = [];
+    frame.contentWindow.addEventListener('error', (e) => errors.push(e.message));
+    frame.contentWindow.addEventListener('unhandledrejection', (e) => errors.push(String(e.reason)));
+    const gridBefore = frame.contentWindow.localStorage.getItem('bibliothek-einstellungen');
+
+    try {
+      // A5 / D1: Startseite
+      await until(() => $$('#genreChips .chip').length > 0);
+      add('Startseite: 15 Genre-Knöpfe (D1)', $$('#genreChips .chip').length === 15, `${$$('#genreChips .chip').length} Knöpfe`);
+      add('Startseite: kein waagrechtes Scrollen auf 360 px (A5)', noOverflow(), `Breite ${doc().documentElement.scrollWidth}`);
+
+      // B3 / B4 / C2: Reihensuche
+      let ms = await search('eragon');
+      const metas = $$('#results .book .meta').slice(0, 4).map((m) => m.textContent);
+      add('„eragon“: Reihe oben in Bandfolge Band 1–4 (B3, C2)', metas.every((m, i) => m.startsWith(`Band ${i + 1}`)), metas.join(' | '));
+      add('„eragon“: Antwort unter 1 s (B4)', ms >= 0 && ms < 1000, `${ms} ms`);
+      add('Trefferliste: kein waagrechtes Scrollen (A5)', noOverflow());
+      const heights = new Set($$('#results .book').slice(0, 8).map((b) => Math.round(b.getBoundingClientRect().height)));
+      add('Alle Buch-Slots gleich hoch (C1)', heights.size === 1, [...heights].join(', ') + ' px');
+
+      // C5 / C6: Detailblatt
+      $('#results .more-btn').click();
+      await until(() => !$('#sheet').hidden);
+      const sheetTxt = $('#sheet').textContent;
+      add('Detailblatt: Besitze/Gelesen/Merken, Meine Angaben, Autor-Link (C5)',
+        ['Besitze', 'Gelesen', 'Merken', 'Bewertung', 'Notiz'].every((w) => sheetTxt.includes(w)) && !!$('#sheet .author .link-btn'), '');
+      const blurbMs = await until(() => $('#sheet .blurb-text') && !$('#sheet .blurb.loading') || !$('#sheet .blurb'), 8000);
+      add('Detailblatt: Klappentext geladen oder Abschnitt entfernt (C5)', blurbMs >= 0, `${blurbMs} ms`);
+      add('Detailblatt: kein waagrechtes Scrollen (A5)', $('#sheet .sheet-panel').scrollWidth <= frame.clientWidth + 1);
+      // Herunterziehen per Finger-Ereignissen (C6)
+      const grip = $('#sheet .sheet-grip');
+      const top = $('#sheet .sheet-panel').getBoundingClientRect().top;
+      const touch = (type, y) => {
+        const t = new frame.contentWindow.Touch({ identifier: 1, target: grip, clientX: 180, clientY: y });
+        grip.dispatchEvent(new frame.contentWindow.TouchEvent(type, { touches: type === 'touchend' ? [] : [t], changedTouches: [t], bubbles: true, cancelable: true }));
+      };
+      touch('touchstart', top + 5);
+      for (let i = 1; i <= 10; i++) { touch('touchmove', top + 5 + i * 45); await sleep(30); }
+      touch('touchend', top + 455);
+      add('Detailblatt lässt sich nach unten wegziehen (C6)', (await until(() => $('#sheet').hidden, 1500)) >= 0);
+
+      // D2: Autorenseite und Zurück
+      $('#results .more-btn').click();
+      await until(() => !$('#sheet').hidden);
+      const author = $('#sheet .author .link-btn').textContent.replace(' ›', '');
+      $('#sheet .author .link-btn').click();
+      ms = await until(() => $('#browseTitle').textContent === author && $$('#results .book').length > 0);
+      add('Autorenseite öffnet sich (D2)', ms >= 0, `${author}, ${ms} ms`);
+      $('#browseBack').click();
+      await sleep(200);
+      add('„‹“ stellt die vorherige Suche wieder her (D2)', $('#searchInput').value === 'eragon' && $$('#results .book').length > 0);
+
+      // D1: Genre
+      const inp = $('#searchInput');
+      inp.value = '';
+      inp.dispatchEvent(new frame.contentWindow.Event('input'));
+      await until(() => !$('#genreChips').hidden);
+      $$('#genreChips .chip').find((c) => c.textContent === 'Fantasy').click();
+      ms = await until(() => $$('#results .book').length >= 50);
+      add('Genre „Fantasy“: 50 Bücher unter 1 s (D1)', ms >= 0 && ms < 1000, `${ms} ms`);
+      add('„Mehr laden“ vorhanden (B6)', !$('#moreBtn').hidden);
+      $('#browseBack').click();
+      await sleep(200);
+
+      // B5: ISBN zeigt das ganze Werk
+      ms = await search('9783404015061');
+      const r = $('#results .book');
+      add('ISBN 9783404015061 → „Rewitched“, 2025 (B5)', r && r.querySelector('.title').textContent === 'Rewitched' && /2025/.test(r.querySelector('.meta').textContent),
+        r ? `${r.querySelector('.title').textContent} / ${r.querySelector('.meta').textContent}` : 'kein Treffer');
+      ms = await search('9783570552698');
+      add('ISBN außerhalb des Katalogs (Sachbuch) wird gefunden (B5)', /Menschheit/.test($('#results .book .title')?.textContent || ''));
+
+      // C4: Cover-Raster
+      await search('harry potter');
+      $('#viewToggle').click();
+      await sleep(200);
+      const books = $$('#results .book').slice(0, 2).map((b) => b.getBoundingClientRect());
+      add('Cover-Raster: 2 Cover nebeneinander (C4)', doc().body.classList.contains('grid-view') && books.length === 2 && Math.abs(books[0].top - books[1].top) < 2);
+      add('Cover-Raster: kein waagrechtes Scrollen (A5)', noOverflow());
+      $('#viewToggle').click();
+    } catch (err) {
+      add('Testlauf abgebrochen', false, err.message);
+    } finally {
+      if (gridBefore === null) frame.contentWindow.localStorage.removeItem('bibliothek-einstellungen');
+      else frame.contentWindow.localStorage.setItem('bibliothek-einstellungen', gridBefore);
+    }
+    add('Keine JavaScript-Fehler in der App', errors.length === 0, errors.slice(0, 3).join(' | '));
+
+    const failed = results.filter((x) => !x.ok).length;
+    document.getElementById('status').textContent = failed ? `${failed} von ${results.length} Tests fehlgeschlagen` : `Alle ${results.length} Tests bestanden`;
+    for (const x of results) {
+      const li = document.createElement('li');
+      li.className = x.ok ? 'ok' : 'fail';
+      li.innerHTML = `${x.name} <small>${x.detail || ''}</small>`;
+      document.getElementById('list').append(li);
+    }
+    window.__uiResults = results;
+  </script>
+</body>
+</html>

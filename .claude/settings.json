@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell -NoProfile -ExecutionPolicy Bypass -File .claude/hooks/stop-pruefung.ps1",
+            "timeout": 60,
+            "statusMessage": "Prüf-Stempel wird geprüft …"
+          }
+        ]
+      }
+    ]
+  }
+}

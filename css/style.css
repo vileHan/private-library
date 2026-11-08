@@ -322,6 +322,9 @@ body.sheet-open { overflow: hidden; }
   .book > .cover { width: 72px; height: 108px; }
   .book > .actions { gap: 4px; }
   .book > .actions .toggle { padding: 3px 6px; font-size: .72rem; gap: 3px; }
+  /* Mit kleinerem Cover bestimmt der Text die Höhe: einzeilige Titel machten Slots 130 statt 145 px hoch
+     (Oberflächen-Test C1). Platz für 2 Titelzeilen reservieren → alle Slots gleich hoch. */
+  body:not(.grid-view) .book:not(.compact) .title { min-height: 2.6em; }
 }
 
 /* „Details ›“ in der Titel-Einblendung (Cover-Raster) */

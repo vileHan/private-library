@@ -42,6 +42,15 @@ Commits laufen mit der GitHub-noreply-Adresse (in der lokalen Git-Konfiguration 
 - **Vor Änderungen an Suchlogik/Datenbank** immer Ressourcen (500 MB, 3-s-Grenze, Datenverkehr) prüfen und bei größeren Änderungen vorher nachfragen.
 - Schema-Änderungen ohne Datenimport: Workflow **„Datenbankschema“** (~1 Minute, darf parallel zu einem Import laufen). **Achtung:** Ein laufender Import spielt beim Schreiben das Schema aus seinem Startzeitpunkt ein. Wurde das Schema währenddessen geändert, danach „Datenbankschema“ noch einmal starten.
 
+## Arbeitsweise: bauen → prüfen → verbessern (seit 08.11.2026)
+
+- **ANFORDERUNGEN.md** = prüfbare Abnahmekriterien (IDs A1 …). Neue Wünsche des Nutzers dort unter „Eingang“ sammeln und in prüfbare Punkte umformulieren.
+- **Prüfer-Agent** (`.claude/agents/pruefer.md`, Agent-Typ `pruefer`): übernimmt die Rolle des Nutzers, ändert nichts, prüft gegen ANFORDERUNGEN.md (Tests, Browser in 375/360 px, Messungen, Stichproben) und liefert VERDIKT + Mängelliste. Bei BESTANDEN setzt er den Prüf-Stempel.
+- **Nach jeder abgeschlossenen Änderung** an Code/Styles/Datenbank/Workflows/Tests: Prüfer aufrufen, Mängel beheben, erneut prüfen – **höchstens 3 Runden**, dann mit Bericht an den Nutzer. Geschmack, Kosten/Grenzen, rechtliche Fragen und größere Datenbankänderungen entscheidet immer der Nutzer.
+- **Tests**: `tests/index.html` (Katalog, 40) und `tests/ui.html` (Oberfläche in 360 px, 19; ändert keine eigenen Daten).
+- **Prüf-Stempel** `tools/pruefstempel.ps1` (Hash über js, css, index.html, sw.js, supabase, scripts, tests, Workflows; Doku zählt nicht) → `.claude/pruefung.json` (nicht im Repository).
+- **Stop-Hook** (`.claude/settings.json` → `.claude/hooks/stop-pruefung.ps1`): Ist der Stand ungeprüft, hält er Claude vor dem Beenden einer Antwort **einmal** an und fordert die Prüfung. Beim zweiten Mal lässt er durch (keine Endlosschleife). Ausnahme: Arbeit läuft noch (z. B. Import) oder reine Frage – kurz begründen.
+
 ## Bewusst später
 
 - Barcode-Scan mit der Handykamera
