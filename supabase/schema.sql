@@ -330,6 +330,7 @@ create table if not exists cover_map (
 );
 alter table cover_map alter column cover_id drop not null;
 alter table cover_map add column if not exists readers integer not null default 0;
+alter table cover_map add column if not exists ol_work integer; -- Open-Library-Werk (OL123W → 123), für den Lauf „Leserzahlen“
 alter table cover_map enable row level security; -- keine Policy: für die App unsichtbar
 
 -- Cover-IDs (höchstens 3, in Cover-Reihenfolge der ISBNs) und Leser-Zahl (Maximum über die Ausgaben)

@@ -1,0 +1,29 @@
+name: Leserzahlen
+
+# Zählt die Open-Library-Leselisten je Werk (scripts/covers.mjs, MODE=readers) → Beliebtheit. ~10 Minuten.
+# Läuft automatisch nach einem erfolgreichen „Cover-IDs“-Lauf (braucht dessen ISBN→Werk-Zuordnung) und per Hand.
+on:
+  workflow_dispatch:
+  workflow_run:
+    workflows: ['Cover-IDs']
+    types: [completed]
+
+concurrency:
+  group: cover-ids
+  cancel-in-progress: false
+
+jobs:
+  readers:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install --no-audit --no-fund
+      - run: node scripts/covers.mjs
+        env:
+          MODE: readers
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}

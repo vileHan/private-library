@@ -1,7 +1,8 @@
 name: Cover-IDs
 
-# Open-Library-Cover-IDs für deutsche ISBNs sammeln (scripts/covers.mjs). Getrennt vom Katalog-Import,
-# weil der Download des Open-Library-Exports je nach Server 2–5 Stunden dauert.
+# Open-Library-Cover-IDs für die ISBNs des Katalogs (scripts/covers.mjs, MODE=covers). Getrennt vom Katalog-Import,
+# weil der Ausgaben-Export ~12,6 GB groß ist (1–4 h). Bei Stillstand lädt das Skript ab der erreichten Stelle weiter.
+# Danach startet automatisch der Workflow „Leserzahlen“.
 on:
   workflow_dispatch:
   schedule:
@@ -23,5 +24,6 @@ jobs:
       - run: npm install --no-audit --no-fund
       - run: node scripts/covers.mjs
         env:
+          MODE: covers
           NODE_OPTIONS: --max-old-space-size=4096
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
