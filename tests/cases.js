@@ -150,6 +150,20 @@ export async function runAll() {
   const amazon = classify({ publisher: 'Independently published', isbns: ['9798287560898'], genres: ['Fantasy'] }, opts);
   results.push({ name: 'Selbstverlag über Amazon fällt raus', ok: !amazon.keep, detail: amazon.reason || '' });
 
+  // Lern-/Beschäftigungsmaterial und Rollenspiel raus – auch mit erzählender Gattung; echte Romane mit ähnlichen Wörtern bleiben
+  const t = (title, keep) => {
+    const r = classify({ title, subtitle: '', publisher: 'Testverlag', isbns: ['9783000000000'], genres: ['Kinderbücher bis 11 Jahre'] }, opts);
+    return r.keep === keep ? '' : `„${title}“ ${keep ? 'fiel raus' : 'blieb'} (${r.reason || 'ok'})`;
+  };
+  const wordFails = [
+    t('Mein rabenstarker Vorschulblock - Rechnen', false), t('Die Biene Maja - Lernen ab 3 Jahren', false),
+    t('Juli Löwenzahn - Mein Kindergarten-Album', false), t('Barfuß-Freunde : Freundebuch', false),
+    t('DSA5 - In den Fängen des Dämons', false), t('Mein Lernblock Buchstaben', false),
+    t('Meine Freunde, die Monster', true), t('Lernen fürs Leben', true), t('Das Album meiner Großmutter', true),
+  ].filter(Boolean);
+  results.push({ name: 'Titelwörter: Lernblöcke, „Lernen ab N Jahren“, Freundebuch, DSA raus; ähnliche Romantitel bleiben',
+    ok: wordFails.length === 0, detail: wordFails.join('; ') });
+
   // ---------- Ohne Netz: Titel-Helfer ----------
   const unit = [
     [cleanTitle('Harry Potter und der Stein der Weisen - Ausgabe zur TV-Serie'), 'Harry Potter und der Stein der Weisen'],

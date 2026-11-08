@@ -112,6 +112,30 @@
       $('#browseBack').click();
       await sleep(200);
 
+      // D4: Eigener Eintrag mit veralteten Daten (wie nach einem Scan: „Rewitched 2026“) wird aufgefrischt,
+      // eigene Angaben bleiben. Testeintrag mit eigenem Schlüssel, wird danach wieder gelöscht.
+      // Module im Rahmen der App laden (gleiche Instanz wie die App), absolute Adresse wegen eval
+      const imp = (p) => frame.contentWindow.eval(`import('${new URL(`js/${p}`, frame.contentWindow.location.href)}')`);
+      const { store } = await imp('store.js');
+      const lib = await imp('library.js');
+      const KEY = 'ui-test-refresh';
+      await store.put({ key: KEY, title: 'Rewitched', sortTitle: 'Rewitched', subtitle: '', authors: ['Lucy Jane Wood'], authorSort: 'Wood, Lucy Jane',
+        year: 2026, genre: 'Fantasy', publisher: 'Lübbe', series: '', volume: '', isbns: ['9783404015061'], coverIsbns: [], coverIds: [], editions: [],
+        owned: true, read: true, readAt: '2026-01-02', wish: false, rating: 4, notes: 'Testnotiz', tags: ['Test'], ownedIsbns: ['9783404015061'],
+        addedAt: '2026-01-01T00:00:00.000Z' });
+      await lib.loadLibrary();
+      try {
+        await search('rewitched');
+        await sleep(500);
+        const e = (await store.getAll()).find((x) => x.key === KEY);
+        add('Eigener Eintrag wird aufgefrischt, eigene Angaben bleiben (D4)',
+          e && e.year === 2025 && e.isbns.length >= 2 && e.owned && e.read && e.rating === 4 && e.notes === 'Testnotiz' && e.tags[0] === 'Test' && e.readAt === '2026-01-02',
+          e ? `Jahr ${e.year}, ${e.isbns.length} ISBN, Besitz ${e.owned}, Bewertung ${e.rating}` : 'Eintrag fehlt');
+      } finally {
+        await store.remove(KEY);
+        await lib.loadLibrary();
+      }
+
       // B5: ISBN zeigt das ganze Werk
       ms = await search('9783404015061');
       const r = $('#results .book');

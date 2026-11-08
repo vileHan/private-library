@@ -381,7 +381,7 @@ function renderLibrary() {
   if (!items.length) {
     box.append(el('p', {
       class: 'empty',
-      text: total ? 'Nichts gefunden.' : 'Noch keine Bücher. Suche ein Buch und tippe auf „Besitze ich“ oder „Merken“.',
+      text: total ? 'Nichts gefunden.' : 'Noch keine Bücher. Suche ein Buch und tippe auf „Besitze“ oder „Merken“.',
     }));
   }
 }

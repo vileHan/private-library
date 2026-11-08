@@ -46,8 +46,8 @@ Commits laufen mit der GitHub-noreply-Adresse (in der lokalen Git-Konfiguration 
 
 - **ANFORDERUNGEN.md** = prüfbare Abnahmekriterien (IDs A1 …). Neue Wünsche des Nutzers dort unter „Eingang“ sammeln und in prüfbare Punkte umformulieren.
 - **Prüfer-Agent** (`.claude/agents/pruefer.md`, Agent-Typ `pruefer`): übernimmt die Rolle des Nutzers, ändert nichts, prüft gegen ANFORDERUNGEN.md (Tests, Browser in 375/360 px, Messungen, Stichproben) und liefert VERDIKT + Mängelliste. Bei BESTANDEN setzt er den Prüf-Stempel.
-- **Nach jeder abgeschlossenen Änderung** an Code/Styles/Datenbank/Workflows/Tests: Prüfer aufrufen, Mängel beheben, erneut prüfen – **höchstens 3 Runden**, dann mit Bericht an den Nutzer. Geschmack, Kosten/Grenzen, rechtliche Fragen und größere Datenbankänderungen entscheidet immer der Nutzer.
-- **Tests**: `tests/index.html` (Katalog, 40) und `tests/ui.html` (Oberfläche in 360 px, 19; ändert keine eigenen Daten).
+- **Nach jeder abgeschlossenen Änderung** an Code/Styles/Datenbank/Workflows/Tests: Prüfer aufrufen, Mängel beheben, erneut prüfen – **höchstens 3 Runden**, dann mit Bericht an den Nutzer (Startwert, vom Nutzer bestätigt 08.11.2026; nach ~5 Aufträgen gemeinsam auswerten, wie viele Runden nötig waren, und anpassen). Im Bericht immer angeben, wie viele Runden es waren. Geschmack, Kosten/Grenzen, rechtliche Fragen und größere Datenbankänderungen entscheidet immer der Nutzer.
+- **Tests**: `tests/index.html` (Katalog, 41) und `tests/ui.html` (Oberfläche in 360 px, 20; eigene Daten bleiben unberührt, ein Testeintrag wird wieder gelöscht).
 - **Prüf-Stempel** `tools/pruefstempel.ps1` (Hash über js, css, index.html, sw.js, supabase, scripts, tests, Workflows; Doku zählt nicht) → `.claude/pruefung.json` (nicht im Repository).
 - **Stop-Hook** (`.claude/settings.json` → `.claude/hooks/stop-pruefung.ps1`): Ist der Stand ungeprüft, hält er Claude vor dem Beenden einer Antwort **einmal** an und fordert die Prüfung. Beim zweiten Mal lässt er durch (keine Endlosschleife). Ausnahme: Arbeit läuft noch (z. B. Import) oder reine Frage – kurz begründen.
 

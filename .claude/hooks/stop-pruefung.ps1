@@ -2,6 +2,7 @@
 # Ist er es nicht, hält der Hook Claude einmal an (Exit-Code 2) und schickt ihm die Aufforderung unten.
 # Danach (stop_hook_active = true) lässt er Claude in jedem Fall aufhören – so entsteht keine Endlosschleife,
 # z. B. wenn gerade nur auf einen Import gewartet wird oder der Nutzer eine reine Frage gestellt hat.
+[Console]::OutputEncoding = [Text.Encoding]::UTF8 # sonst kommen Umlaute als „Pr�fer“ an
 $inputJson = [Console]::In.ReadToEnd()
 try { $data = $inputJson | ConvertFrom-Json } catch { $data = $null }
 if ($data -and $data.stop_hook_active) { exit 0 }
