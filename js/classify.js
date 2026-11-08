@@ -47,12 +47,15 @@ const NON_BOOK_TITLE = words([
   'freundebuch', 'dsa\\d',
   // Stichprobe Lernbücher 11/2026 (je ~14 Titel aus 9 Mustern, ~1.000–2.000 Nicht-Bücher geschätzt):
   // Ordner/Verkaufseinheiten, Jahreskalender, Rätsel-/Quizbücher, Übungsbücher, Kreativ-/Ausmalhefte, Lieder, ABC-/Schreiblernbücher
+  // Prüfrunde 08.11.2026: „sachwissen“, „quiz“, „sudoku“, „liederbuch“, „kinderlieder“, „ausmal…“ trafen echte Geschichten
+  // (GEOlino-Erstleser „mit Extra Sachwissen“, Lesebücher „mit Hufeisen-Quiz“, Sudoku-Krimis, Gedichtbände „Liederbuch“) →
+  // hier nur noch eindeutige Formen, die übrigen stehen bei den schwachen Wörtern.
   'sammelordner', 'aktenordner', 'schnellhefter', '\\d+er vk', '\\d+ exemplare', '\\p{L}+kalender \\d{4}',
-  'sudoku', 'quiz', '\\p{L}+-quiz', 'quiz-?buch', 'rätselbuch', 'rätsel-?block', '\\d+ (\\p{L}+ )?rätsel', 'aufgaben und rätsel',
+  'quiz-?buch', 'rätselbuch', 'rätsel-?block', '\\d+ (\\p{L}+ )?rätsel', 'aufgaben und rätsel',
   'rätsel und (spiele|aufgaben)', 'mit über \\d+ rätseln', 'konzentration fördern', 'spielerisch fördern',
   'übungsbuch', '\\p{L}+-übungsbuch', '\\d+ übungen', 'mit übungen', 'handbuch für lehrer', 'lehrerhandbuch',
-  'kreativbuch', 'ausmal-?\\p{L}*', 'kinderlieder', 'liederbuch', 'abc-buch', '(buchstaben|zahlen) schreiben', 'schreiben ab \\d',
-  'sachwissen',
+  'kreativbuch', 'ausmal-?(panorama|block|heft|spaß|buch)', '(buchstaben|zahlen) schreiben', 'schreiben ab \\d',
+  'erstes sachwissen',
 ]);
 // Nur verdächtig, wenn die Gattung nicht erzählend ist oder fehlt
 // (sonst flöge z. B. Arno Geigers Roman „Alles über Sally“ raus):
@@ -60,6 +63,7 @@ const NON_BOOK_TITLE_WEAK = words([
   'sticker', 'poster', 'puzzle', 'postkarten', 'alles über', 'lexikon', 'enzyklopädie',
   'bildwörterbuch', 'das offizielle (buch|malbuch|stickerbuch|rätselbuch|kochbuch|fanbuch|handbuch)', 'kalender',
   'mitmachbuch', '\\p{L}+-mitmachbuch', 'rezepte', 'sprüche',
+  'quiz', 'sudoku', 'kinderlieder', 'liederbuch', 'ausmalbildern', 'abc-buch',
 ]);
 const NON_NARRATIVE_GENRE = /Sachb|Spiel|Lernen|Geschenk|Kalender|Ratgeber|Bildung|Nachschlage/;
 

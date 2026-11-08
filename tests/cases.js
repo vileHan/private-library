@@ -153,8 +153,8 @@ export async function runAll() {
   results.push({ name: 'Amazons Verlagsprogramm (AmazonCrossing) bleibt im Katalog', ok: crossing.keep, detail: crossing.reason || '' });
 
   // Lern-/Beschäftigungsmaterial und Rollenspiel raus – auch mit erzählender Gattung; echte Romane mit ähnlichen Wörtern bleiben
-  const t = (title, keep) => {
-    const r = classify({ title, subtitle: '', publisher: 'Testverlag', isbns: ['9783000000000'], genres: ['Kinderbücher bis 11 Jahre'] }, opts);
+  const t = (title, keep, genre = 'Kinderbücher bis 11 Jahre') => {
+    const r = classify({ title, subtitle: '', publisher: 'Testverlag', isbns: ['9783000000000'], genres: genre ? [genre] : [] }, opts);
     return r.keep === keep ? '' : `„${title}“ ${keep ? 'fiel raus' : 'blieb'} (${r.reason || 'ok'})`;
   };
   const wordFails = [
@@ -168,7 +168,14 @@ export async function runAll() {
     t('Höher, schneller, weiter : das ultimative Sport-Quiz-Buch', false), t('144 kugelrunde Rätsel', false),
     t('Piraten-Rätsel : Konzentration fördern', false), t('Das Märchen-Übungsbuch', false), t('Felix-Kreativbuch', false),
     t('Der kleine Drache Kokosnuss - Mein Ausmal-Panorama', false), t('Buchstaben und Zahlen schreiben ab 5 Jahren', false),
-    t('Das ABC-Buch mit dem ABCebra', false), t('Magie der Selbstregulation : 35 Übungen und Geschichten für Kinder', false),
+    t('Magie der Selbstregulation : 35 Übungen und Geschichten für Kinder', false),
+    t('Quiz und Quatsch. Level 2', false, ''), t('Die schönsten Kinderlieder', false, ''), t('Wie leben die Wölfe? : erstes Sachwissen zum Hören', false),
+    // Prüfrunde 08.11.2026: echte Geschichten und Gedichte, die zu weit gefasste Wörter getroffen hatten
+    t('Vampire auf Klassenfahrt : mit Extra: GEOlino-Sachwissen', true), t('Die drei ??? Kids - das Dino-Geheimnis : mit Sachwissen', true),
+    t('Cleopatra reißt aus : mit Rätseln und Hufeisen-Quiz', true), t('The Game - Das Spiel erwacht : mit Antolin-Quiz', true),
+    t('Tödliches Sudoku', true, 'Krimis, Thriller, Spionage'), t('Todesrätsel : Ein Sudoku-Krimi', true, 'Krimis, Thriller, Spionage'),
+    t('Italienisches Liederbuch : ausgewählte Gedichte', true, 'Lyrik'), t('Kinderlieder : junge Gedichte', true, 'Lyrik'),
+    t('Du hast den Wal : Ein Kinderbuch mit Ausmalbildern', true), t('Das alleralbernste ABC-Buch', true, 'Erzählerische Bilderbücher'),
     // … und echte Geschichten mit ähnlichen Wörtern bleiben
     t('Das Rätsel der Spiegelwüste', true), t('Der Schlunz und das Rätsel im Weihnachtskeks', true),
     t('Spannende Abc-Geschichten für Erstleser', true), t('Die kleine Eins entdeckt das Rechnen', true),
