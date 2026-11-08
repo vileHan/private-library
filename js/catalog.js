@@ -47,6 +47,21 @@ function toWork(r) {
 }
 
 const PAGE = 50;
+
+/** Das Katalog-Werk zu einer ISBN finden: per Volltextsuche nach Titel + Nachname, dann über die ISBN prüfen. */
+async function dbWorkForIsbn(isbn, editions, signal) {
+  const e = editions.find((x) => x.isbns.includes(isbn)) || editions[0];
+  if (!e) return null;
+  const surname = (e.authorsSort[0] || '').split(',')[0];
+  for (const text of [`${e.title} ${surname}`, e.title]) {
+    const tokens = normalizeText(text).split(' ').filter((t) => t.length >= 2).slice(0, 6);
+    if (!tokens.length) continue;
+    const rows = await rpc('search_works', { tokens, lim: PAGE, off: 0 }, signal);
+    const hit = rows.find((r) => (r.isbns || []).map(String).includes(isbn));
+    if (hit) return toWork(hit);
+  }
+  return null;
+}
 const blurbCache = new Map();
 
 export const catalog = {
@@ -69,7 +84,15 @@ export const catalog = {
         console.warn('Datenbank nicht erreichbar, suche live bei der DNB:', err);
       }
     }
-    return searchDnb(query, cursor ?? 1, signal);
+    const res = await searchDnb(query, cursor ?? 1, signal);
+    // ISBN (Barcode): Die DNB kennt nur die gescannte Ausgabe. Steht das Buch im Katalog, das ganze Werk zeigen –
+    // mit allen Ausgaben, dem ersten Erscheinungsjahr und den Cover-IDs (sonst z. B. Rewitched als „2026“ statt 2025).
+    const isbn = normalizeIsbn(query);
+    if (isbn && useDb() && !cursor) {
+      const work = await dbWorkForIsbn(isbn, res.editions, signal).catch(() => null);
+      if (work) return { works: [work], total: 1, next: null };
+    }
+    return res;
   },
 
   /** Ausgaben-Details zu ISBNs (live von der DNB). */

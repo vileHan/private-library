@@ -2,7 +2,7 @@ import { catalog } from './catalog.js';
 import { groupEditions, compareTitle, compareAuthor, normalizeText, searchableSubtitle } from './works.js';
 import { exportJson, importJson } from './store.js';
 import { normalizeIsbn } from './isbn.js';
-import { library, loadLibrary, entryFor, onLibraryChange, allTags } from './library.js';
+import { library, loadLibrary, entryFor, onLibraryChange, allTags, refreshEntry } from './library.js';
 import { bookCard } from './card.js';
 import { renderSeries } from './series.js';
 import { renderStats } from './stats.js';
@@ -54,6 +54,7 @@ function renderResults() {
   box.replaceChildren();
   const fromDb = search.works.length > 0;
   const works = fromDb ? search.works : groupEditions(search.editions);
+  if (fromDb) works.forEach((w) => refreshEntry(w).catch(() => {})); // eigene Einträge mit Katalogdaten auffrischen
   const seen = new Set();
   const owned = [];
   const others = [];
@@ -205,6 +206,7 @@ function renderBrowse() {
   const status = $('#searchStatus');
   status.classList.remove('error');
   let list = browse.works;
+  list.forEach((w) => refreshEntry(w).catch(() => {}));
   if (browse.mode === 'author') {
     // Eigene Bücher oben (auch solche, die nur per ISBN in die Bibliothek kamen), Reihen zusammen, sonst A–Z
     const seen = new Set();

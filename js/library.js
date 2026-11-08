@@ -41,6 +41,23 @@ export async function updateEntry(work, change) {
   return entryFor(work);
 }
 
+/**
+ * Buchdaten eines eigenen Eintrags auffrischen (Titel, Jahr, Reihe, Genre, Cover …), ohne die eigenen Angaben
+ * anzufassen. Hintergrund: Ein per Barcode markiertes Buch speichert die Daten der einen gescannten Ausgabe
+ * (Rewitched: Taschenbuch 2026), die Datenbank kennt das ganze Werk (erste Ausgabe 2025). Nur mit Werken
+ * aus der Datenbank aufrufen. Schreibt nur, wenn sich etwas geändert hat.
+ */
+const META = ['title', 'sortTitle', 'subtitle', 'authors', 'authorSort', 'year', 'genre', 'series', 'volume', 'isbns', 'coverIds'];
+export async function refreshEntry(work) {
+  const existing = entryFor(work);
+  if (!existing) return;
+  const fresh = entryFromWork(work, existing);
+  if (META.every((k) => JSON.stringify(fresh[k] ?? null) === JSON.stringify(existing[k] ?? null))) return;
+  await store.put(fresh);
+  library.byKey.set(fresh.key, fresh);
+  for (const i of fresh.isbns || []) library.byIsbn.set(i, fresh.key);
+}
+
 /** Alle vergebenen Regale (Schlagworte), alphabetisch. */
 export function allTags() {
   const tags = new Set();

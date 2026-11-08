@@ -142,6 +142,7 @@ Ziel: Die Daten werden **einmal aufbereitet** und nicht bei jeder Suche neu.
 - **Achtung GitHub**: Zeitgesteuerte Workflows in öffentlichen Repos werden nach 60 Tagen ohne Commit deaktiviert. GitHub schickt vorher eine Mail, dann im Actions-Tab wieder aktivieren.
 - **Datenquelle austauschbar**: `js/catalog.js` nutzt Supabase, wenn `CONFIG.supabase` gesetzt ist, sonst die DNB live. ISBN-Suchen laufen immer über die DNB (ungefiltert). Bei Datenbankfehlern greift automatisch die DNB.
 - **Testhinweis Browser-Ansicht:** Lazy-Bilder laden in Hintergrund-Tabs nicht. Vor Cover-Tests den Tab nach vorne holen.
+- **Eigene Einträge sind Kopien der Buchdaten** (IndexedDB). Barcode-/ISBN-Suche holt die Ausgabe live von der DNB und sucht dann das ganze Werk im Katalog (`dbWorkForIsbn` in catalog.js: Volltextsuche Titel + Nachname, Treffer über die ISBN). Erscheint ein Werk aus der Datenbank in Suche/Stöbern, frischt `refreshEntry` (library.js) Titel, Jahr, Reihe, Genre, ISBNs und Cover-IDs des eigenen Eintrags auf – eigene Angaben bleiben. (Fall Rewitched: per Scan „2026“ gespeichert, Werk ist von 2025.)
 - Die eigenen Markierungen liegen weiterhin lokal in IndexedDB. Später optional Abgleich über Supabase mit Anmeldung.
 
 ## Technik
