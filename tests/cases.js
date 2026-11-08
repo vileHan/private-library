@@ -181,6 +181,17 @@ export async function runAll() {
     t('Spannende Abc-Geschichten für Erstleser', true), t('Die kleine Eins entdeckt das Rechnen', true),
     t('Tote Erzieherin - gute Erzieherin : Mord in der KiTa', true), t('Der Adventskalender', true), t('Eine tödliche Rezeptur', true),
   ].filter(Boolean);
+  // Ohne Gattung: erzählender Untertitel schützt vor schwachen Wörtern; Rätselgeschichten fallen raus (Nutzerentscheidung 08.11.2026)
+  const sub = (title, subtitle, keep, genres = []) => {
+    const r = classify({ title, subtitle, publisher: 'Testverlag', isbns: ['9783000000000'], genres }, opts);
+    return r.keep === keep ? '' : `„${title} : ${subtitle}“ ${keep ? 'fiel raus' : 'blieb'} (${r.reason || 'ok'})`;
+  };
+  wordFails.push(...[
+    sub('Sudoku für Männer', 'Kurzgeschichten', true), sub('Tödliches Sudoku', 'Kriminalroman', true),
+    sub('Die Goldfisch-Geschichte', 'mit Ausmalbildern und Rätselspaß', true, ['Erzählerische Bilderbücher']),
+    sub('Sudoku', 'Rätselheft für Einsteiger', false),
+    sub('Die drei ??? Kids - Diebstahl im Eiscafé', 'das große Rätselbuch', false, ['Kinderbücher bis 11 Jahre']),
+  ].filter(Boolean));
   results.push({ name: 'Titelwörter: Lernblöcke, „Lernen ab N Jahren“, Freundebuch, DSA raus; ähnliche Romantitel bleiben',
     ok: wordFails.length === 0, detail: wordFails.join('; ') });
 

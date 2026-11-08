@@ -43,7 +43,7 @@ const NON_BOOK_TITLE = words([
   'schuber', 'geschenkschuber', '\\p{L}*-?box',
   // Lern- und Beschäftigungsmaterial, Rollenspiel-Abenteuer (Stichprobe 11/2026: „Mein rabenstarker Vorschulblock - Rechnen“,
   // „Die Biene Maja - Lernen ab 3 Jahren“, „Juli Löwenzahn - Mein Kindergarten-Album“, „DSA5 - In den Fängen des Dämons“)
-  'vorschulblock', 'lernblock', 'rechenblock', 'übungsblock', 'rätselspaß', 'lernen ab \\d+( jahren)?', 'kindergarten-album',
+  'vorschulblock', 'lernblock', 'rechenblock', 'übungsblock', 'lernen ab \\d+( jahren)?', 'kindergarten-album',
   'freundebuch', 'dsa\\d',
   // Stichprobe Lernbücher 11/2026 (je ~14 Titel aus 9 Mustern, ~1.000–2.000 Nicht-Bücher geschätzt):
   // Ordner/Verkaufseinheiten, Jahreskalender, Rätsel-/Quizbücher, Übungsbücher, Kreativ-/Ausmalhefte, Lieder, ABC-/Schreiblernbücher
@@ -63,7 +63,7 @@ const NON_BOOK_TITLE_WEAK = words([
   'sticker', 'poster', 'puzzle', 'postkarten', 'alles über', 'lexikon', 'enzyklopädie',
   'bildwörterbuch', 'das offizielle (buch|malbuch|stickerbuch|rätselbuch|kochbuch|fanbuch|handbuch)', 'kalender',
   'mitmachbuch', '\\p{L}+-mitmachbuch', 'rezepte', 'sprüche',
-  'quiz', 'sudoku', 'kinderlieder', 'liederbuch', 'ausmalbildern', 'abc-buch',
+  'quiz', 'sudoku', 'kinderlieder', 'liederbuch', 'ausmalbildern', 'abc-buch', 'rätselspaß',
 ]);
 const NON_NARRATIVE_GENRE = /Sachb|Spiel|Lernen|Geschenk|Kalender|Ratgeber|Bildung|Nachschlage/;
 
@@ -102,7 +102,11 @@ export function classify(e, { excludeGenreGroups = Object.keys(GENRE_GROUPS) } =
   const text = `${e.title || ''} ${e.subtitle || ''}`;
   const m = text.match(NON_BOOK_TITLE);
   if (m) return { keep: false, reason: `Titel: „${m[0].trim()}“` };
-  if (!narrativeGenre) {
+  // Ohne Gattung entscheidet der Untertitel: „Tödliches Sudoku : Kriminalroman“, „Sudoku für Männer : Kurzgeschichten“
+  // sind erzählend – schwache Wörter greifen dann nicht (Prüfrunde 08.11.2026).
+  const narrativeSubtitle = /(^|[^\p{L}])(roman|kriminalroman|krimi|thriller|erzählung|erzählungen|kurzgeschichten|geschichten|gedichte|novelle|märchen)($|[^\p{L}])/iu
+    .test(e.subtitle || '');
+  if (!narrativeGenre && !narrativeSubtitle) {
     const w = text.match(NON_BOOK_TITLE_WEAK);
     if (w) return { keep: false, reason: `Titel (ohne erzählende Gattung): „${w[0].trim()}“` };
   }
