@@ -197,7 +197,9 @@ export async function runAll() {
     sub('Thomas und seine Freunde', 'Sticker-Geschichten', false),
     sub('Meine schönsten Bilderbücher - Verkaufs-Kassette', '', false, ['Bilderbücher']),
     sub('Postkarten', 'Roman', true), sub('Gedanken lüften', 'Gedichte und Sprüche', true),
-    sub('Keine Rose ohne Dornen', 'Roman ; mit Mini-Poster', true),
+    sub('Keine Rose ohne Dornen', 'Roman ; mit Mini-Poster, Gewinnspiel & farbigen Extra-Seiten', true),
+    sub('Umziehen', 'Jahresheft 2013', true, ['Erzählende Literatur: Gegenwartsliteratur ab 1945']),
+    sub('Sonnewalder Heimatblätter', 'Jahresheft zur Geschichte', false),
     sub('Die drei ??? Kids - Diebstahl im Eiscafé', 'das große Rätselbuch', false, ['Kinderbücher bis 11 Jahre']),
   ].filter(Boolean));
   results.push({ name: 'Titelwörter: Lernblöcke, „Lernen ab N Jahren“, Freundebuch, DSA raus; ähnliche Romantitel bleiben',

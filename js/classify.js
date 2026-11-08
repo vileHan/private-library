@@ -55,7 +55,7 @@ const NON_BOOK_TITLE = words([
   'rätsel und (spiele|aufgaben)', 'mit über \\d+ rätseln', 'konzentration fördern', 'spielerisch fördern',
   'übungsbuch', '\\p{L}+-übungsbuch', '\\d+ übungen', 'mit übungen', 'handbuch für lehrer', 'lehrerhandbuch',
   'kreativbuch', 'ausmal-?(panorama|block|heft|spaß|buch)', '(buchstaben|zahlen) schreiben', 'schreiben ab \\d',
-  'erstes sachwissen', 'verkaufs-?kassette', 'jahresheft',
+  'erstes sachwissen', 'verkaufs-?kassette',
 ]);
 // Nur verdächtig, wenn die Gattung nicht erzählend ist oder fehlt
 // (sonst flöge z. B. Arno Geigers Roman „Alles über Sally“ raus):
@@ -63,7 +63,7 @@ const NON_BOOK_TITLE_WEAK = words([
   'sticker', 'poster', 'puzzle', 'postkarten', 'alles über', 'lexikon', 'enzyklopädie',
   'bildwörterbuch', 'das offizielle (buch|malbuch|stickerbuch|rätselbuch|kochbuch|fanbuch|handbuch)', 'kalender',
   'mitmachbuch', '\\p{L}+-mitmachbuch', 'rezepte', 'sprüche',
-  'quiz', 'sudoku', 'kinderlieder', 'liederbuch', 'ausmalbildern', 'abc-buch', 'rätselspaß',
+  'quiz', 'sudoku', 'kinderlieder', 'liederbuch', 'ausmalbildern', 'abc-buch', 'rätselspaß', 'jahresheft',
 ]);
 const NON_NARRATIVE_GENRE = /Sachb|Spiel|Lernen|Geschenk|Kalender|Ratgeber|Bildung|Nachschlage/;
 
@@ -109,8 +109,11 @@ export function classify(e, { excludeGenreGroups = Object.keys(GENRE_GROUPS) } =
   const sub = e.subtitle || '';
   const activityList = /bastel|rätsel|spiele|sticker|weitermal|malbild|wissenswert|tipps|rezepte|postkarte|poster/i.test(sub)
     && (/,/.test(sub) || /(sticker|rätsel|bastel)-?geschichten/i.test(sub));
-  const narrativeSubtitle = !activityList
-    && /(^|[^\p{L}])(roman|kriminalroman|krimi|thriller|erzählung|erzählungen|kurzgeschichten|geschichten|gedichte|novelle|märchen)($|[^\p{L}])/iu.test(sub);
+  // Eindeutige Erzählwörter schützen immer („Keine Rose ohne Dornen : Roman ; mit Mini-Poster, Gewinnspiel …“, Prüfrunde 3);
+  // „Geschichten“, „Gedichte“, „Märchen“ nur ohne Beschäftigungs-Aufzählung.
+  const word = (list) => new RegExp(`(^|[^\\p{L}])(${list})($|[^\\p{L}])`, 'iu');
+  const narrativeSubtitle = word('roman|kriminalroman|krimi|thriller|novelle|erzählung|erzählungen|kurzgeschichten').test(sub)
+    || (!activityList && word('geschichten|gedichte|märchen').test(sub));
   if (!narrativeGenre && !narrativeSubtitle) {
     const w = text.match(NON_BOOK_TITLE_WEAK);
     if (w) return { keep: false, reason: `Titel (ohne erzählende Gattung): „${w[0].trim()}“` };
