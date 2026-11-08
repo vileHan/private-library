@@ -32,6 +32,9 @@ Du kennst die Umsetzung nicht und sollst sie auch nicht verteidigen – prüfe, 
 Ändere dabei **keine eigenen Daten** in der App (keine Besitz-/Gelesen-Knöpfe drücken), außer zum Test – und dann
 sofort zurücksetzen. Lege keine Konten an, sende nichts ab.
 
+## Umfang
+Du wirst nur für Prüfstufe 2 (gezielt, nur der geänderte Bereich, 1 Runde) und Stufe 3 (voll) gerufen – siehe CLAUDE.md „Prüfstufen“. Halte dich bei Stufe 2 knapp an den Auftrag und prüfe nicht die ganze App; Tokens sind knapp.
+
 ## Bericht (deine Antwort)
 ```
 VERDIKT: BESTANDEN | MÄNGEL

@@ -12,9 +12,10 @@ $result = & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $root
 if ($LASTEXITCODE -eq 0) { exit 0 }
 
 [Console]::Error.WriteLine(@'
-Der aktuelle Stand (Code, Styles, Datenbank, Workflows oder Tests) ist noch nicht vom Prüfer abgenommen.
-Bitte jetzt den Prüfer-Agenten aufrufen (Agent mit subagent_type "pruefer"), seine Mängel beheben und erneut prüfen lassen
-(höchstens 3 Runden). Er setzt bei „BESTANDEN“ den Prüf-Stempel. Ausnahme: Ist die Arbeit noch mitten im Gange
-(z. B. Warten auf einen laufenden Import) oder war es eine reine Frage ohne Änderung, kurz begründen und beenden.
+Der aktuelle Stand (Code, Styles, Datenbank, Workflows oder Tests) ist noch ungeprüft.
+Prüfstufe nach CLAUDE.md wählen: Stufe 1 (kleine, von Tests abgedeckte Änderung) = Tests selbst laufen lassen und
+bei grün selbst stempeln (tools/pruefstempel.ps1 -Setzen); Stufe 2/3 = Prüfer-Agent (subagent_type "pruefer"), höchstens 3 Runden.
+Ausnahme: Ist die Arbeit noch mitten im Gange (z. B. eine Prüfrunde oder ein Import läuft) oder war es eine reine Frage
+ohne Änderung, kurz begründen und beenden.
 '@)
 exit 2

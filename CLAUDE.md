@@ -46,8 +46,24 @@ Commits laufen mit der GitHub-noreply-Adresse (in der lokalen Git-Konfiguration 
 
 - **ANFORDERUNGEN.md** = prüfbare Abnahmekriterien (IDs A1 …). Neue Wünsche des Nutzers dort unter „Eingang“ sammeln und in prüfbare Punkte umformulieren.
 - **Prüfer-Agent** (`.claude/agents/pruefer.md`, Agent-Typ `pruefer`): übernimmt die Rolle des Nutzers, ändert nichts, prüft gegen ANFORDERUNGEN.md (Tests, Browser in 375/360 px, Messungen, Stichproben) und liefert VERDIKT + Mängelliste. Bei BESTANDEN setzt er den Prüf-Stempel.
-- **Nach jeder abgeschlossenen Änderung** an Code/Styles/Datenbank/Workflows/Tests: Prüfer aufrufen, Mängel beheben, erneut prüfen – **höchstens 3 Runden**, dann mit Bericht an den Nutzer (Startwert, vom Nutzer bestätigt 08.11.2026; nach ~5 Aufträgen gemeinsam auswerten, wie viele Runden nötig waren, und anpassen). Im Bericht immer angeben, wie viele Runden es waren. **Während eine Prüfrunde läuft, keine neuen Fragen oder Änderungsvorschläge an den Nutzer** – erst wenn alle Runden durch sind, ein zusammenfassender Bericht mit allen offenen Entscheidungen (Wunsch des Nutzers, 08.11.2026). Geschmack, Kosten/Grenzen, rechtliche Fragen und größere Datenbankänderungen entscheidet immer der Nutzer.
-- **Tests**: `tests/index.html` (Katalog, 41) und `tests/ui.html` (Oberfläche in 360 px, 20; eigene Daten bleiben unberührt, ein Testeintrag wird wieder gelöscht).
+- **Prüfstufen** (der Prüfer-Agent kostet viele Tokens – Wunsch des Nutzers 08.11.2026, Stufe nach der Änderung wählen und im Bericht nennen):
+  - **Stufe 0 – kein Prüfen:** reine Fragen, Doku/Kommentare, Texte in ANFORDERUNGEN/PLAN, Memory. (Zählt nicht für den Stempel.)
+  - **Stufe 1 – Selbstprüfung (ohne Agent):** kleine, von Tests abgedeckte Änderungen – Textänderung in der Oberfläche, einzelne CSS-Regel, neue Testfälle, Rücknahme auf einen geprüften Stand, Versionsnummer in sw.js. Claude lässt `tests/index.html` und `tests/ui.html` selbst laufen (ggf. kurzer Blick in 360 px) und setzt bei grün den Stempel selbst (`tools/pruefstempel.ps1 -Setzen`).
+  - **Stufe 2 – Prüfer, gezielt (1 Runde, kurzer Auftrag nur für den geänderten Bereich):** neue/geänderte Katalogregeln mit wenigen Wörtern, eine neue Oberflächen-Funktion in einem Bereich, Workflow-Änderungen.
+  - **Stufe 3 – Prüfer, voll (bis 3 Runden):** neue Funktionen über mehrere Bereiche, Katalogregeln mit breiter Wirkung (classify/works/dnb grundlegend), Datenbankschema/Suchfunktionen, alles vor einem Neuimport, Ressourcen-/Kostenfragen.
+  - Faustregel: Je mehr Bücher oder Nutzer eine Änderung trifft und je weniger Tests den Bereich abdecken, desto höher die Stufe. Im Zweifel Stufe 2.
+- **Nach jeder abgeschlossenen Änderung** an Code/Styles/Datenbank/Workflows/Tests (Stufe 2/3): Prüfer aufrufen, Mängel beheben, erneut prüfen – **höchstens 3 Runden**, dann mit Bericht an den Nutzer (Startwert, vom Nutzer bestätigt 08.11.2026; nach ~5 Aufträgen gemeinsam auswerten, wie viele Runden nötig waren, und anpassen). Im Bericht immer angeben, wie viele Runden es waren. **Während eine Prüfrunde läuft, keine neuen Fragen oder Änderungsvorschläge an den Nutzer** – erst wenn alle Runden durch sind, ein zusammenfassender Bericht mit allen offenen Entscheidungen (Wunsch des Nutzers, 08.11.2026). Geschmack, Kosten/Grenzen, rechtliche Fragen und größere Datenbankänderungen entscheidet immer der Nutzer.
+- **Abschlussblock in jedem Bericht** (ganz am Ende, nach den Erklärungen, Wunsch des Nutzers 08.11.2026), damit auf einen Blick klar ist, woran er ist:
+  ```
+  ── Stand auf einen Blick ──
+  ✅ erledigt: … (je Punkt eine Zeile)
+  ❌ gescheitert/verworfen: … (mit Grund in wenigen Wörtern)
+  ⏳ läuft noch: … (mit Zeitschätzung)
+  ❓ deine Entscheidung: … (nur wenn offen)
+  🔍 Prüfung: Stufe N, X Runden, Ergebnis
+  ```
+  Leere Zeilen weglassen.
+- **Tests**: `tests/index.html` (Katalog, 42) und `tests/ui.html` (Oberfläche in 360 px, 20; eigene Daten bleiben unberührt, ein Testeintrag wird wieder gelöscht).
 - **Prüf-Stempel** `tools/pruefstempel.ps1` (Hash über js, css, index.html, sw.js, supabase, scripts, tests, Workflows; Doku zählt nicht) → `.claude/pruefung.json` (nicht im Repository).
 - **Stop-Hook** (`.claude/settings.json` → `.claude/hooks/stop-pruefung.ps1`): Ist der Stand ungeprüft, hält er Claude vor dem Beenden einer Antwort **einmal** an und fordert die Prüfung. Beim zweiten Mal lässt er durch (keine Endlosschleife). Ausnahme: Arbeit läuft noch (z. B. Import) oder reine Frage – kurz begründen.
 
