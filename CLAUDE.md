@@ -122,7 +122,7 @@ Zusätzlich zum DNB-Filter fliegen beim Import (und in der DNB-Live-Suche) herau
 - **Sachliches per Titelwort: ausprobiert und verworfen (08.11.2026).** Eine Regel gegen Memoiren, „wahre Geschichten“, Gebete, Kolumnen, Ratgeber traf in der Zufallsstichprobe nur 0,07 % des Katalogs, aber 6–9 % ihrer Treffer waren Romane (Woolf „Orlando : eine Biographie“, Jean Paul, „Maigrets Memoiren“, Lukian „Wahre Geschichten“, Danielle Steel „Erhörte Gebete“, Tiere als Erzähler). Fiktive Memoiren und Biografien sind eine Romanform – am Titel nicht sicher unterscheidbar. Nutzer: „wenn nichts anderes mit fliegt“, sonst so lassen → bleibt so (~93 % Belletristik).
 - **Zielbild des Nutzers: Belletristik / Fiction** = Bücher zum Lesen (Romane, Krimis, alles Erzählende, auch Lyrik/Drama), keine Sach-, Lehr- oder Beschäftigungsbücher. Stichprobe 300 Zufallswerke (08.11.2026): ~85 % erzählende Prosa, ~8 % Lyrik/Drama, ~6 % Sachliches (Memoiren/„wahre Geschichte“, Gebete, Ratgeber, Reiseberichte, Kolumnen, Freundebuch, Verkaufsdisplay), ~1 % unklar.
 - **Cover neuer Bücher**: ab 2020 haben nur ~15 % ein Cover über Google/Open Library. Die DNB hätte fast alle, ist aber durch eine Bot-Prüfung geschützt – **auch nicht über einen eigenen Server abrufen** (verworfen 08.11.2026). Für Katalog-Werke entfällt die langsame Open-Library-ISBN-Abfrage (Cover-IDs kennt die Datenbank, `fromDb`).
-- Tests: 40.
+- Tests: 42.
 
 ## Werke statt Ausgaben
 
