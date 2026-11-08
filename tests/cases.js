@@ -149,6 +149,8 @@ export async function runAll() {
 
   const amazon = classify({ publisher: 'Independently published', isbns: ['9798287560898'], genres: ['Fantasy'] }, opts);
   results.push({ name: 'Selbstverlag über Amazon fällt raus', ok: !amazon.keep, detail: amazon.reason || '' });
+  const crossing = classify({ title: 'Ein Roman', publisher: 'Luxembourg : AmazonCrossing', isbns: ['9782919800001'], genres: ['Liebesromane'] }, opts);
+  results.push({ name: 'Amazons Verlagsprogramm (AmazonCrossing) bleibt im Katalog', ok: crossing.keep, detail: crossing.reason || '' });
 
   // Lern-/Beschäftigungsmaterial und Rollenspiel raus – auch mit erzählender Gattung; echte Romane mit ähnlichen Wörtern bleiben
   const t = (title, keep) => {
@@ -160,6 +162,17 @@ export async function runAll() {
     t('Juli Löwenzahn - Mein Kindergarten-Album', false), t('Barfuß-Freunde : Freundebuch', false),
     t('DSA5 - In den Fängen des Dämons', false), t('Mein Lernblock Buchstaben', false),
     t('Meine Freunde, die Monster', true), t('Lernen fürs Leben', true), t('Das Album meiner Großmutter', true),
+    // Stichprobe Lernbücher 11/2026
+    t('Trötsch Unser Sandmännchen Sammelordner Meine Kindergartenzeit', false), t('24er VK MAXI Im Kindergarten', false),
+    t('Mein bunter Vorschulspaßkalender 2009', false), t('Sudoku Rätsel-Block für Vorschulkinder', false),
+    t('Höher, schneller, weiter : das ultimative Sport-Quiz-Buch', false), t('144 kugelrunde Rätsel', false),
+    t('Piraten-Rätsel : Konzentration fördern', false), t('Das Märchen-Übungsbuch', false), t('Felix-Kreativbuch', false),
+    t('Der kleine Drache Kokosnuss - Mein Ausmal-Panorama', false), t('Buchstaben und Zahlen schreiben ab 5 Jahren', false),
+    t('Das ABC-Buch mit dem ABCebra', false), t('Magie der Selbstregulation : 35 Übungen und Geschichten für Kinder', false),
+    // … und echte Geschichten mit ähnlichen Wörtern bleiben
+    t('Das Rätsel der Spiegelwüste', true), t('Der Schlunz und das Rätsel im Weihnachtskeks', true),
+    t('Spannende Abc-Geschichten für Erstleser', true), t('Die kleine Eins entdeckt das Rechnen', true),
+    t('Tote Erzieherin - gute Erzieherin : Mord in der KiTa', true), t('Der Adventskalender', true), t('Eine tödliche Rezeptur', true),
   ].filter(Boolean);
   results.push({ name: 'Titelwörter: Lernblöcke, „Lernen ab N Jahren“, Freundebuch, DSA raus; ähnliche Romantitel bleiben',
     ok: wordFails.length === 0, detail: wordFails.join('; ') });

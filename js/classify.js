@@ -45,12 +45,21 @@ const NON_BOOK_TITLE = words([
   // „Die Biene Maja - Lernen ab 3 Jahren“, „Juli Löwenzahn - Mein Kindergarten-Album“, „DSA5 - In den Fängen des Dämons“)
   'vorschulblock', 'lernblock', 'rechenblock', 'übungsblock', 'rätselspaß', 'lernen ab \\d+( jahren)?', 'kindergarten-album',
   'freundebuch', 'dsa\\d',
+  // Stichprobe Lernbücher 11/2026 (je ~14 Titel aus 9 Mustern, ~1.000–2.000 Nicht-Bücher geschätzt):
+  // Ordner/Verkaufseinheiten, Jahreskalender, Rätsel-/Quizbücher, Übungsbücher, Kreativ-/Ausmalhefte, Lieder, ABC-/Schreiblernbücher
+  'sammelordner', 'aktenordner', 'schnellhefter', '\\d+er vk', '\\d+ exemplare', '\\p{L}+kalender \\d{4}',
+  'sudoku', 'quiz', '\\p{L}+-quiz', 'quiz-?buch', 'rätselbuch', 'rätsel-?block', '\\d+ (\\p{L}+ )?rätsel', 'aufgaben und rätsel',
+  'rätsel und (spiele|aufgaben)', 'mit über \\d+ rätseln', 'konzentration fördern', 'spielerisch fördern',
+  'übungsbuch', '\\p{L}+-übungsbuch', '\\d+ übungen', 'mit übungen', 'handbuch für lehrer', 'lehrerhandbuch',
+  'kreativbuch', 'ausmal-?\\p{L}*', 'kinderlieder', 'liederbuch', 'abc-buch', '(buchstaben|zahlen) schreiben', 'schreiben ab \\d',
+  'sachwissen',
 ]);
 // Nur verdächtig, wenn die Gattung nicht erzählend ist oder fehlt
 // (sonst flöge z. B. Arno Geigers Roman „Alles über Sally“ raus):
 const NON_BOOK_TITLE_WEAK = words([
   'sticker', 'poster', 'puzzle', 'postkarten', 'alles über', 'lexikon', 'enzyklopädie',
   'bildwörterbuch', 'das offizielle (buch|malbuch|stickerbuch|rätselbuch|kochbuch|fanbuch|handbuch)', 'kalender',
+  'mitmachbuch', '\\p{L}+-mitmachbuch', 'rezepte', 'sprüche',
 ]);
 const NON_NARRATIVE_GENRE = /Sachb|Spiel|Lernen|Geschenk|Kalender|Ratgeber|Bildung|Nachschlage/;
 
@@ -63,7 +72,9 @@ export function classify(e, { excludeGenreGroups = Object.keys(GENRE_GROUPS) } =
   if (e.leader19 === 'a' || /^\d+\s+Bände/.test(e.extent || '')) return { keep: false, reason: 'Sammelaufnahme/Paket' };
   // Selbstverlag über Amazon (KDP/CreateSpace): Verlag „Independently published“ o. ä., ISBNs 979-8 (US-Kontingent von Amazon).
   // Ergänzt den DNB-Filter gegen Selfpublishing (epubli, BoD, tredition, Neopubli) – Stichprobe 11/2026: ~3.900 Werke.
-  if (/independently published|createspace|kindle direct|amazon/i.test(e.publisher || '')
+  // Amazons echte Verlagsprogramme mit Lektorat (AmazonCrossing, Amazon Publishing, Tinte & Feder, Edition M) bleiben –
+  // Entscheidung des Nutzers 08.11.2026. Deshalb NICHT allgemein auf „amazon“ prüfen.
+  if (/independently published|createspace|kindle direct/i.test(e.publisher || '')
     || (e.isbns?.length && e.isbns.every((i) => i.startsWith('9798')))) return { keep: false, reason: 'Selbstverlag (Amazon)' };
   const genres = e.genres || [];
   // Erzählend, sobald mindestens eine Gattung erzählend ist („Jugendbücher ab 12“ + „Spielerisches Lernen“ → erzählend)
