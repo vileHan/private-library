@@ -190,6 +190,13 @@ export async function runAll() {
     sub('Sudoku für Männer', 'Kurzgeschichten', true), sub('Tödliches Sudoku', 'Kriminalroman', true),
     sub('Die Goldfisch-Geschichte', 'mit Ausmalbildern und Rätselspaß', true, ['Erzählerische Bilderbücher']),
     sub('Sudoku', 'Rätselheft für Einsteiger', false),
+    // Nachzählung 09.11.2026: zusammengesetzte Malbücher, Witze-, Lern-, Puzzlebücher, „erste Wörter“ raus;
+    // Erstlese-Geschichten („Leselernbuch“) und Romane mit „Mal“ im Wort bleiben
+    t('Mein schönstes Ostermalbuch', false), t('Megamalbuch gelb', false), t('Das große Witzebuch', false, 'Humor, Satire'),
+    t('Erstes Register-Lernbuch - Bauernhof', false), t('Roald Dahl - 100 erste Wörter', false),
+    t('Fabeln von La Fontaine - mein großes Puzzlebuch', false, 'Märchen und Sagen für Kinder und Jugendliche'),
+    t('Das große Leserabe Leselernbuch - Tiergeschichten', true, 'Erstlesealter, Vorschulalter'),
+    t('Das Denkmal', true, 'Erzählende Literatur'), t('Das Denkmalbuch', true, 'Erzählende Literatur'),
     // Prüfrunde 2: Aufzählungen mit Beschäftigungswörtern schützen nicht
     sub('Frohe Ostern', 'Rezepte, Basteltipps und Gedichte', false),
     sub('Der Hai im Strandkorb', 'Geschichten, Bilderrätsel, Spiele, Postkarten und mehr', false),

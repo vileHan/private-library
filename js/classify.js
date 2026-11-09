@@ -56,6 +56,10 @@ const NON_BOOK_TITLE = words([
   'übungsbuch', '\\p{L}+-übungsbuch', '\\d+ übungen', 'mit übungen', 'handbuch für lehrer', 'lehrerhandbuch',
   'kreativbuch', 'ausmal-?(panorama|block|heft|spaß|buch)', '(buchstaben|zahlen) schreiben', 'schreiben ab \\d',
   'erstes sachwissen', 'verkaufs-?kassette',
+  // Nachzählung nach dem Import 09.11.2026 (~240 Werke, alle Beschäftigungs-/Lernbücher): zusammengesetzte Malbücher
+  // („Ostermalbuch“, „Megamalbuch“), Witzebücher, Lernbücher („Register-Lernbuch“ – nicht „Leselernbuch“: Erstlese-Geschichten),
+  // „100 erste Wörter“, Puzzlebücher
+  '\\p{L}+(?<!denk|merk|mahn|grab|mutter|wund|ehren|toten|nacht|ehe)malbuch','\\p{L}*witzebuch', '(\\p{L}+-)?lernbuch', 'erste wörter', '\\p{L}*-?puzzlebuch',
 ]);
 // Nur verdächtig, wenn die Gattung nicht erzählend ist oder fehlt
 // (sonst flöge z. B. Arno Geigers Roman „Alles über Sally“ raus):
