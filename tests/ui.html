@@ -168,6 +168,19 @@
       await sleep(200);
       add('„‹“ stellt die vorherige Suche wieder her (D2)', $('#searchInput').value === 'eragon' && $$('#results .book').length > 0);
 
+      // D7: Reihe im Detailblatt antippen → alle Bände in Bandfolge, „‹“ zurück zur Suche
+      $('#results .more-btn').click();
+      await until(() => !$('#sheet').hidden);
+      const seriesLink = $$('#sheet .sheet-facts .link-btn').find((b) => /Band \d+ ›$/.test(b.textContent));
+      seriesLink?.click();
+      ms = await until(() => $('#browseKind').textContent === 'Reihe' && $$('#results .book').length >= 3);
+      const bands = $$('#results .book .meta').map((m) => (m.textContent.match(/^Band (\d+)/) || [])[1]).filter(Boolean).map(Number);
+      add('Reihe im Detailblatt: ganze Reihe in Bandfolge (D7)', !!seriesLink && ms >= 0 && bands.length >= 3 && bands.every((b, i) => i === 0 || b >= bands[i - 1]),
+        `${seriesLink?.textContent || 'kein Link'}; Bände ${bands.join(', ')}; ${ms} ms`);
+      $('#browseBack').click();
+      await sleep(200);
+      add('Reihe: „‹“ stellt die vorherige Suche wieder her (D7)', $('#searchInput').value === 'eragon' && $('#browseBar').hidden);
+
       // D1: Genre
       $('#searchClear').click(); // „×“ leert die Suche → Startansicht mit Genres (B7)
       add('„×“ leert die Suchleiste und blendet sich aus (B7)', $('#searchInput').value === '' && $('#searchClear').hidden);

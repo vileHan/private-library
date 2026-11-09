@@ -53,6 +53,7 @@ Prüfart: **T** = automatischer Test (`tests/index.html`, `tests/ui.html`), **M*
 | D4 | Eigene Einträge werden mit Katalogdaten aufgefrischt, eigene Angaben bleiben. | T |
 | D5 | Merkliste: „Besitze“ nimmt ein Buch von der Merkliste. „Gelesen“ setzt das Lesedatum auf heute. | S |
 | D6 | Sicherung: Export/Import als JSON. Offline: „Meine Bücher“ funktioniert ohne Netz. | S |
+| D7 | Reihe im Detailblatt („Eragon, Band 2 ›“) antippen → alle Bände der Reihe in Bandfolge (auch mit mehreren Autoren, Bände ohne Nummer nach Jahr dahinter), Leiste „‹ Reihe“, Zurück stellt die Suche wieder her; < 1 s. | T |
 
 ## E – Katalogqualität
 

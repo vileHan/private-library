@@ -4,8 +4,8 @@ Nur was noch zu tun ist. Erledigtes steht in der Git-Historie, Entscheidungen un
 prüfbare Anforderungen in [ANFORDERUNGEN.md](ANFORDERUNGEN.md). Stand: 09.11.2026.
 
 ## Am iPhone ausprobieren (nur dort prüfbar)
-- Knöpfe Besitze/Gelesen/Merken (neue Tipp-Logik, 3. Anlauf): lösen sie beim Scrollen, Wischen und beim Anhalten einer Scroll-Bewegung wirklich nicht mehr aus? Gehen normale Tipps nicht verloren? Haptik-Ticken beim Wischen ohne Wirkung ist möglich.
-- Cover in der Liste antippen: Vollbild bleibt offen, der nächste Tipp schließt es, ohne darunter etwas auszulösen.
+- Wischen, das auf einem Knopf beginnt (Knöpfe jetzt ohne Label, Schalter nur in der Mitte): scrollt die Liste? Falls nicht: Entscheidung Haptik oder freies Wischen.
+- Reihen-Link im Detailblatt per Finger.
 
 ## Mit dem Import am 01.12.2026 (automatisch, schon im Code)
 - Pappbilderbücher (~5.900) und Spielleiter-Schirme fallen weg.
@@ -15,11 +15,15 @@ prüfbare Anforderungen in [ANFORDERUNGEN.md](ANFORDERUNGEN.md). Stand: 09.11.20
 - **„Mein Kinderbuchhaus“** (Oetinger-Sammelreihe, 8 Autoren) als Verlagsreihe herausnehmen? Sonst zeigt „Pippi Langstrumpf“ nach dem Import „Band 5“. Kleine Regel in `isPublisherSeries`.
 
 ## Katalog
+- **Reihen mit Unterreihen** („Die drei ??? Kids“: 186 Bände, „Band 1“ viermal – Blanck, Pfeiffer, „Mission …“): Reihenseite nach Autor/Unterreihe gruppieren? (Entscheidung des Nutzers)
+- **Harry Potter**: Sammelband „I-VII“ und „Potter guides“ stehen in der Reihe – Regeln prüfen (nach dem Import am 01.12. nachsehen).
+- Titel „Die drei? ?? Kids, Mission …“ (Fragezeichen zerlegt) aufräumen.
 - **Genre für alte Bücher**: 2000–2011 fehlt bei ~80 % der Gattungsbegriff. Lösung: (a) Open-Library-Schlagworte (englisch) über eine Zuordnungstabelle ins Deutsche (passt zum Workflow „Cover-IDs“), (b) grobe Ersatzgruppe aus der Sachgruppe (B = Belletristik, K = Kinder-/Jugendbuch) fürs Stöbern. Zuordnungstabelle danach gemeinsam durchgehen.
 - **Sammelbände/Gesamtausgaben** (z. B. „4192 Seiten“) aus den Ausgaben eines Einzelbandes heraushalten.
 - Optional: weitere Sachgruppen freischalten, z. B. Geschichte (`900`) – Konfiguration ergänzen, Import laufen lassen.
 
 ## Oberfläche
+- Screenreader: Zustand der Knöpfe am Schalter mitführen (`input.checked`), heute liest er immer „nicht aktiviert“.
 - Farben der Knöpfe und Rahmen feinschleifen (Grundregeln stehen in CLAUDE.md „Gestaltungsregeln“).
 - Testseite: Konsolenmeldungen 401/404 aufräumen (stören nicht, verwirren beim Prüfen).
 

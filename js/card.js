@@ -360,7 +360,8 @@ function openSheet(ctx) {
   const link = (text, mode, value) => el('button', { type: 'button', class: 'link-btn', text, onclick: () => browseTo(mode, value) });
   const group = catalog.canBrowse ? genreGroup(work.genre) : '';
   const facts = [
-    work.series ? `Reihe: ${work.series}${work.volume ? `, Band ${work.volume}` : ''}` : null,
+    // Reihe antippen → alle Bände der Reihe in Bandfolge (Stöbern, Modus „series“ in app.js)
+    work.series ? el('span', {}, 'Reihe: ', link(`${work.series}${work.volume ? `, Band ${work.volume}` : ''} ›`, 'series', { series: work.series, authorSort: work.authorSort || '' })) : null,
     work.year ? `Erschienen: ${work.year}` : null,
     work.genre ? el('span', {}, `Genre: ${work.genre}`, group ? el('br') : null, group ? link(`Mehr ${group} ›`, 'genre', group) : null) : null,
   ].filter(Boolean);

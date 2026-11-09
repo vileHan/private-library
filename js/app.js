@@ -215,12 +215,16 @@ function renderGenreChips() {
     }))));
 }
 
+// Stöber-Arten: Autor (Wert = Name), Genre (Wert = Gruppe), Reihe (Wert = { series, authorSort }, 09.11.2026)
+const BROWSE_KINDS = { author: 'Autor', genre: 'Genre', series: 'Reihe' };
+const browseTitle = () => (browse.mode === 'series' ? browse.value.series : browse.value);
+
 function renderBrowse() {
   const box = $('#results');
   box.replaceChildren();
   $('#browseBar').hidden = false;
-  $('#browseTitle').textContent = browse.value;
-  $('#browseKind').textContent = browse.mode === 'author' ? 'Autor' : 'Genre';
+  $('#browseTitle').textContent = browseTitle();
+  $('#browseKind').textContent = BROWSE_KINDS[browse.mode];
   const status = $('#searchStatus');
   status.classList.remove('error');
   let list = browse.works;
@@ -248,6 +252,9 @@ function renderBrowse() {
     for (const w of others) box.append(bookCard(w));
     list = [...owned, ...others];
     status.textContent = `${plural(list.length, 'Buch', 'Bücher')}, A–Z${list.length >= 500 ? ' (die ersten 500)' : ''}.`;
+  } else if (browse.mode === 'series') {
+    for (const w of list) box.append(bookCard(w));
+    status.textContent = `${plural(list.length, 'Band', 'Bände')} in Bandfolge.`;
   } else {
     for (const w of list) box.append(bookCard(w));
     status.textContent = 'Die beliebtesten zuerst.';
@@ -268,6 +275,14 @@ async function loadBrowse(append = false) {
   try {
     if (browse.mode === 'author') {
       browse.works = await catalog.authorWorks(browse.value);
+      browse.next = null;
+    } else if (browse.mode === 'series') {
+      // Alle Bände in Bandfolge, Bände ohne Nummer nach Erscheinungsjahr dahinter
+      // Ganze Reihe, auch mit mehreren Autoren (Die drei ??? Kids); ohne Treffer nur mit diesem Autor (DNB-Ausweichweg)
+      let works = await catalog.seriesWorks(browse.value.series, null);
+      if (!works.length) works = await catalog.seriesWorks(browse.value.series, browse.value.authorSort);
+      const vol = (w) => (w.volume ? Number(w.volume) : Infinity);
+      browse.works = works.sort((a, b) => vol(a) - vol(b) || (a.year || 9999) - (b.year || 9999) || compareTitle(a, b));
       browse.next = null;
     } else {
       const res = await catalog.browseGenre(browse.value, append ? browse.next : 0, controller.signal);
@@ -296,8 +311,8 @@ function startBrowse(mode, value) {
   $('#moreBtn').hidden = true;
   renderGenreChips();
   $('#browseBar').hidden = false;
-  $('#browseKind').textContent = mode === 'author' ? 'Autor' : 'Genre';
-  $('#browseTitle').textContent = value;
+  $('#browseKind').textContent = BROWSE_KINDS[mode];
+  $('#browseTitle').textContent = browseTitle();
   loadBrowse();
 }
 

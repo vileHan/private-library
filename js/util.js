@@ -97,7 +97,9 @@ export function onTap(elm, fn) {
  * Der Zustand des Schalters selbst ist egal, maßgeblich bleibt aria-pressed am Label.
  */
 export function switchToggle(cls, text) {
-  const label = document.createElement('label');
+  // <span>, nicht <label>: Ein Label reicht am iPhone jede Berührung an den Schalter weiter – dann hielt der Schalter
+  // auch ein Wischen fest, das am Rand des Knopfs begann, und die Liste scrollte nicht (Nutzer 09.11.2026).
+  const label = document.createElement('span');
   label.className = `toggle ${cls}`;
   label.setAttribute('aria-pressed', 'false');
   label.innerHTML = '<input type="checkbox" switch class="haptic-switch"><span class="lbl"></span>';

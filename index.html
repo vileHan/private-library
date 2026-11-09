@@ -114,9 +114,10 @@
         <p class="meta"></p>
       </div>
       <div class="actions">
-        <label class="toggle own" aria-pressed="false"><input type="checkbox" switch class="haptic-switch" aria-label="Besitze"><span class="lbl">Besitze</span></label>
-        <label class="toggle read" aria-pressed="false"><input type="checkbox" switch class="haptic-switch" aria-label="Gelesen"><span class="lbl">Gelesen</span></label>
-        <label class="toggle wish" aria-pressed="false"><input type="checkbox" switch class="haptic-switch" aria-label="Merken"><span class="lbl">Merken</span></label>
+        <!-- <span>, nicht <label>: siehe switchToggle in js/util.js (Wischen ab dem Knopfrand muss scrollen) -->
+        <span class="toggle own" aria-pressed="false"><input type="checkbox" switch class="haptic-switch" aria-label="Besitze"><span class="lbl">Besitze</span></span>
+        <span class="toggle read" aria-pressed="false"><input type="checkbox" switch class="haptic-switch" aria-label="Gelesen"><span class="lbl">Gelesen</span></span>
+        <span class="toggle wish" aria-pressed="false"><input type="checkbox" switch class="haptic-switch" aria-label="Merken"><span class="lbl">Merken</span></span>
         <button class="more-btn" type="button" aria-label="Mehr: Ausgaben, Bewertung, Notiz" title="Ausgaben, Bewertung, Notiz">⋯</button>
       </div>
     </article>
