@@ -27,6 +27,7 @@ Prüfart: **T** = automatischer Test (`tests/index.html`, `tests/ui.html`), **M*
 | B4 | Testsuchen (harry, eragon, zeh, kind, liebe, fitzek, drache, unterleutn) antworten **unter 1 s**, keine über 3 s. | M |
 | B5 | ISBN/Barcode zeigt das ganze Werk aus dem Katalog (alle Ausgaben, erstes Jahr): 9783404015061 → „Rewitched“, 2025. Bücher außerhalb des Katalogs (Sachbuch) werden über die DNB trotzdem gefunden. | T |
 | B6 | Seitenweises Laden („Mehr laden“) statt alles auf einmal. | T |
+| B7 | Suchleiste ohne Lupe (Tastatur-„Suchen“ und Live-Suche reichen), „×“ am Ende leert die ganze Suche (nur sichtbar bei Text, Tastatur bleibt offen). Berührung außerhalb der Suchleiste schließt die Tastatur. | T + H |
 | B7 | Nichts wird ausgegraut, keine Abzeichen am Cover. | S |
 
 ## C – Buchkarte, Raster, Detailblatt
@@ -38,9 +39,9 @@ Prüfart: **T** = automatischer Test (`tests/index.html`, `tests/ui.html`), **M*
 | C3 | Rahmen: grün = Besitz, gold = gemerkt (ohne Besitz). Knöpfe: nicht gewählt = Rand, gewählt = leicht gefüllt + farbiger Rand. | S |
 | C4 | Cover-Raster: 2 Cover pro Reihe, nur Symbole ○/● □/■ ♡/♥; Gesten: Tipp = Titel + „Details ›“, Doppeltipp = Besitze, rechts wischen = Merken, links = Gelesen, halten = Detailblatt; danach 2,5 s „↶ Rückgängig“. | S + H |
 | C5 | Detailblatt: Cover, Titel, Autor (antippbar → Autorenseite), Reihe/Jahr/Genre („Mehr <Genre> ›“), Knöpfe, Klappentext (5 Zeilen + „Mehr lesen“, fehlt er → Abschnitt weg), Bewertung, Lesedatum, Regale, Notiz, Ausgaben zugeklappt. | T + S |
-| C6 | Detailblatt lässt sich nach unten wegziehen (Griff immer, Inhalt nur ganz oben; > 30 % oder Schnippen schließt). Knöpfe reagieren nicht auf Darüberwischen. | T + H |
+| C6 | Detailblatt lässt sich nach unten wegziehen (Griff immer, Inhalt nur ganz oben; > 30 % oder Schnippen schließt). Knöpfe reagieren nicht auf Darüberwischen; ein Wischen, das auf einem Knopf oder Cover beginnt, scrollt trotzdem die Liste. | T + H |
 | C7 | Haptik am iPhone bei Besitze/Gelesen/Merken (echter Schalter), kein Doppeltipp-Zoom. | H |
-| C8 | Cover-Vollbild: In der Liste (nicht im Raster) und im Detailblatt öffnet ein echter Tipp aufs Cover ein Vollbild in größerer Fassung; Wischen/Scrollen öffnet nichts. Jede nächste Aktion (Berührung, Mausrad, Taste) schließt es, ohne darunter etwas auszulösen; der Geisterklick nach dem öffnenden Tipp schließt es nicht. Escape schließt nur das Vollbild. | T + H |
+| C8 | Cover-Vollbild: In der Liste (nicht im Raster) und im Detailblatt öffnet ein echter Tipp aufs Cover ein Vollbild in größerer Fassung; Wischen/Scrollen öffnet nichts. Jede nächste Aktion (Berührung, Mausrad, Taste) schließt es, ohne darunter etwas auszulösen; der Geisterklick nach dem öffnenden Tipp schließt es nicht. Ein Wischen auf dem Vollbild schließt es und scrollt die Liste in derselben Bewegung. Escape schließt nur das Vollbild. | T + H |
 
 ## D – Stöbern und Meine Bücher
 

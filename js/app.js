@@ -6,7 +6,7 @@ import { library, loadLibrary, entryFor, onLibraryChange, allTags, refreshEntry 
 import { bookCard } from './card.js';
 import { renderSeries } from './series.js';
 import { renderStats } from './stats.js';
-import { $, el, fmt, plural } from './util.js';
+import { $, el, fmt, plural, ignoreScrollBriefly } from './util.js';
 import { scanIsbn } from './scan.js';
 import { settings } from './settings.js';
 import { GENRES } from './genres.js';
@@ -179,7 +179,25 @@ $('#searchInput').addEventListener('input', () => {
     if ($('#searchInput').value.trim() === q && q !== search.query) runSearch(q);
   }, 500);
 });
-$('#searchForm').addEventListener('submit', cancelLive);
+$('#searchForm').addEventListener('submit', () => { cancelLive(); syncClear(); });
+
+// ---------- Suchleiste: „×“ leert alles, Tastatur schließt bei Berührung außerhalb ----------
+// Die Lupe ist weg (09.11.2026) – „Suchen“ auf der Tastatur und die Live-Suche reichen.
+const clearBtn = $('#searchClear');
+const syncClear = () => { clearBtn.hidden = !$('#searchInput').value; };
+$('#searchInput').addEventListener('input', syncClear);
+clearBtn.addEventListener('pointerdown', (ev) => ev.preventDefault()); // Fokus (und Tastatur) im Feld lassen
+clearBtn.addEventListener('click', () => {
+  const inp = $('#searchInput');
+  inp.value = '';
+  inp.dispatchEvent(new Event('input')); // setzt die Suche zurück (siehe unten) und blendet „×“ aus
+  inp.focus();
+});
+// Wer den Bildschirm hinter der Tastatur benutzt (scrollen, tippen), braucht sie nicht mehr – außer in der Suchleiste.
+document.addEventListener('touchstart', (ev) => {
+  const inp = $('#searchInput');
+  if (document.activeElement === inp && !ev.target.closest?.('#searchForm')) { ignoreScrollBriefly(); inp.blur(); }
+}, { capture: true, passive: true });
 
 // ---------- Stöbern: Autorenseite und Genres ----------
 // Läuft im Such-Tab: Leiste „‹ Zurück · Titel“ über der Liste. „Zurück“ stellt die vorherige Suche wieder her.
@@ -290,7 +308,7 @@ function endBrowse(restore = true) {
   Object.assign(browse, { mode: null, value: '', works: [], next: null, saved: null });
   $('#browseBar').hidden = true;
   if (!restore) return;
-  $('#searchInput').value = saved?.input || '';
+  $('#searchInput').value = saved?.input || ''; syncClear();
   if (search.query) {
     renderResults();
     window.scrollTo(0, saved?.scroll || 0);
@@ -324,7 +342,7 @@ $('#scanBtn').addEventListener('click', async () => {
   const isbn = await scanIsbn();
   if (!isbn) return;
   showView('search');
-  $('#searchInput').value = isbn;
+  $('#searchInput').value = isbn; syncClear();
   runSearch(isbn);
 });
 

@@ -65,6 +65,38 @@
       add('„eragon“: Reihe oben in Bandfolge Band 1–4 (B3, C2)', metas.every((m, i) => m.startsWith(`Band ${i + 1}`)), metas.join(' | '));
       add('„eragon“: Antwort unter 1 s (B4)', ms >= 0 && ms < 1000, `${ms} ms`);
       add('Trefferliste: kein waagrechtes Scrollen (A5)', noOverflow());
+      // C6: Die echten Knöpfe einer Trefferkarte reagieren (Mausklick) – Fehler 09.11.2026: Karten-Knöpfe nicht verdrahtet.
+      // Nur an einem Buch ohne eigene Markierung, sofort wieder zurück (leerer Eintrag wird gelöscht).
+      {
+        const card = $$('#results .book').find((b) => !b.classList.contains('owned') && b.querySelector('.toggle.wish')?.getAttribute('aria-pressed') === 'false');
+        const wish = card?.querySelector('.toggle.wish');
+        wish?.querySelector('input').click();
+        const on = await until(() => wish.getAttribute('aria-pressed') === 'true', 2000);
+        wish?.querySelector('input').click();
+        const off = await until(() => wish.getAttribute('aria-pressed') === 'false', 2000);
+        add('Trefferkarte: Knopf „Merken“ reagiert auf Klick und lässt sich zurücknehmen (C6)', !!wish && on >= 0 && off >= 0, `an ${on} ms, aus ${off} ms`);
+      }
+      // B7: Suchleiste ohne Lupe, „×“ sichtbar bei Text; Tastatur (Fokus) schließt bei Berührung außerhalb, nicht in der Leiste
+      {
+        const W = frame.contentWindow;
+        const inp = $('#searchInput');
+        const touchOn = (target) => {
+          const t = new W.Touch({ identifier: 3, target, clientX: 20, clientY: 20 });
+          target.dispatchEvent(new W.TouchEvent('touchstart', { touches: [t], changedTouches: [t], bubbles: true }));
+          target.dispatchEvent(new W.TouchEvent('touchend', { touches: [], changedTouches: [t], bubbles: true }));
+        };
+        const noLupe = !$('#searchForm button[type="submit"]') && !$('.search-btn');
+        const xShown = !$('#searchClear').hidden;
+        // Text darf nicht unter das „×“ laufen: rechter Innenabstand des Feldes ≥ Breite des „×“
+        const padOk = parseFloat(frame.contentWindow.getComputedStyle(inp).paddingRight) >= $('#searchClear').getBoundingClientRect().width;
+        inp.focus();
+        touchOn($('#searchClear'));
+        const focusKeptInBar = doc().activeElement === inp;
+        touchOn($('#results .book .title'));
+        const blurredOutside = doc().activeElement !== inp;
+        add('Suchleiste: keine Lupe, „×“ bei Text, Tastatur schließt nur bei Berührung außerhalb (B7)',
+          noLupe && xShown && padOk && focusKeptInBar && blurredOutside, JSON.stringify({ noLupe, xShown, padOk, focusKeptInBar, blurredOutside }));
+      }
       const heights = new Set($$('#results .book').slice(0, 8).map((b) => Math.round(b.getBoundingClientRect().height)));
       add('Alle Buch-Slots gleich hoch (C1)', heights.size === 1, [...heights].join(', ') + ' px');
 
@@ -137,9 +169,8 @@
       add('„‹“ stellt die vorherige Suche wieder her (D2)', $('#searchInput').value === 'eragon' && $$('#results .book').length > 0);
 
       // D1: Genre
-      const inp = $('#searchInput');
-      inp.value = '';
-      inp.dispatchEvent(new frame.contentWindow.Event('input'));
+      $('#searchClear').click(); // „×“ leert die Suche → Startansicht mit Genres (B7)
+      add('„×“ leert die Suchleiste und blendet sich aus (B7)', $('#searchInput').value === '' && $('#searchClear').hidden);
       await until(() => !$('#genreChips').hidden);
       $$('#genreChips .chip').find((c) => c.textContent === 'Fantasy').click();
       ms = await until(() => $$('#results .book').length >= 50);

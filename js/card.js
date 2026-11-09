@@ -4,7 +4,7 @@ import { catalog } from './catalog.js';
 import { entryFor, updateEntry, allTags } from './library.js';
 import { ownedIsbnsOf } from './store.js';
 import { formatIsbn } from './isbn.js';
-import { $, el, escapeHtml, today, haptic, pop, switchToggle, onTap } from './util.js';
+import { $, el, escapeHtml, today, haptic, pop, switchToggle, wireToggle, onTap } from './util.js';
 import { genreGroup } from './genres.js';
 
 // Untertitel wie „Roman“ oder „Thriller“ sind nur Gattungsangaben – die stehen schon beim Genre.
@@ -197,7 +197,7 @@ export function bookCard(work, opts = {}) {
   };
 
   // „toggle“ kommt nur bei einem echten Tipp, nie beim Wischen (switchToggle in util.js); der Schalter darin sorgt am iPhone für Haptik
-  const onToggle = (cls, fn) => card.querySelector(`.toggle.${cls}`).addEventListener('toggle', () => { haptic(); ctx.change(fn()); });
+  const onToggle = (cls, fn) => wireToggle(card.querySelector(`.toggle.${cls}`)).addEventListener('toggle', () => { haptic(); ctx.change(fn()); });
   onToggle('own', () => actions.own(work));
   onToggle('read', () => actions.read());
   onToggle('wish', () => actions.wish());

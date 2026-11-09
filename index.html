@@ -41,12 +41,8 @@
         <div class="search-wrap">
           <input id="searchInput" type="search" name="q" placeholder="Titel, Autor oder ISBN" autocomplete="off" enterkeyhint="search"
                  aria-label="Suchbegriff">
+          <button type="button" id="searchClear" class="search-clear" aria-label="Suche löschen" title="Suche löschen" hidden>×</button>
         </div>
-        <button type="submit" class="search-btn" aria-label="Suchen" title="Suchen">
-          <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round">
-            <circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5 21 21"/>
-          </svg>
-        </button>
       </form>
       <div id="browseBar" class="browse-bar" hidden>
         <button id="browseBack" class="browse-back" type="button" aria-label="Zurück">‹</button>

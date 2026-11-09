@@ -36,9 +36,16 @@ export function haptic(ms = 15) {
 // Zeitpunkt der letzten Scroll-Bewegung irgendwo auf der Seite (Liste, Detailblatt …). Ein Finger, der eine
 // laufende Scroll-Bewegung anhält, oder eine Berührung, während der gescrollt wurde, ist kein Tipp.
 let lastScroll = -1e9;
+let ignoreScrollUntil = 0;
 if (typeof window !== 'undefined') {
-  window.addEventListener('scroll', () => { lastScroll = performance.now(); }, { capture: true, passive: true });
+  window.addEventListener('scroll', () => {
+    if (performance.now() < ignoreScrollUntil) return;
+    lastScroll = performance.now();
+  }, { capture: true, passive: true });
 }
+/** Scroll-Ereignisse kurz nicht werten – z. B. wenn die Tastatur einfährt und iOS dabei die Seite verschiebt, damit
+ *  der Tipp, der die Tastatur schließt, trotzdem ankommt (Prüfrunde 09.11.2026). */
+export function ignoreScrollBriefly(ms = 400) { ignoreScrollUntil = performance.now() + ms; }
 
 /**
  * Ruft fn nur bei einem ECHTEN Tipp auf – nie beim Wischen oder Scrollen:
@@ -97,7 +104,16 @@ export function switchToggle(cls, text) {
   label.querySelector('.lbl').textContent = text;
   const input = label.querySelector('input');
   input.setAttribute('aria-label', text);
-  input.addEventListener('change', (ev) => ev.stopImmediatePropagation()); // nur für die Haptik da
+  return wireToggle(label);
+}
+
+/**
+ * Macht aus einem fertigen Knopf-Label (auch aus der Karten-Vorlage #bookTpl in index.html!) einen Knopf, der
+ * „toggle“ nur bei echtem Tipp meldet. Ohne diesen Aufruf reagiert der Knopf gar nicht (Fehler vom 09.11.2026:
+ * die Karten-Knöpfe waren nicht verdrahtet).
+ */
+export function wireToggle(label) {
+  label.querySelector('input')?.addEventListener('change', (ev) => ev.stopImmediatePropagation()); // nur für die Haptik da
   onTap(label, () => label.dispatchEvent(new CustomEvent('toggle')));
   return label;
 }
