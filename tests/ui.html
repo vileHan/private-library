@@ -258,6 +258,22 @@
           await sleep(100);
           add('Statistik: Jahresziel-Block und „abgebrochen“-Kachel (D10)',
             !!$('#statsBox .stat-block.goal') && /abgebrochen/.test($('#statsBox').textContent), '');
+          // D11: Sicherung nimmt leere Regale und Jahresziel mit (Geräte-Einstellungen danach wiederhergestellt)
+          {
+            const LS = frame.contentWindow.localStorage;
+            const before = LS.getItem('bibliothek-einstellungen');
+            const { exportJson, importJson } = await imp('store.js');
+            const { settings } = await imp('settings.js');
+            settings.set('shelves', ['Testregal leer']);
+            settings.set('readingGoals', { 2026: 33 });
+            const json = await exportJson();
+            settings.set('shelves', []);
+            settings.set('readingGoals', {});
+            await importJson(json);
+            const ok = settings.get('shelves', []).includes('Testregal leer') && settings.get('readingGoals', {})[2026] === 33;
+            if (before === null) LS.removeItem('bibliothek-einstellungen'); else LS.setItem('bibliothek-einstellungen', before);
+            add('Sicherung: leere Regale und Jahresziel werden exportiert und wieder eingespielt (D11)', ok && /"settings"/.test(json), '');
+          }
           $('.segmented button[data-sub="list"]').click();
           $('.chip[data-filter="owned"]').click();
           $('#tab-search').click();

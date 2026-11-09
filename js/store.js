@@ -1,4 +1,5 @@
 // Eigene Daten (besitze / gelesen / Bewertung) lokal im Browser (IndexedDB).
+import { settings } from './settings.js';
 const DB_NAME = 'bibliothek';
 const STORE = 'books';
 let dbPromise;
@@ -75,7 +76,24 @@ export function ownedIsbnsOf(entry) {
 /** Export als JSON-Datei (Backup). */
 export async function exportJson() {
   const books = await store.getAll();
-  return JSON.stringify({ app: 'private-library', version: 1, exportedAt: new Date().toISOString(), books }, null, 2);
+  // Seit 10.11.2026 auch leere Regale und Jahresziele (liegen sonst nur in den Geräte-Einstellungen)
+  const extras = { shelves: settings.get('shelves', []), readingGoals: settings.get('readingGoals', {}) };
+  return JSON.stringify({ app: 'private-library', version: 1, exportedAt: new Date().toISOString(), books, settings: extras }, null, 2);
+}
+
+/** Regale und Jahresziele aus einer Sicherung übernehmen: Regale zusammenführen, Jahresziele nur für Jahre ohne eigenes Ziel. */
+function importSettings(extras) {
+  if (!extras) return;
+  if (Array.isArray(extras.shelves)) {
+    const mine = settings.get('shelves', []);
+    settings.set('shelves', [...new Set([...mine, ...extras.shelves.filter((s) => typeof s === 'string' && s.trim())])]);
+  }
+  if (extras.readingGoals && typeof extras.readingGoals === 'object') {
+    const mine = settings.get('readingGoals', {});
+    const merged = { ...mine };
+    for (const [year, n] of Object.entries(extras.readingGoals)) if (!merged[year] && Number(n) > 0) merged[year] = Number(n);
+    settings.set('readingGoals', merged);
+  }
 }
 
 /** Import: neuere Einträge (updatedAt) gewinnen. Gibt die Anzahl übernommener Einträge zurück. */
@@ -91,5 +109,6 @@ export async function importJson(text) {
       if (!cur || (b.updatedAt || '') > (cur.updatedAt || '')) { s.put(b); n++; }
     }
   });
+  importSettings(data.settings);
   return n;
 }
