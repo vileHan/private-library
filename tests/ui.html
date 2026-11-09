@@ -68,6 +68,36 @@
       const heights = new Set($$('#results .book').slice(0, 8).map((b) => Math.round(b.getBoundingClientRect().height)));
       add('Alle Buch-Slots gleich hoch (C1)', heights.size === 1, [...heights].join(', ') + ' px');
 
+      // C6: Knöpfe (iOS-Schalter) lösen beim Darüberwischen nicht aus – auch nicht, wenn der Schalter „change“
+      // schon während der Bewegung meldet (so am iPhone in der Trefferliste). Eigener Testknopf, eigene Daten bleiben unberührt.
+      {
+        const { switchToggle } = await import('../js/util.js');
+        const lbl = switchToggle('wish', 'Test');
+        document.body.append(lbl);
+        const box = lbl.querySelector('input');
+        let fired = 0;
+        box.addEventListener('change', () => fired++);
+        const ft = (type, x, y) => {
+          const t = new Touch({ identifier: 7, target: lbl, clientX: x, clientY: y });
+          lbl.dispatchEvent(new TouchEvent(type, { touches: /end|cancel/.test(type) ? [] : [t], changedTouches: [t], bubbles: true }));
+        };
+        const flip = () => { box.checked = !box.checked; box.dispatchEvent(new Event('change', { bubbles: true })); };
+        // Wischen: change mitten in der Bewegung (nach 4 px), dann weiter bis 60 px
+        ft('touchstart', 10, 10); ft('touchmove', 14, 10); flip(); ft('touchmove', 70, 12); ft('touchend', 70, 12);
+        const swipe = fired;
+        // Scrollen übernimmt (touchcancel)
+        ft('touchstart', 10, 10); flip(); ft('touchcancel', 10, 40);
+        const cancel = fired;
+        // Tipp: change während der Berührung bzw. danach
+        ft('touchstart', 10, 10); flip(); ft('touchend', 11, 10);
+        const tap1 = fired;
+        ft('touchstart', 10, 10); ft('touchend', 10, 10); flip();
+        const tap2 = fired;
+        lbl.remove();
+        add('Knöpfe: Wischen/Scrollen löst nicht aus, Tippen schon (C6)', swipe === 0 && cancel === 0 && tap1 === 1 && tap2 === 2,
+          `Wischen ${swipe}, Scrollen ${cancel}, Tipp ${tap1}/${tap2 - tap1}`);
+      }
+
       // C5 / C6: Detailblatt
       $('#results .more-btn').click();
       await until(() => !$('#sheet').hidden);

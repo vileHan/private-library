@@ -47,20 +47,37 @@ export function switchToggle(cls, text) {
   label.querySelector('.lbl').textContent = text;
   const input = label.querySelector('input');
   input.setAttribute('aria-label', text);
-  // iOS-Schalter lassen sich auch durch Darüberwischen umlegen – dann ohne Haptik und ungewollt
-  // (z. B. beim Scrollen oder Herunterziehen des Detailblatts). Bewegt sich der Finger mehr als
-  // 10 px, wird die Änderung zurückgenommen. Dieser Lauscher kommt zuerst und stoppt die übrigen.
-  let x0 = 0, y0 = 0, moved = false;
-  label.addEventListener('touchstart', (e) => { const t = e.touches[0]; x0 = t.clientX; y0 = t.clientY; moved = false; }, { passive: true });
+  // iOS-Schalter lassen sich auch durch Darüberwischen umlegen – ungewollt beim Scrollen der Liste oder
+  // Herunterziehen des Detailblatts. Der Schalter meldet „change“ dabei oft schon WÄHREND der Bewegung,
+  // bevor der Finger 10 px weit gekommen ist (erste Fassung prüfte nur dann → Knöpfe lösten beim Wischen aus).
+  // Deshalb: Kommt „change“ während einer Berührung, wird es zurückgehalten und erst beim Loslassen entschieden –
+  // insgesamt mehr als 10 px bewegt oder Berührung abgebrochen (Scrollen) = Änderung zurücknehmen, sonst
+  // durchlassen. Dieser Lauscher kommt zuerst und stoppt die übrigen (card.js reagiert auf „change“).
+  let x0 = 0, y0 = 0, moved = false, touching = false, pending = false, endedAt = 0;
+  const revert = () => { input.checked = !input.checked; };
+  const accept = () => { const ev = new Event('change'); ev.accepted = true; input.dispatchEvent(ev); };
+  const finish = (cancelled) => {
+    touching = false;
+    endedAt = Date.now();
+    if (cancelled) moved = true;
+    if (!pending) return;
+    pending = false;
+    if (moved) revert(); else accept();
+  };
+  label.addEventListener('touchstart', (e) => {
+    const t = e.touches[0]; x0 = t.clientX; y0 = t.clientY; moved = false; touching = true; pending = false;
+  }, { passive: true });
   label.addEventListener('touchmove', (e) => {
     const t = e.touches[0];
     if (Math.hypot(t.clientX - x0, t.clientY - y0) > 10) moved = true;
   }, { passive: true });
+  label.addEventListener('touchend', () => finish(false), { passive: true });
+  label.addEventListener('touchcancel', () => finish(true), { passive: true });
   input.addEventListener('change', (e) => {
-    if (!moved) return;
-    moved = false;
-    input.checked = !input.checked;
-    e.stopImmediatePropagation();
+    if (e.accepted) return;
+    if (touching) { pending = true; e.stopImmediatePropagation(); return; }
+    // „change“ nach dem Loslassen (normaler Tipp): nur zurücknehmen, wenn die Berührung eben gewischt hat
+    if (moved && Date.now() - endedAt < 600) { moved = false; revert(); e.stopImmediatePropagation(); }
   });
   return label;
 }
