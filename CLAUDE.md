@@ -70,7 +70,6 @@ Commits laufen mit der GitHub-noreply-Adresse (in der lokalen Git-Konfiguration 
 
 ## Bewusst später
 
-- Barcode-Scan mit der Handykamera
 - Abgleich der eigenen Markierungen zwischen mehreren Geräten (Supabase, gleiches Projekt)
 
 ## Datenquellen
