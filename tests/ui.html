@@ -179,12 +179,36 @@
 
       // C4: Cover-Raster
       await search('harry potter');
+      // C8: Detailblatt-Cover antippen → Vollbild in größerer Fassung, Escape schließt nur das Vollbild
+      $('#results .more-btn').click();
+      await until(() => !$('#sheet').hidden && $('#sheet .sheet-head .cover img.loaded'), 8000);
+      $('#sheet .sheet-head .cover').click();
+      const zoomImg = $('.cover-zoom img');
+      const zoomBox = zoomImg?.getBoundingClientRect();
+      add('Detailblatt: Cover antippen öffnet Vollbild (C8)', !!zoomImg && zoomBox.width > frame.clientWidth * 0.8, zoomImg ? `${Math.round(zoomBox.width)}×${Math.round(zoomBox.height)} px` : 'kein Vollbild');
+      doc().dispatchEvent(new frame.contentWindow.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      await sleep(250);
+      add('Vollbild: Escape schließt nur das Vollbild (C8)', !$('.cover-zoom') && !$('#sheet').hidden);
+      $('#sheet .sheet-close').click();
+      await sleep(250);
+      // C4/C8: Liste → Raster → Groß → Liste (Ausgangsansicht des Geräts erst herstellen)
+      for (let i = 0; i < 3 && doc().body.classList.contains('grid-view'); i++) { $('#viewToggle').click(); await sleep(50); }
       $('#viewToggle').click();
       await sleep(200);
       const books = $$('#results .book').slice(0, 2).map((b) => b.getBoundingClientRect());
       add('Cover-Raster: 2 Cover nebeneinander (C4)', doc().body.classList.contains('grid-view') && books.length === 2 && Math.abs(books[0].top - books[1].top) < 2);
       add('Cover-Raster: kein waagrechtes Scrollen (A5)', noOverflow());
       $('#viewToggle').click();
+      await until(() => $$('#results .book .cover img.loaded').length > 0, 15000); // Open Library ist manchmal langsam
+      const big = $$('#results .book').slice(0, 2).map((b) => b.getBoundingClientRect());
+      const bigImgs = $$('#results .book .cover img.loaded').slice(0, 3).map((i) => i.src);
+      add('Ansicht „Groß“: 1 Cover je Reihe, breit, größere Bilder (C8)', doc().body.classList.contains('large-view')
+        && big[1].top > big[0].bottom - 1 && big[0].width > frame.clientWidth * 0.8 && bigImgs.length > 0 && bigImgs.every((s) => !/_SY360_|-M\.jpg/.test(s)),
+        `${Math.round(big[0].width)} px breit; ${bigImgs.length} Bilder geprüft`);
+      add('Ansicht „Groß“: kein waagrechtes Scrollen (A5)', noOverflow());
+      $('#viewToggle').click();
+      await sleep(100);
+      add('Dritter Klick: zurück zur Liste (C8)', !doc().body.classList.contains('grid-view') && !doc().body.classList.contains('large-view'));
     } catch (err) {
       add('Testlauf abgebrochen', false, err.message);
     } finally {

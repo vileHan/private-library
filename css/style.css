@@ -57,7 +57,9 @@ button, input, select { font: inherit; color: inherit; }
 .ico-grid { width: 18px; height: 18px; background:
   linear-gradient(currentColor 0 0) 0 0 / 8px 8px no-repeat, linear-gradient(currentColor 0 0) 10px 0 / 8px 8px no-repeat,
   linear-gradient(currentColor 0 0) 0 10px / 8px 8px no-repeat, linear-gradient(currentColor 0 0) 10px 10px / 8px 8px no-repeat; }
-.icon-btn[aria-pressed="true"] .ico-grid { background:
+/* Das Symbol zeigt die nächste Ansicht: Liste → Raster (2×2) → Groß (eine Kachel) → Liste (Striche) */
+.icon-btn[data-next="large"] .ico-grid { width: 14px; background: none; border: 2px solid currentColor; border-radius: 2px; box-sizing: border-box; }
+.icon-btn[data-next="list"] .ico-grid { background:
   linear-gradient(currentColor 0 0) 0 1px / 18px 3px no-repeat, linear-gradient(currentColor 0 0) 0 7.5px / 18px 3px no-repeat,
   linear-gradient(currentColor 0 0) 0 14px / 18px 3px no-repeat; }
 
@@ -388,3 +390,24 @@ body.grid-view :is(#results, #libList) > .book .cover.pressing { transform: scal
 .link-btn { border: 0; background: none; padding: 2px 0; margin: 0; font: inherit; color: var(--accent); font-weight: 600;
   cursor: pointer; text-align: left; touch-action: manipulation; }
 .sheet-facts .link-btn { font-size: .85rem; }
+
+/* ---------- Ansicht „Groß“: ein Cover je Reihe (Raster mit einer Spalte, gleiche Gesten) ---------- */
+body.large-view #results, body.large-view #libList { grid-template-columns: minmax(0, 1fr); justify-items: center; gap: 18px; }
+body.large-view :is(#results, #libList) > .book { width: min(100%, 420px); }
+body.large-view :is(#results, #libList) > .book .toggle { width: 52px; height: 46px; }
+body.large-view :is(#results, #libList) > .book .cover .ph { font-size: 4rem; }
+
+/* ---------- Cover im Vollbild (Detailblatt: Cover antippen) ---------- */
+.sheet-head .cover { cursor: zoom-in; }
+.cover-zoom {
+  position: fixed; inset: 0; z-index: 60; background: rgba(0,0,0,.92); display: grid; grid-template: minmax(0, 1fr) / minmax(0, 1fr);
+  padding: calc(16px + env(safe-area-inset-top)) 16px calc(16px + env(safe-area-inset-bottom)); cursor: zoom-out;
+  touch-action: none; animation: zoom-in .15s ease-out;
+}
+.cover-zoom img { width: 100%; height: 100%; max-width: 600px; justify-self: center; object-fit: contain; min-height: 0; }
+.cover-zoom.closing { opacity: 0; transition: opacity .15s; }
+.cover-zoom-close {
+  position: absolute; top: calc(12px + env(safe-area-inset-top)); right: 12px; width: 40px; height: 40px; border-radius: 50%;
+  border: 0; background: rgba(255,255,255,.18); color: #fff; font-size: 1.6rem; line-height: 1; cursor: pointer;
+}
+@keyframes zoom-in { from { opacity: 0; } to { opacity: 1; } }
