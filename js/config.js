@@ -1,4 +1,6 @@
 // Zentrale Einstellungen. Neue Sachgruppen (z. B. '900' für Geschichte) einfach hier ergänzen.
+import { isbn13to10 } from './isbn.js';
+
 export const CONFIG = {
   // Eigene Katalog-Datenbank. Beide Werte sind öffentlich (nur Leserechte). Leer = live bei der DNB suchen.
   supabase: {
@@ -30,9 +32,14 @@ export const CONFIG = {
     byId: (id) => `https://covers.openlibrary.org/b/id/${id}-M.jpg`,
     // Über die ISBN: zuerst Google (schnell). Open Library erlaubt per ISBN nur 100 Abrufe pro 5 Minuten
     // und lässt Anfragen danach hängen – deshalb nur als letzte Möglichkeit (siehe coverUrls in card.js).
+    // Amazon zuerst: hat fast alle neuen deutschen Bücher (Stichprobe 09.11.2026: 96 von 100, „dungeon“ 25 von 25 –
+    // Google 32 von 100 bzw. 0 von 50). Fehlt ein Cover, liefert Amazon ein 1×1-GIF (→ isPlaceholder). Nur ISBN-10,
+    // also nur 978er-ISBNs. Nutzung mit Link zu Amazon im Detailblatt (Entscheidung des Nutzers 09.11.2026).
     sources: [
+      (isbn) => { const i10 = isbn13to10(isbn); return i10 && `https://images-na.ssl-images-amazon.com/images/P/${i10}.01._SCLZZZZZZZ_SY360_.jpg`; },
       (isbn) => `https://books.google.com/books/content?vid=ISBN${isbn}&printsec=frontcover&img=1&zoom=1`,
     ],
+    amazonLink: (isbn) => { const i10 = isbn13to10(isbn); return i10 && `https://www.amazon.de/dp/${i10}`; },
     lastResort: (isbn) => `https://covers.openlibrary.org/b/isbn/${isbn}-M.jpg?default=false`,
     // Google liefert bei fehlendem Cover ein „image not available“-Bild (PNG) in einer dieser Größen.
     // Echte Cover kommen als JPEG und haben fast immer andere Maße.

@@ -29,3 +29,13 @@ function isbn10to13(s) {
 export function formatIsbn(isbn) {
   return isbn ? `${isbn.slice(0, 3)}-${isbn.slice(3)}` : '';
 }
+
+/** ISBN-13 (978…) → ISBN-10, z. B. für Amazon-Cover und -Links. 979er-ISBNs haben keine ISBN-10 → null. */
+export function isbn13to10(isbn) {
+  const s = String(isbn || '');
+  if (!/^978\d{10}$/.test(s)) return null;
+  const b = s.slice(3, 12);
+  const sum = [...b].reduce((acc, d, i) => acc + Number(d) * (10 - i), 0);
+  const c = (11 - (sum % 11)) % 11;
+  return b + (c === 10 ? 'X' : c);
+}

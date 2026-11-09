@@ -12,13 +12,13 @@ const GENERIC_SUBTITLE = /^(ein(e|en)?\s+)?([\wäöüß-]+\s+)?[\wäöüß-]*(ro
 
 /** Reihenfolge: Cover der eigenen Ausgabe(n), dann Cover-IDs aus der Datenbank, dann die übrigen ISBNs. */
 /**
- * Reihenfolge der Cover-Quellen: eigene Ausgabe (Google) → Open-Library-Cover-IDs → weitere Ausgaben (Google) →
+ * Reihenfolge der Cover-Quellen: eigene Ausgabe (Amazon, Google) → Open-Library-Cover-IDs → weitere Ausgaben (Amazon, Google) →
  * nur außerhalb des Katalogs: Open Library per ISBN. Für Katalog-Werke kennt die Datenbank alle Open-Library-Cover
  * schon (Workflow „Cover-IDs“) – die langsame Open-Library-ISBN-Abfrage (max. 100 pro 5 min) wäre dort überflüssig.
  * DNB-Cover bewusst NICHT (Bot-Prüfung von portal.dnb.de wird nicht umgangen, auch nicht über einen Server).
  */
 function coverUrls(ownIsbns, coverIds, otherIsbns, fromDb = false) {
-  const byIsbn = (i) => CONFIG.covers.sources.map((src) => src(i));
+  const byIsbn = (i) => CONFIG.covers.sources.map((src) => src(i)).filter(Boolean);
   const others = otherIsbns.filter((i) => !ownIsbns.includes(i)).slice(0, CONFIG.covers.maxIsbns);
   const first = [...ownIsbns.slice(0, 1), ...others.slice(0, 1)];
   return [
@@ -306,6 +306,10 @@ function openSheet(ctx) {
     work.year ? `Erschienen: ${work.year}` : null,
     work.genre ? el('span', {}, `Genre: ${work.genre}`, group ? el('br') : null, group ? link(`Mehr ${group} ›`, 'genre', group) : null) : null,
   ].filter(Boolean);
+  // Link zu Amazon (Cover kommen meist von dort – Gegenleistung laut Amazon-Bedingungen); eigene Ausgabe bevorzugt
+  const amazonUrl = [...ownedIsbnsOf(entry), ...(work.coverIsbns || []), ...(work.isbns || []).map(String)]
+    .map(CONFIG.covers.amazonLink).find(Boolean);
+  if (amazonUrl) facts.push(el('a', { class: 'link-btn amazon-link', href: amazonUrl, target: '_blank', rel: 'noopener noreferrer', text: 'Bei Amazon ansehen ›' }));
   const authors = work.authors || [];
   const authorLine = el('p', { class: 'author' });
   if (!authors.length) authorLine.textContent = 'Unbekannter Autor';

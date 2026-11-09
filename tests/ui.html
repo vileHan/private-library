@@ -74,6 +74,9 @@
       const sheetTxt = $('#sheet').textContent;
       add('Detailblatt: Besitze/Gelesen/Merken, Meine Angaben, Autor-Link (C5)',
         ['Besitze', 'Gelesen', 'Merken', 'Bewertung', 'Notiz'].every((w) => sheetTxt.includes(w)) && !!$('#sheet .author .link-btn'), '');
+      const amazon = $('#sheet .amazon-link')?.href || '';
+      add('Detailblatt: Link „Bei Amazon ansehen“ (ISBN-10, neuer Tab)',
+        /^https:\/\/www\.amazon\.de\/dp\/\d{9}[\dX]$/.test(amazon) && $('#sheet .amazon-link').target === '_blank', amazon || 'fehlt');
       const blurbMs = await until(() => $('#sheet .blurb-text') && !$('#sheet .blurb.loading') || !$('#sheet .blurb'), 8000);
       add('Detailblatt: Klappentext geladen oder Abschnitt entfernt (C5)', blurbMs >= 0, `${blurbMs} ms`);
       add('Detailblatt: kein waagrechtes Scrollen (A5)', $('#sheet .sheet-panel').scrollWidth <= frame.clientWidth + 1);

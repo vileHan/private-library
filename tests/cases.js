@@ -6,6 +6,7 @@ import { fetchRecords, searchDnb, displayName } from '../js/dnb.js';
 import { classify } from '../js/classify.js';
 import { groupEditions, normalizeText } from '../js/works.js';
 import { cleanTitle, splitVolumePrefix, isPublisherSeries, cleanSeriesName, splitTitleSubtitle, plausibleYear } from '../js/titles.js';
+import { isbn13to10 } from '../js/isbn.js';
 
 // Muss im Katalog bleiben (ISBN → Titel zur Lesbarkeit)
 export const KEEP = {
@@ -239,6 +240,10 @@ export async function runAll() {
     [displayName('Zeh, Juli'), 'Juli Zeh'],
     [String(plausibleYear('3013')), 'null'],
     [String(plausibleYear('2025')), '2025'],
+    [String(isbn13to10('9783596712489')), '3596712483'],
+    [String(isbn13to10('9780306406157')), '0306406152'],
+    [String(isbn13to10('9798886450000')), 'null'],
+    [String(CONFIG.covers.sources[0]('9783596712489')), 'https://images-na.ssl-images-amazon.com/images/P/3596712483.01._SCLZZZZZZZ_SY360_.jpg'],
   ];
   const wrong = unit.filter(([got, want]) => got !== want);
   results.push({ name: `Titel-Helfer (${unit.length} Einzelprüfungen)`, ok: wrong.length === 0, detail: wrong.map(([g, w]) => `„${g}“ statt „${w}“`).join('; ') });

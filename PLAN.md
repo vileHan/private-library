@@ -38,7 +38,7 @@ Die Entscheidungen und Details stehen in [CLAUDE.md](CLAUDE.md).
 - Barcode-Scan mit der Handykamera.
 - Abgleich der Markierungen zwischen Geräten über Supabase mit Anmeldung.
 - **Genre für alte Bücher (Punkt 8 der Stichprobe 11/2026)**: 2000–2011 fehlt bei ~80 % der Gattungsbegriff (alte DNB-Datensätze). Lösung: (a) Open-Library-Schlagworte (englisch) aus dem Ausgaben-Export über eine Zuordnungstabelle ins Deutsche übertragen (passt zum Workflow „Cover-IDs“), (b) grobe Ersatzgruppe aus der Sachgruppe (B = Belletristik, K = Kinder-/Jugendbuch) für das Stöbern.
-- **Weitere Cover-Quellen für neue Bücher suchen** (kostenlos und erlaubt). DNB-Cover sind ausgeschlossen (Bot-Prüfung).
+- ~~Weitere Cover-Quellen für neue Bücher~~ → erledigt 09.11.2026: Amazon (mit Link), siehe CLAUDE.md „Datenquellen“.
 - **Überlegung Konten (06.11.2026)**: Konten für mich, Familie und Freunde (10–20 Personen). Machbar und kostenlos:
   - Supabase Auth (Gratis-Tarif bis 50.000 aktive Nutzer/Monat). Anmeldung per E-Mail-Link oder E-Mail + Passwort.
   - Achtung: Der eingebaute E-Mail-Versand von Supabase schafft nur wenige Mails pro Stunde. Für 20 Personen reicht das meist. Sonst einen kostenlosen Mail-Dienst anbinden (z. B. Brevo, 300 Mails/Tag).
