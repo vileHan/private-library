@@ -76,6 +76,15 @@
         const off = await until(() => wish.getAttribute('aria-pressed') === 'false', 2000);
         add('Trefferkarte: Knopf „Merken“ reagiert auf Klick und lässt sich zurücknehmen (C6)', !!wish && on >= 0 && off >= 0, `an ${on} ms, aus ${off} ms`);
       }
+      // C6: Während die Seite scrollt, sind die Schalter in den Knöpfen abgeschaltet (Weiterwischen ab einem Knopf)
+      {
+        const sw = $('#results .book .haptic-switch');
+        frame.contentWindow.dispatchEvent(new frame.contentWindow.Event('scroll'));
+        const during = frame.contentWindow.getComputedStyle(sw).pointerEvents;
+        await sleep(500);
+        const after = frame.contentWindow.getComputedStyle(sw).pointerEvents;
+        add('Knöpfe: Schalter beim Scrollen abgeschaltet, danach wieder aktiv (C6)', during === 'none' && after !== 'none', `${during} → ${after}`);
+      }
       // B7: Suchleiste ohne Lupe, „×“ sichtbar bei Text; Tastatur (Fokus) schließt bei Berührung außerhalb, nicht in der Leiste
       {
         const W = frame.contentWindow;

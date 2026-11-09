@@ -360,10 +360,12 @@ body.sheet-open { overflow: hidden; }
 .haptic-switch {
   /* Nur die Mitte des Knopfs (nicht die Ränder): Hält der native iOS-Schalter eine Wischgeste fest, scrollt ein
      Wischen ab dem Rand trotzdem; der Tipp selbst wird am ganzen Knopf erkannt (onTap am Label), Haptik in der Mitte. */
-  position: absolute; inset: 0 22%; width: auto; height: auto; margin: 0; opacity: .011; cursor: pointer; z-index: 1;
+  position: absolute; inset: 0 30%; width: auto; height: auto; margin: 0; opacity: .011; cursor: pointer; z-index: 1;
   touch-action: pan-x pan-y; /* ein Wischen, das auf dem Knopf beginnt, soll die Liste scrollen (09.11.2026) */
 }
 .toggle:has(.haptic-switch:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
+/* Während die Seite scrollt: Schalter abschalten, damit ein neues Wischen auf einem Knopf die Liste weiterbewegt */
+.scrolling .haptic-switch { pointer-events: none; }
 
 /* Sichtbares Feedback für Gesten (am iPhone gibt es dafür keine Haptik) */
 @keyframes pop { 0% { transform: scale(1); } 40% { transform: scale(1.06); } 100% { transform: scale(1); } }

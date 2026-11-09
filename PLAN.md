@@ -4,7 +4,7 @@ Nur was noch zu tun ist. Erledigtes steht in der Git-Historie, Entscheidungen un
 prüfbare Anforderungen in [ANFORDERUNGEN.md](ANFORDERUNGEN.md). Stand: 09.11.2026.
 
 ## Als Nächstes (Reihenfolge vom Nutzer, 09.11.2026 – sobald wieder Tokens da sind)
-1. **Wischen ab den Knöpfen verbessern.** Stand: Normales Wischen klappt einwandfrei; wer es drauf anlegt, schafft es noch, dass ein Wischen auf einem Knopf hängen bleibt (vermutlich, wenn es in der Knopfmitte über dem iOS-Schalter beginnt). Nutzer ist „soweit zufrieden, könnte besser sein“. Ideen: Schalter-Fläche weiter verkleinern, Schalter erst nach kurzer Ruhe aktivieren, oder Haptik gegen freies Wischen abwägen (Entscheidung Nutzer).
+1. ~~Wischen ab den Knöpfen verbessern~~ → 09.11.2026: Schalter beim Scrollen abgeschaltet, Fläche nur noch mittleres Drittel. Am iPhone nachprüfen.
 2. **Gesamte App analysieren und Feature-Ideen sammeln:** Was bieten ähnliche Apps (Goodreads, StoryGraph, Hardcover, Bookly, Libib, Kindle/Apple Books …), das hier angenehm wäre? Vorschläge dem Nutzer vorlegen.
 3. Wenn dort nichts mehr gefällt: **diese Liste abarbeiten.**
 

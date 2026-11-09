@@ -37,10 +37,17 @@ export function haptic(ms = 15) {
 // laufende Scroll-Bewegung anhält, oder eine Berührung, während der gescrollt wurde, ist kein Tipp.
 let lastScroll = -1e9;
 let ignoreScrollUntil = 0;
+// Solange die Seite scrollt (und 350 ms danach), trägt <html> die Klasse „scrolling“: Dann sind die iOS-Schalter in
+// den Knöpfen für Berührungen abgeschaltet (CSS). Wer beim schnellen Weiterwischen auf einem Knopf ansetzt, erwischt
+// so nicht den Schalter, der die Wischbewegung festhalten würde (Nutzer 09.11.2026).
+let scrollingTimer = null;
 if (typeof window !== 'undefined') {
   window.addEventListener('scroll', () => {
     if (performance.now() < ignoreScrollUntil) return;
     lastScroll = performance.now();
+    document.documentElement.classList.add('scrolling');
+    clearTimeout(scrollingTimer);
+    scrollingTimer = setTimeout(() => document.documentElement.classList.remove('scrolling'), 350);
   }, { capture: true, passive: true });
 }
 /** Scroll-Ereignisse kurz nicht werten – z. B. wenn die Tastatur einfährt und iOS dabei die Seite verschiebt, damit
