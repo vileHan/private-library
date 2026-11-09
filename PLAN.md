@@ -24,6 +24,10 @@ Alle kostenlos und lokal machbar (IndexedDB, vorhandener Katalog). Aufwand grob:
 - ~~L zuletzt hinzugefügt~~ – gab es schon
 - **M Leihe in Bibliotheken** (Onleihe-Suche als Link aus dem Detailblatt). S – nur Link, kein Abruf
 
+## Meine Bücher entzerren (Wunsch 10.11.2026, Aufbau vom Nutzer zu wählen)
+- Zufallsbuch als eigener Reiter: Würfel-Kästchen rechts in der Leiste „Suche | Meine Bücher“. Seite mit kurzer Erklärung im leeren Feld, Quellen „Ungelesen“ und „Gemerkt“ als Knöpfe (beide anwählbar), „Regale ▾“ als Aufklappliste mit mehreren Häkchen.
+- Regale: eigene Verwaltung (anlegen, umbenennen, löschen) – Varianten siehe Bericht 10.11.2026 (A: Regale im Zufall-/Listen-Filter, B: Regale als 4. Unteransicht „Liste · Reihen · Regale · Statistik“, C: Leiste unten mit 4 Reitern).
+
 ## Mit dem Import am 01.12.2026 (automatisch, schon im Code)
 - Pappbilderbücher (~5.900) und Spielleiter-Schirme fallen weg.
 - Känguru-Reihe mit vollen Titeln und Band 1–5; Box-Bände ohne Autor werden eingegliedert.
@@ -44,13 +48,13 @@ Alle kostenlos und lokal machbar (IndexedDB, vorhandener Katalog). Aufwand grob:
 - Farben der Knöpfe und Rahmen feinschleifen (Grundregeln stehen in CLAUDE.md „Gestaltungsregeln“).
 - Testseite: Konsolenmeldungen 401/404 aufräumen (stören nicht, verwirren beim Prüfen).
 
-## Konten und Abgleich zwischen Geräten (Überlegung 06.11.2026)
-Konten für mich, Familie und Freunde (10–20 Personen) – machbar und kostenlos:
-- Supabase Auth (Gratis bis 50.000 aktive Nutzer/Monat), Anmeldung per E-Mail-Link oder Passwort. Der eingebaute Mailversand schafft nur wenige Mails pro Stunde; sonst kostenloser Maildienst (z. B. Brevo, 300/Tag).
-- Tabelle `user_books` mit Row Level Security (jeder sieht nur seine Einträge), ~3 MB für 20 Personen × 500 Bücher.
-- Bringt den Abgleich Handy ↔ Laptop. Beim ersten Anmelden werden die IndexedDB-Daten hochgeladen; ohne Anmeldung bleibt alles wie heute.
-- Später: gegenseitig sehen, wer ein Buch schon hat.
-- Aufwand ca. 4–6 Stunden. Offen: Registrierung nur auf Einladung? Anmeldung per Link oder Passwort?
+## Konten erstellen (Wunsch des Nutzers 10.11.2026)
+- **Start zum Testen: 5 Konten** (Nutzer + 4 Testpersonen), später ausbaubar auf Familie und Freunde (10–20).
+- Kostenlos über Supabase Auth (Gratis-Tarif, bis 50.000 aktive Nutzer/Monat). Anmeldung per E-Mail + Passwort oder E-Mail-Link; die 5 Konten legt der Nutzer im Supabase-Dashboard an oder per Einladung (keine offene Registrierung). Eingebauter Mailversand reicht für 5 Personen.
+- Tabelle `user_books` mit Row Level Security: jede Person sieht nur ihre eigenen Einträge (~1 MB für 5 × 500 Bücher, Grenze 500 MB).
+- Angemeldet: Markierungen liegen in Supabase und sind auf allen Geräten gleich (Handy, iPad, Laptop). Beim ersten Anmelden werden die vorhandenen Daten des Geräts hochgeladen. Ohne Anmeldung bleibt alles wie heute (nur auf dem Gerät).
+- Später möglich: sehen, wer ein Buch schon hat / ausleihen kann.
+- Aufwand ca. 4–6 Stunden (Stufe 3). Offen: Anmeldung per Passwort oder Link?
 
 ## Arbeitsweise
 - **Auswertung der Prüfrunden ist fällig** (vereinbart nach ~5 Aufträgen): bisher etwa 6 Prüfaufträge seit 08.11.2026 – die Lernbuch-Regeln brauchten 3 Runden, alle späteren (Titelwörter, Amazon-Cover, größere Cover) bestanden in 1 Runde.

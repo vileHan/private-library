@@ -72,7 +72,7 @@ Commits laufen mit der GitHub-noreply-Adresse (in der lokalen Git-Konfiguration 
 
 ## Bewusst später
 
-- Abgleich der eigenen Markierungen zwischen mehreren Geräten (Supabase, gleiches Projekt)
+- Konten (zunächst 5 zum Testen) mit Abgleich zwischen Geräten – siehe PLAN.md „Konten erstellen“
 
 ## Datenquellen
 
