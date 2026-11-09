@@ -3,6 +3,17 @@
 Nur was noch zu tun ist. Erledigtes steht in der Git-Historie, Entscheidungen und Details in [CLAUDE.md](CLAUDE.md),
 prüfbare Anforderungen in [ANFORDERUNGEN.md](ANFORDERUNGEN.md). Stand: 09.11.2026.
 
+## Am iPhone testen (Merkliste für den Nutzer, Stand 10.11.2026)
+Vorher die App einmal schließen und neu öffnen, damit die neue Version ankommt (ggf. zweimal).
+1. **Wischen ab den Knöpfen:** schnell hintereinander durch die Trefferliste wischen und dabei auf Besitze/Gelesen/Merken ansetzen – scrollt die Liste, löst nichts aus? Normaler Tipp löst genau einmal aus, Haptik in der Knopfmitte.
+2. **Cover-Vollbild:** Cover in der Liste antippen → groß; danach weiterwischen → Bild weg und Liste scrollt in derselben Bewegung.
+3. **Suchleiste:** „×“ leert alles; Tippen/Scrollen außerhalb schließt die Tastatur; der erste Tipp auf einen Knopf bei offener Tastatur kommt an.
+4. **Detailblatt:** „Reihe: …, Band 2 ›“ zeigt die ganze Reihe; „Bei Amazon ansehen“ öffnet und man kommt gut zurück; „ד oben rechts schließt nur das Blatt (auch wenn darunter „Merken“ liegt); Kästchen „Abgebrochen“ gut zu treffen.
+5. **Meine Bücher:** wirkt es jetzt luftig? Filterzeile wischen (Verlauf rechts verschwindet am Ende); Unteransicht **Regale**: anlegen, öffnen, umbenennen, löschen; Eingabefenster („Name des Regals“) fühlt sich in der installierten App okay an?
+6. **Würfel-Reiter 🎲:** Ungelesen/Gemerkt/Regale ▾ (mehrere Häkchen), Aufklappliste schließt beim Tippen daneben, Würfeln.
+7. **Statistik:** Jahresziel festlegen; nach kurzer Zeit erscheinen Seitenzahlen.
+8. **Sicherung:** Exportieren → Datei in „Dateien“ speichern; testweise auf einem zweiten Gerät (iPad) importieren.
+
 ## Als Nächstes (Reihenfolge vom Nutzer, 09.11.2026 – sobald wieder Tokens da sind)
 1. ~~Wischen ab den Knöpfen verbessern~~ → 09.11.2026: Schalter beim Scrollen abgeschaltet, Fläche nur noch mittleres Drittel. Am iPhone nachprüfen.
 2. ~~Feature-Analyse~~ → erledigt; gewählt B, C, F, H (+ Regal-Zeile), umgesetzt 09.11.2026. Übrige Ideen siehe unten.
