@@ -4,7 +4,7 @@ import { catalog } from './catalog.js';
 import { entryFor, updateEntry, allTags } from './library.js';
 import { ownedIsbnsOf } from './store.js';
 import { formatIsbn } from './isbn.js';
-import { $, el, escapeHtml, today, haptic, pop, switchToggle } from './util.js';
+import { $, el, escapeHtml, today, haptic, pop, switchToggle, onTap } from './util.js';
 import { genreGroup } from './genres.js';
 
 // Untertitel wie „Roman“ oder „Thriller“ sind nur Gattungsangaben – die stehen schon beim Genre.
@@ -30,57 +30,54 @@ function coverUrls(ownIsbns, coverIds, otherIsbns, fromDb = false) {
 }
 
 /**
- * Größere Fassung derselben Cover-Adresse – für die Ansicht „Groß“ und das Vollbild.
+ * Größere Fassung derselben Cover-Adresse – für das Vollbild.
  * Amazon: _SY360_ → _SY900_ (liefert die Originalgröße, meist ~500 px hoch), Open Library: -M → -L. Google bleibt.
  */
 export function hiResCover(url = '') {
   return url.replace('_SY360_', '_SY900_').replace(/(covers\.openlibrary\.org\/b\/(?:id|isbn)\/[^/]+)-M\.jpg/, '$1-L.jpg');
 }
-const isLarge = () => document.body.classList.contains('large-view');
 
 /**
- * Vollbild eines Covers (aus dem Detailblatt). Zeigt sofort das schon geladene Bild und tauscht es gegen die größere
- * Fassung, sobald die da ist. Schließen: Tippen, „×“, Escape oder nach unten/oben wischen.
+ * Vollbild eines Covers (Liste und Detailblatt: Cover antippen). Zeigt sofort das schon geladene Bild und tauscht es
+ * gegen die größere Fassung, sobald die da ist. Egal was als Nächstes kommt – Tippen, Wischen, Mausrad, eine Taste –
+ * das Vollbild verschwindet sofort (Wunsch des Nutzers 09.11.2026). Die Fläche bleibt aber bis kurz nach dem Loslassen
+ * liegen (unsichtbar), damit der schließende Tipp nicht auf einem Knopf darunter landet.
  */
 function openCoverZoom(src, title) {
   const img = el('img', { src, alt: `Cover: ${title}`, decoding: 'async' });
+  const box = el('div', { class: 'cover-zoom', role: 'dialog', 'aria-modal': 'true', 'aria-label': `Cover: ${title}` }, img);
+  let closed = false;
+  const remove = (ms) => setTimeout(() => box.remove(), ms);
   const close = () => {
+    if (closed) return;
+    closed = true;
     document.removeEventListener('keydown', onKey, true);
     box.classList.add('closing');
-    setTimeout(() => box.remove(), 150);
+    remove(3000); // spätestens dann weg, falls das Loslassen nicht gemeldet wird
   };
-  const onKey = (ev) => { if (ev.key === 'Escape') { ev.stopPropagation(); close(); } }; // nur das Vollbild, nicht auch das Detailblatt
-  const box = el('div', { class: 'cover-zoom', role: 'dialog', 'aria-modal': 'true', 'aria-label': `Cover: ${title}` },
-    img, el('button', { type: 'button', class: 'cover-zoom-close', 'aria-label': 'Schließen', text: '×' }));
+  const onKey = (ev) => { ev.stopPropagation(); close(); remove(150); }; // nur das Vollbild schließen, nicht auch das Detailblatt
+  box.addEventListener('pointerdown', close);
+  box.addEventListener('touchstart', close, { passive: true });
+  box.addEventListener('wheel', () => { close(); remove(150); }, { passive: true });
+  for (const type of ['pointerup', 'pointercancel', 'touchend', 'touchcancel']) {
+    box.addEventListener(type, () => { if (closed) remove(350); });
+  }
+  // Nach einem Fingertipp schickt der Browser noch einen „Geisterklick“ hinterher – der landet schon auf dem Vollbild
+  // und darf es nicht gleich wieder schließen (Prüfrunde 09.11.2026). Klicks in den ersten 500 ms nur schlucken.
+  const openedAt = performance.now();
+  box.addEventListener('click', (ev) => {
+    ev.stopPropagation();
+    if (performance.now() - openedAt < 500 && !closed) return;
+    close(); remove(150);
+  });
   const big = hiResCover(src);
   if (big !== src) {
     const pre = new Image();
-    pre.onload = () => { if (pre.naturalWidth > 10) img.src = big; };
+    pre.onload = () => { if (pre.naturalWidth > 10 && !closed) img.src = big; };
     pre.src = big;
   }
-  let y0 = null;
-  box.addEventListener('touchstart', (ev) => { y0 = ev.touches[0].clientY; }, { passive: true });
-  box.addEventListener('touchmove', (ev) => {
-    if (y0 === null) return;
-    img.style.transform = `translateY(${ev.touches[0].clientY - y0}px)`;
-  }, { passive: true });
-  box.addEventListener('touchend', (ev) => {
-    const dy = y0 === null ? 0 : ev.changedTouches[0].clientY - y0;
-    y0 = null;
-    if (Math.abs(dy) > 80) close(); else img.style.transform = '';
-  });
-  box.addEventListener('click', close);
   document.addEventListener('keydown', onKey, true);
   document.body.append(box);
-}
-
-/** Beim Wechsel in die Ansicht „Groß“ schon geladene Cover gegen die größere Fassung tauschen. */
-export function upgradeCovers() {
-  if (!isLarge()) return;
-  document.querySelectorAll('.book .cover img[src]').forEach((img) => { // auch Bilder, die noch laden
-    const big = hiResCover(img.src);
-    if (big !== img.src) img.src = big;
-  });
 }
 
 /** Lädt das Cover in ein Element mit .cover > img + .ph (Platzhalter-Buchstabe). */
@@ -96,8 +93,7 @@ function setCover(root, urls, title) {
   function next() {
     clearTimeout(timer);
     if (n >= urls.length) { img.classList.remove('loaded'); img.removeAttribute('src'); ph.hidden = false; return; }
-    const url = urls[n++];
-    img.src = isLarge() && root.classList.contains('book') ? hiResCover(url) : url;
+    img.src = urls[n++];
     // Lazy-Bilder außerhalb des Bildschirms laden noch gar nicht – die Zeit läuft erst, wenn sie sichtbar werden.
     if (visible) arm();
   }
@@ -200,13 +196,20 @@ export function bookCard(work, opts = {}) {
     onChange: null, // setzt das Detailblatt, solange es offen ist
   };
 
-  // „change“ des echten Schalters im Label (siehe switchToggle in util.js) – sorgt am iPhone für Haptik
-  const onToggle = (cls, fn) => card.querySelector(`.toggle.${cls} input`).addEventListener('change', () => { haptic(); ctx.change(fn()); });
+  // „toggle“ kommt nur bei einem echten Tipp, nie beim Wischen (switchToggle in util.js); der Schalter darin sorgt am iPhone für Haptik
+  const onToggle = (cls, fn) => card.querySelector(`.toggle.${cls}`).addEventListener('toggle', () => { haptic(); ctx.change(fn()); });
   onToggle('own', () => actions.own(work));
   onToggle('read', () => actions.read());
   onToggle('wish', () => actions.wish());
   card.querySelector('.more-btn').addEventListener('click', () => openSheet(ctx));
   attachGridGestures(card, ctx);
+  // Liste: Cover antippen → Vollbild (nur bei echtem Tipp, nie beim Scrollen; im Raster hat der Tipp eine andere Bedeutung)
+  const listCover = card.querySelector('.cover');
+  onTap(listCover, () => {
+    if (document.body.classList.contains('grid-view')) return;
+    const img = listCover.querySelector('img.loaded');
+    if (img) openCoverZoom(img.src, fullTitle(work));
+  });
 
   paint(entry);
   return card;
@@ -378,7 +381,7 @@ function openSheet(ctx) {
   setCover(head, coverUrls(ownedIsbnsOf(entry), work.coverIds, work.coverIsbns || [], !!(work.fromDb || entry?.fromDb)), work.title);
   // Cover antippen → Vollbild (nur wenn ein echtes Cover geladen ist)
   const headCover = head.querySelector('.cover');
-  headCover.addEventListener('click', () => {
+  onTap(headCover, () => {
     const img = headCover.querySelector('img.loaded');
     if (img) openCoverZoom(img.src, fullTitle(work));
   });
@@ -386,7 +389,7 @@ function openSheet(ctx) {
   // Dieselben drei Knöpfe, ausgeschrieben
   const toggle = (cls, label, fn) => {
     const b = switchToggle(cls, label); // echter iOS-Schalter im Knopf → Haptik am iPhone
-    b.querySelector('input').addEventListener('change', () => { haptic(); ctx.change(fn); });
+    b.addEventListener('toggle', () => { haptic(); ctx.change(fn); }); // nur bei echtem Tipp, siehe switchToggle
     return b;
   };
   const bar = el('div', { class: 'actions sheet-actions' },

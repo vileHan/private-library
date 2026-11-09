@@ -81,11 +81,15 @@ const PUBLISHER_SERIES = /(taschenbuch|taschenbuecher|bibliothek)$|(buecherschat
  * „Selcouth-Reihe“ → „Selcouth“. „-Saga“ bleibt („Die Underworld-Saga“).
  */
 export function cleanSeriesName(s = '') {
-  return s
+  const name = s
     .replace(/^band\s*(\.\.\.|…|\d*)\s*(der|des|aus der|aus dem|im|in der)\s+/i, '')
     .replace(/["„“”»«]/g, '')
-    .replace(/[-\s](reihe|trilogie|dilogie|tetralogie)$/i, '')
     .trim();
+  // Alle Schreibweisen einer Reihe auf denselben Stamm bringen – die DNB wechselt je Ausgabe („Die Känguru-Trilogie“,
+  // „-Tetralogie“, „-Pentalogie“, „-Werke“; „Die Wellenläufer-Reihe“/„-Trilogie“). Ein Versuch mit „Die Känguru-Reihe“
+  // als Anzeigename erzeugte Phantom-Werke („Die Wellenläufer-Reihe“) und wurde verworfen (Prüfrunden 09.11.2026).
+  // „-Werke“ nur mit Bindestrich („Gesammelte Werke“ bleibt).
+  return name.replace(/[-\s](reihe|trilogie|dilogie|tetralogie|pentalogie|hexalogie)$/i, '').replace(/-werke$/i, '').trim();
 }
 
 /** Ist die „Reihe“ eigentlich eine Verlagsreihe? */

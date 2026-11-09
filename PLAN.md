@@ -4,16 +4,17 @@ Nur was noch zu tun ist. Erledigtes steht in der Git-Historie, Entscheidungen un
 prüfbare Anforderungen in [ANFORDERUNGEN.md](ANFORDERUNGEN.md). Stand: 09.11.2026.
 
 ## Am iPhone ausprobieren (nur dort prüfbar)
-- Knöpfe Besitze/Gelesen/Merken lösen beim Scrollen und Wischen nicht mehr aus (Suche, Meine Bücher, Detailblatt).
-- Ansicht „Groß“: Cover scharf genug? Wischen, Halten, Doppeltipp ohne Zoom?
-- Vollbild-Cover per Wischen schließen.
-- Link „Bei Amazon ansehen“ aus der installierten App: wohin öffnet er, kommt man gut zurück?
+- Knöpfe Besitze/Gelesen/Merken (neue Tipp-Logik, 3. Anlauf): lösen sie beim Scrollen, Wischen und beim Anhalten einer Scroll-Bewegung wirklich nicht mehr aus? Gehen normale Tipps nicht verloren? Haptik-Ticken beim Wischen ohne Wirkung ist möglich.
+- Cover in der Liste antippen: Vollbild bleibt offen, der nächste Tipp schließt es, ohne darunter etwas auszulösen.
+
+## Mit dem Import am 01.12.2026 (automatisch, schon im Code)
+- Pappbilderbücher (~5.900) und Spielleiter-Schirme fallen weg.
+- Känguru-Reihe mit vollen Titeln und Band 1–5; Box-Bände ohne Autor werden eingegliedert.
 
 ## Entscheidungen des Nutzers
-- **Pappbilderbücher** (5.879 Werke, 1,6 % des Katalogs): etwa die Hälfte kleine Geschichten, die andere Hälfte Zeige-/Geräuschbücher. Drin lassen oder raus?
+- **„Mein Kinderbuchhaus“** (Oetinger-Sammelreihe, 8 Autoren) als Verlagsreihe herausnehmen? Sonst zeigt „Pippi Langstrumpf“ nach dem Import „Band 5“. Kleine Regel in `isPublisherSeries`.
 
 ## Katalog
-- **Englische Spielleiter-Schirme** („Dungeon Master's Screen – …“, 6 Treffer bei „dungeon“) als Nicht-Buch erkennen (deutsche Regel kennt nur „Sichtschirm“). Wirkt erst nach dem nächsten Import.
 - **Genre für alte Bücher**: 2000–2011 fehlt bei ~80 % der Gattungsbegriff. Lösung: (a) Open-Library-Schlagworte (englisch) über eine Zuordnungstabelle ins Deutsche (passt zum Workflow „Cover-IDs“), (b) grobe Ersatzgruppe aus der Sachgruppe (B = Belletristik, K = Kinder-/Jugendbuch) fürs Stöbern. Zuordnungstabelle danach gemeinsam durchgehen.
 - **Sammelbände/Gesamtausgaben** (z. B. „4192 Seiten“) aus den Ausgaben eines Einzelbandes heraushalten.
 - Optional: weitere Sachgruppen freischalten, z. B. Geschichte (`900`) – Konfiguration ergänzen, Import laufen lassen.

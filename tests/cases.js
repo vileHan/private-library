@@ -127,6 +127,15 @@ export async function runAll() {
   results.push({ name: 'Biss: Verlagsreihe „Carlsen“ gilt nicht als Buchreihe', ok: biss.length >= 1 && biss.every((w) => !/carlsen/i.test(w.series)),
     detail: biss.map((w) => `${w.title} / ${w.series || '–'}`).join('; ') });
 
+  // Känguru (Analyse 09.11.2026): „Die Känguru-Chroniken“ blieb als „Chroniken“ übrig (Reihe „Die Känguru“ vorne
+  // abgeschnitten), Band 4 fehlte (steht nur im Box-Datensatz ohne Autor). Erwartet: volle Titel, Bände 1–5.
+  const kang = (await grouped('Marc-Uwe Kling Känguru', 2)).filter((w) => /Kling/.test(w.authors.join()) && w.series);
+  const vols = Object.fromEntries(kang.map((w) => [w.volume, w.title]));
+  results.push({ name: 'Känguru: volle Titel (nicht „Chroniken“), Reihe Band 1–5 inkl. Band 4 aus dem Box-Datensatz',
+    ok: vols[1] === 'Die Känguru-Chroniken' && vols[2] === 'Das Känguru-Manifest' && vols[3] === 'Die Känguru-Offenbarung'
+      && vols[4] === 'Die Känguru-Apokryphen' && kang.every((w) => w.series === 'Die Känguru'),
+    detail: kang.map((w) => `${w.title} / ${w.series} ${w.volume}`).join('; ') });
+
   // ---------- Stichprobe 11/2026: neue Bücher, Reihen ohne Nummer, Verlagsreihen ----------
   const wood = (await grouped('Lucy Jane Wood', 1)).filter((w) => /Wood/.test(w.authors.join()));
   const rew = wood.find((w) => w.title === 'Rewitched');
@@ -145,6 +154,21 @@ export async function runAll() {
     detail: '' });
   const loose = groupEditions([syn('', 'Wood, Lucy', 'A', { looseSeries: 'Selcouth' }), syn('', 'Wood, Lucy', 'B', { looseSeries: 'Selcouth' }),
     syn('', 'Muster, Max', 'C', { looseSeries: 'Einzelstück' })]);
+  // Box-Datensätze (gleiche ISBN, verschiedene Titel): ihre Reihe zählt nur, wenn sie auch bei normalen Ausgaben vorkommt
+  const box = groupEditions([
+    syn('Mein Kinderbuchhaus', 'Lindgren, Astrid', 'Pippi Langstrumpf', { volume: '5', isbns: ['9783000000019'] }),
+    syn('Mein Kinderbuchhaus', 'Lindgren, Astrid', 'Michel aus Lönneberga', { volume: '6', isbns: ['9783000000019'] }),
+    syn('', 'Lindgren, Astrid', 'Pippi Langstrumpf', { isbns: ['9783789114465'] }),
+    syn('Die Känguru-Reihe', '', 'Die Känguru-Apokryphen', { volume: '4', isbns: ['9783548061610'], authors: [], authorsSort: [] }),
+    syn('Die Känguru-Reihe', '', 'Die Känguru-Offenbarung', { volume: '3', isbns: ['9783548061610'], authors: [], authorsSort: [] }),
+    syn('', 'Kling, Marc-Uwe', 'Die Känguru-Apokryphen', { isbns: ['9783548291956'] }),
+    syn('Die Känguru-Reihe', 'Kling, Marc-Uwe', 'Die Känguru-Chroniken', { volume: '1', isbns: ['9783548000001'] }),
+  ]);
+  const pippi = box.find((w) => w.title === 'Pippi Langstrumpf' && w.isbns.length);
+  const apo = box.find((w) => w.title === 'Die Känguru-Apokryphen' && w.isbns.length);
+  results.push({ name: 'Box-Bände: Sammelbox-Reihe fällt weg (Pippi), echte Reihe bleibt und bringt den Band mit (Känguru 4)',
+    ok: !!pippi && !pippi.series && !!apo && apo.series === 'Die Känguru-Reihe' && apo.volume === '4' && apo.authors.length === 1,
+    detail: `Pippi: ${pippi?.series || '–'} ${pippi?.volume || ''}; Apokryphen: ${apo?.series || '–'} ${apo?.volume || ''} / ${apo?.authors}` });
   results.push({ name: 'Reihe ohne Nummer nur bei ≥ 2 Büchern desselben Autors',
     ok: loose.filter((w) => w.series === 'Selcouth').length === 2 && !loose.find((w) => w.title === 'C').series, detail: '' });
 
@@ -198,6 +222,10 @@ export async function runAll() {
     t('Fabeln von La Fontaine - mein großes Puzzlebuch', false, 'Märchen und Sagen für Kinder und Jugendliche'),
     t('Das große Leserabe Leselernbuch - Tiergeschichten', true, 'Erstlesealter, Vorschulalter'),
     t('Das Denkmal', true, 'Erzählende Literatur'), t('Das Denkmalbuch', true, 'Erzählende Literatur'),
+    // 09.11.2026: Spielleiter-Schirme (auch englisch) und Pappbilderbücher raus; normale Bilderbücher bleiben
+    t('Dungeon Master\'s Screen - Fluch des Strahd', false, 'Fantasy'), t('Der Spielleiterschirm', false, 'Fantasy'),
+    t('Mein Bauernhof', false, 'Pappbilderbücher mit und ohne Zusatzteile, Fühlbilderbücher'),
+    t('Kitzeln kann man sich nicht allein', true, 'Bilderbücher'), t('Dungeon Crawler Carl', true, 'Science Fiction'),
     // Prüfrunde 2: Aufzählungen mit Beschäftigungswörtern schützen nicht
     sub('Frohe Ostern', 'Rezepte, Basteltipps und Gedichte', false),
     sub('Der Hai im Strandkorb', 'Geschichten, Bilderrätsel, Spiele, Postkarten und mehr', false),
@@ -231,6 +259,12 @@ export async function runAll() {
     [String(isPublisherSeries('Selcouth', 'Köln : Lübbe')), 'false'],
     [cleanSeriesName('Band ... der "Children of blood and bone"-Trilogie'), 'Children of blood and bone'],
     [cleanSeriesName('Selcouth-Reihe'), 'Selcouth'],
+    [cleanSeriesName('Die Känguru-Werke'), 'Die Känguru'],
+    [cleanSeriesName('Die Känguru-Pentalogie'), 'Die Känguru'],
+    [cleanSeriesName('Die Wellenläufer-Trilogie'), 'Die Wellenläufer'],
+    [cleanSeriesName('Gesammelte Werke'), 'Gesammelte Werke'],
+    [cleanSeriesName('Die Tribute von Panem-Trilogie'), 'Die Tribute von Panem'],
+    [cleanSeriesName('Die Wellenläufer-Reihe'), 'Die Wellenläufer'],
     [cleanSeriesName('Die Underworld-Saga'), 'Die Underworld-Saga'],
     [JSON.stringify(splitTitleSubtitle('Katzenjagd : Roman')), JSON.stringify({ title: 'Katzenjagd', subtitle: 'Roman' })],
     [JSON.stringify(splitTitleSubtitle('Star Wars : Das Erwachen der Macht')), 'null'],

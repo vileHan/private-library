@@ -33,11 +33,61 @@ export function haptic(ms = 15) {
   try { navigator.vibrate?.(ms); } catch { /* egal */ }
 }
 
+// Zeitpunkt der letzten Scroll-Bewegung irgendwo auf der Seite (Liste, Detailblatt …). Ein Finger, der eine
+// laufende Scroll-Bewegung anhält, oder eine Berührung, während der gescrollt wurde, ist kein Tipp.
+let lastScroll = -1e9;
+if (typeof window !== 'undefined') {
+  window.addEventListener('scroll', () => { lastScroll = performance.now(); }, { capture: true, passive: true });
+}
+
 /**
- * iPhone-Haptik-Versuch: Die Knöpfe „Besitze / Gelesen / Merken“ sind <label>-Elemente mit einem echten,
- * unsichtbaren iOS-Schalter (`<input type="checkbox" switch>`) darin. Ein Tipp legt diesen Schalter wirklich um –
- * iOS quittiert das mit Haptik. Die App reagiert auf das „change“ des Schalters (nicht auf „click“, das bei
- * Labels doppelt käme). Der Zustand des Schalters selbst ist egal, maßgeblich bleibt aria-pressed am Label.
+ * Ruft fn nur bei einem ECHTEN Tipp auf – nie beim Wischen oder Scrollen:
+ * Finger höchstens 10 px bewegt, kürzer als 600 ms, nicht abgebrochen, keine Scroll-Bewegung kurz vor oder
+ * während der Berührung, nur ein Finger. Maus und Tastatur lösen über „click“ aus (nicht kurz nach einer Berührung,
+ * sonst käme der Tipp doppelt). fn bekommt das auslösende Ereignis.
+ */
+export function onTap(elm, fn) {
+  let s = null;
+  let lastTouch = -1e9;
+  let lastFire = -1e9;
+  const fire = (ev) => {
+    const now = performance.now();
+    if (now - lastFire < 50) return; // Label + Schalter melden denselben Mausklick evtl. zweimal
+    lastFire = now;
+    fn(ev);
+  };
+  elm.addEventListener('touchstart', (ev) => {
+    lastTouch = performance.now();
+    if (ev.touches.length > 1) { s = null; return; }
+    const t = ev.touches[0];
+    s = { x: t.clientX, y: t.clientY, t: lastTouch, moved: false, scrolling: lastTouch - lastScroll < 150 };
+  }, { passive: true });
+  elm.addEventListener('touchmove', (ev) => {
+    if (!s) return;
+    const t = ev.touches[0];
+    if (ev.touches.length > 1 || Math.hypot(t.clientX - s.x, t.clientY - s.y) > 10) s.moved = true;
+  }, { passive: true });
+  elm.addEventListener('touchcancel', () => { s = null; lastTouch = performance.now(); }, { passive: true });
+  elm.addEventListener('touchend', (ev) => {
+    const now = performance.now();
+    lastTouch = now;
+    const ok = s && !s.moved && !s.scrolling && now - s.t < 600 && lastScroll < s.t;
+    s = null;
+    if (ok) fire(ev);
+  }, { passive: true });
+  elm.addEventListener('click', (ev) => {
+    if (performance.now() - lastTouch < 800) return; // nach einer Berührung entscheidet allein touchend
+    fire(ev);
+  });
+}
+
+/**
+ * Knöpfe „Besitze / Gelesen / Merken“: <label> mit einem echten, fast unsichtbaren iOS-Schalter
+ * (`<input type="checkbox" switch>`) darin. Ein Tipp legt diesen Schalter um – iOS quittiert das mit Haptik.
+ * ENTSCHIEDEN wird aber nicht über das „change“ des Schalters: iOS legt ihn auch beim Darüberwischen um und meldet
+ * das (zwei Fassungen, die „change“ nachträglich filterten, halfen am iPhone nicht – Nutzer 09.11.2026).
+ * Stattdessen meldet das Label ein eigenes Ereignis „toggle“, und zwar nur bei einem echten Tipp (onTap).
+ * Der Zustand des Schalters selbst ist egal, maßgeblich bleibt aria-pressed am Label.
  */
 export function switchToggle(cls, text) {
   const label = document.createElement('label');
@@ -47,38 +97,8 @@ export function switchToggle(cls, text) {
   label.querySelector('.lbl').textContent = text;
   const input = label.querySelector('input');
   input.setAttribute('aria-label', text);
-  // iOS-Schalter lassen sich auch durch Darüberwischen umlegen – ungewollt beim Scrollen der Liste oder
-  // Herunterziehen des Detailblatts. Der Schalter meldet „change“ dabei oft schon WÄHREND der Bewegung,
-  // bevor der Finger 10 px weit gekommen ist (erste Fassung prüfte nur dann → Knöpfe lösten beim Wischen aus).
-  // Deshalb: Kommt „change“ während einer Berührung, wird es zurückgehalten und erst beim Loslassen entschieden –
-  // insgesamt mehr als 10 px bewegt oder Berührung abgebrochen (Scrollen) = Änderung zurücknehmen, sonst
-  // durchlassen. Dieser Lauscher kommt zuerst und stoppt die übrigen (card.js reagiert auf „change“).
-  let x0 = 0, y0 = 0, moved = false, touching = false, pending = false, endedAt = 0;
-  const revert = () => { input.checked = !input.checked; };
-  const accept = () => { const ev = new Event('change'); ev.accepted = true; input.dispatchEvent(ev); };
-  const finish = (cancelled) => {
-    touching = false;
-    endedAt = Date.now();
-    if (cancelled) moved = true;
-    if (!pending) return;
-    pending = false;
-    if (moved) revert(); else accept();
-  };
-  label.addEventListener('touchstart', (e) => {
-    const t = e.touches[0]; x0 = t.clientX; y0 = t.clientY; moved = false; touching = true; pending = false;
-  }, { passive: true });
-  label.addEventListener('touchmove', (e) => {
-    const t = e.touches[0];
-    if (Math.hypot(t.clientX - x0, t.clientY - y0) > 10) moved = true;
-  }, { passive: true });
-  label.addEventListener('touchend', () => finish(false), { passive: true });
-  label.addEventListener('touchcancel', () => finish(true), { passive: true });
-  input.addEventListener('change', (e) => {
-    if (e.accepted) return;
-    if (touching) { pending = true; e.stopImmediatePropagation(); return; }
-    // „change“ nach dem Loslassen (normaler Tipp): nur zurücknehmen, wenn die Berührung eben gewischt hat
-    if (moved && Date.now() - endedAt < 600) { moved = false; revert(); e.stopImmediatePropagation(); }
-  });
+  input.addEventListener('change', (ev) => ev.stopImmediatePropagation()); // nur für die Haptik da
+  onTap(label, () => label.dispatchEvent(new CustomEvent('toggle')));
   return label;
 }
 

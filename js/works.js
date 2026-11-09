@@ -77,7 +77,9 @@ export function fixSeriesTitles(editions) {
     if (a) {
       for (const s of rawSeriesByAuthor.get(a) || []) {
         const esc = s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+');
-        const m = e.title.match(new RegExp(`^${esc}\\s*(?:\\d{1,3}\\s*)?(?:in)?\\s*[-–:]\\s*(.{3,})$`, 'iu'));
+        // Trenner nur mit Leerraum („ - “, „ – “, „:“) – ein Bindestrich im zusammengesetzten Wort trennt nichts:
+        // „Die Känguru-Chroniken“ (Reihe „Die Känguru“) blieb sonst als „Chroniken“ übrig (Analyse 09.11.2026)
+        const m = e.title.match(new RegExp(`^${esc}\\s*(?:\\d{1,3}\\s*)?(?:in)?(?:\\s*:|\\s+[-–]|\\s*–)\\s*(.{3,})$`, 'iu'));
         if (m) {
           const title = m[1].charAt(0).toUpperCase() + m[1].slice(1);
           e = { ...e, title, sortTitle: title.replace(/^\s*(der|die|das|ein|eine)\s+/i, ''), series: e.series || s };
@@ -169,6 +171,11 @@ export function groupEditions(editions) {
   editions = editions.map((e) => (e.isbns.some((i) => ambiguous.has(i))
     ? { ...e, isbns: e.isbns.filter((i) => !ambiguous.has(i)), isBoxPart: true }
     : e));
+  // Reihenangaben aus Box-Datensätzen nur übernehmen, wenn dieselbe Reihe auch bei einer normalen Ausgabe vorkommt:
+  // „Die Känguru-Werke“ ja, die Sammelbox „Mein Kinderbuchhaus“, Band 5 (Pippi Langstrumpf) nein (Prüfrunde 09.11.2026).
+  const normalSeries = new Set(editions.filter((e) => !e.isBoxPart && e.series).map((e) => titleKey(e.series)));
+  editions = editions.map((e) => (e.isBoxPart && e.series && !normalSeries.has(titleKey(e.series))
+    ? { ...e, series: '', volume: '' } : e));
 
   const byKey = new Map();
   const byIsbn = new Map();
@@ -187,6 +194,23 @@ export function groupEditions(editions) {
     for (const isbn of e.isbns) {
       if (byIsbn.has(isbn)) union(i, byIsbn.get(isbn)); else byIsbn.set(isbn, i);
     }
+  });
+
+  // Box-Bände ohne Autor (DNB-Datensatz der Box nennt nur im Titelfeld den Autor) mit dem Werk desselben Titels
+  // verbinden, wenn genau EIN Autor ein Buch dieses Titels hat: bringt Reihe und Band mit („Die Känguru-Apokryphen“,
+  // Band 4 steht nur im Box-Datensatz der Tetralogie – Analyse 09.11.2026). Nur Box-Bände, damit gleichnamige
+  // Bücher anderer Autoren nicht verschmelzen.
+  const authoredByTitle = new Map();
+  editions.forEach((e, i) => {
+    if (!authorKey(e)) return;
+    const t = titleKey(e.title);
+    if (!authoredByTitle.has(t)) authoredByTitle.set(t, new Map());
+    authoredByTitle.get(t).set(authorKey(e), i);
+  });
+  editions.forEach((e, i) => {
+    if (authorKey(e) || !e.isBoxPart) return;
+    const owners = authoredByTitle.get(titleKey(e.title));
+    if (owners?.size === 1) union(i, [...owners.values()][0]);
   });
 
   const groups = new Map();
@@ -234,7 +258,8 @@ function buildWork(editions) {
   // Neueste gedruckte Ausgaben zuerst – deren Cover sind am ehesten vorhanden.
   const sorted = [...editions].sort((a, b) => (b.year || 0) - (a.year || 0) || Number(a.isEbook) - Number(b.isEbook));
   const title = mostCommon(editions.map((e) => e.title));
-  const main = editions.find((e) => e.title === title) || sorted[0];
+  // Hauptausgabe möglichst mit Autor (ein verbundener Box-Band ohne Autor soll ihn nicht verdrängen)
+  const main = editions.find((e) => e.title === title && e.authors.length) || editions.find((e) => e.title === title) || sorted[0];
   const isbns = [...new Set(editions.flatMap((e) => e.isbns))];
   const years = editions.map((e) => e.year).filter(Boolean);
   // Gleiche ISBN mehrfach (z. B. Nachdruck) nur einmal auflisten.

@@ -45,6 +45,8 @@ const NON_BOOK_TITLE = words([
   // „Die Biene Maja - Lernen ab 3 Jahren“, „Juli Löwenzahn - Mein Kindergarten-Album“, „DSA5 - In den Fängen des Dämons“)
   'vorschulblock', 'lernblock', 'rechenblock', 'übungsblock', 'lernen ab \\d+( jahren)?', 'kindergarten-album',
   'freundebuch', 'dsa\\d',
+  // Spielleiter-Schirme fürs Rollenspiel, auch englisch („Dungeon Master's Screen – Fluch des Strahd“, 09.11.2026)
+  '(dungeon|game) master[’\']?s? screen', 'gm[- ]screen', 'spielleiter-?schirm', 'meisterschirm',
   // Stichprobe Lernbücher 11/2026 (je ~14 Titel aus 9 Mustern, ~1.000–2.000 Nicht-Bücher geschätzt):
   // Ordner/Verkaufseinheiten, Jahreskalender, Rätsel-/Quizbücher, Übungsbücher, Kreativ-/Ausmalhefte, Lieder, ABC-/Schreiblernbücher
   // Prüfrunde 08.11.2026: „sachwissen“, „quiz“, „sudoku“, „liederbuch“, „kinderlieder“, „ausmal…“ trafen echte Geschichten
@@ -93,6 +95,10 @@ export function classify(e, { excludeGenreGroups = Object.keys(GENRE_GROUPS) } =
   const nonfiction = terms.find((t) => NONFICTION_TERMS.has(t));
   // Eine erzählende Gattung (z. B. „Erstlesealter“) hat Vorrang vor einem Sachbuch-Schlagwort.
   if (nonfiction && !narrativeGenre && !terms.some((t) => FICTION_TERMS.has(t))) return { keep: false, reason: `Formschlagwort: ${nonfiction}` };
+  // Pappbilderbücher für Kleinkinder (Zeige-, Fühl-, Geräuschbücher, auch kleine Geschichten) – Nutzerentscheidung
+  // 09.11.2026: alle raus, auch neben einer erzählenden Gattung (~5.900 Werke).
+  const papp = genres.find((g) => /^Pappbilderbücher/i.test(g));
+  if (papp) return { keep: false, reason: `Gattung: ${papp}` };
   if (!narrativeGenre) {
     for (const key of excludeGenreGroups) {
       const g = genres.find((x) => GENRE_GROUPS[key]?.test(x));

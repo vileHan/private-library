@@ -68,34 +68,37 @@
       const heights = new Set($$('#results .book').slice(0, 8).map((b) => Math.round(b.getBoundingClientRect().height)));
       add('Alle Buch-Slots gleich hoch (C1)', heights.size === 1, [...heights].join(', ') + ' px');
 
-      // C6: Knöpfe (iOS-Schalter) lösen beim Darüberwischen nicht aus – auch nicht, wenn der Schalter „change“
-      // schon während der Bewegung meldet (so am iPhone in der Trefferliste). Eigener Testknopf, eigene Daten bleiben unberührt.
+      // C6: Knöpfe lösen nur bei einem echten Tipp aus – nicht beim Wischen, Scrollen oder wenn der Finger eine laufende
+      // Scroll-Bewegung anhält; das „change“ des iOS-Schalters selbst zählt nie (iPhone legt ihn auch beim Wischen um).
+      // Eigener Testknopf, eigene Daten bleiben unberührt.
       {
         const { switchToggle } = await import('../js/util.js');
         const lbl = switchToggle('wish', 'Test');
         document.body.append(lbl);
         const box = lbl.querySelector('input');
         let fired = 0;
-        box.addEventListener('change', () => fired++);
+        lbl.addEventListener('toggle', () => fired++);
         const ft = (type, x, y) => {
-          const t = new Touch({ identifier: 7, target: lbl, clientX: x, clientY: y });
-          lbl.dispatchEvent(new TouchEvent(type, { touches: /end|cancel/.test(type) ? [] : [t], changedTouches: [t], bubbles: true }));
+          const t = new Touch({ identifier: 7, target: box, clientX: x, clientY: y });
+          box.dispatchEvent(new TouchEvent(type, { touches: /end|cancel/.test(type) ? [] : [t], changedTouches: [t], bubbles: true }));
         };
         const flip = () => { box.checked = !box.checked; box.dispatchEvent(new Event('change', { bubbles: true })); };
-        // Wischen: change mitten in der Bewegung (nach 4 px), dann weiter bis 60 px
-        ft('touchstart', 10, 10); ft('touchmove', 14, 10); flip(); ft('touchmove', 70, 12); ft('touchend', 70, 12);
-        const swipe = fired;
-        // Scrollen übernimmt (touchcancel)
-        ft('touchstart', 10, 10); flip(); ft('touchcancel', 10, 40);
-        const cancel = fired;
-        // Tipp: change während der Berührung bzw. danach
-        ft('touchstart', 10, 10); flip(); ft('touchend', 11, 10);
-        const tap1 = fired;
-        ft('touchstart', 10, 10); ft('touchend', 10, 10); flip();
-        const tap2 = fired;
+        const count = async (fn) => { const b = fired; await fn(); return fired - b; };
+        const n = {};
+        n.wischen = await count(() => { ft('touchstart', 10, 10); ft('touchmove', 14, 10); flip(); ft('touchmove', 70, 12); ft('touchend', 70, 12); });
+        n.abbruch = await count(() => { ft('touchstart', 10, 10); flip(); ft('touchcancel', 10, 40); });
+        // Liste scrollt noch, der Finger hält sie an
+        n.anhalten = await count(() => { window.dispatchEvent(new Event('scroll')); ft('touchstart', 10, 10); ft('touchend', 10, 10); });
+        await sleep(200);
+        n.scrollen = await count(() => { ft('touchstart', 10, 10); window.dispatchEvent(new Event('scroll')); ft('touchend', 10, 10); });
+        await sleep(200);
+        // echter Tipp; der Klick, den der Browser danach schickt, zählt nicht doppelt
+        n.tipp = await count(() => { ft('touchstart', 10, 10); flip(); ft('touchend', 11, 10); box.click(); });
+        await sleep(900);
+        n.maus = await count(() => box.click()); // Maus/Tastatur
         lbl.remove();
-        add('Knöpfe: Wischen/Scrollen löst nicht aus, Tippen schon (C6)', swipe === 0 && cancel === 0 && tap1 === 1 && tap2 === 2,
-          `Wischen ${swipe}, Scrollen ${cancel}, Tipp ${tap1}/${tap2 - tap1}`);
+        add('Knöpfe: nur echter Tipp löst aus – nicht Wischen, Abbruch, Anhalten, Scrollen (C6)',
+          n.wischen === 0 && n.abbruch === 0 && n.anhalten === 0 && n.scrollen === 0 && n.tipp === 1 && n.maus === 1, JSON.stringify(n));
       }
 
       // C5 / C6: Detailblatt
@@ -179,7 +182,7 @@
 
       // C4: Cover-Raster
       await search('harry potter');
-      // C8: Detailblatt-Cover antippen → Vollbild in größerer Fassung, Escape schließt nur das Vollbild
+      // C8: Cover antippen → Vollbild (Detailblatt und Liste); jede nächste Aktion schließt nur das Vollbild
       $('#results .more-btn').click();
       await until(() => !$('#sheet').hidden && $('#sheet .sheet-head .cover img.loaded'), 8000);
       $('#sheet .sheet-head .cover').click();
@@ -188,27 +191,54 @@
       add('Detailblatt: Cover antippen öffnet Vollbild (C8)', !!zoomImg && zoomBox.width > frame.clientWidth * 0.8, zoomImg ? `${Math.round(zoomBox.width)}×${Math.round(zoomBox.height)} px` : 'kein Vollbild');
       doc().dispatchEvent(new frame.contentWindow.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
       await sleep(250);
-      add('Vollbild: Escape schließt nur das Vollbild (C8)', !$('.cover-zoom') && !$('#sheet').hidden);
+      add('Vollbild: eine Taste schließt nur das Vollbild (C8)', !$('.cover-zoom') && !$('#sheet').hidden);
       $('#sheet .sheet-close').click();
       await sleep(250);
-      // C4/C8: Liste → Raster → Groß → Liste (Ausgangsansicht des Geräts erst herstellen)
-      for (let i = 0; i < 3 && doc().body.classList.contains('grid-view'); i++) { $('#viewToggle').click(); await sleep(50); }
+      // Ausgangsansicht des Geräts: Liste
+      for (let i = 0; i < 2 && doc().body.classList.contains('grid-view'); i++) { $('#viewToggle').click(); await sleep(50); }
+      await until(() => $('#results .book .cover img.loaded'), 8000);
+      let listCover = $$('#results .book .cover').find((c) => c.querySelector('img.loaded'));
+      if (!listCover) { // Cover-Dienste gerade langsam: Bild nachstellen – geprüft wird nur das Antippen
+        listCover = $('#results .book .cover');
+        const im = listCover.querySelector('img');
+        im.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==';
+        im.classList.add('loaded');
+      }
+      // Fingertipp aufs Cover, danach der „Geisterklick“ des Browsers auf das schon offene Vollbild: muss offen bleiben
+      const W = frame.contentWindow;
+      const tch = (type) => {
+        const t = new W.Touch({ identifier: 9, target: listCover, clientX: 40, clientY: 40 });
+        listCover.dispatchEvent(new W.TouchEvent(type, { touches: type === 'touchend' ? [] : [t], changedTouches: [t], bubbles: true }));
+      };
+      await sleep(200);
+      tch('touchstart'); tch('touchend');
+      $('.cover-zoom')?.dispatchEvent(new W.MouseEvent('click', { bubbles: true }));
+      await sleep(200);
+      const ghostOk = !!$('.cover-zoom') && !$('.cover-zoom.closing');
+      add('Vollbild per Fingertipp bleibt trotz Geisterklick offen (C8)', ghostOk);
+      $('.cover-zoom')?.dispatchEvent(new W.PointerEvent('pointerdown', { bubbles: true }));
+      $('.cover-zoom')?.dispatchEvent(new W.PointerEvent('pointerup', { bubbles: true }));
+      await sleep(500);
+      await sleep(900); // danach mit der Maus
+      listCover?.click();
+      const opened = !!$('.cover-zoom');
+      $('.cover-zoom')?.dispatchEvent(new frame.contentWindow.PointerEvent('pointerdown', { bubbles: true }));
+      const hidden = !!$('.cover-zoom.closing');
+      $('.cover-zoom')?.dispatchEvent(new frame.contentWindow.PointerEvent('pointerup', { bubbles: true }));
+      await sleep(500);
+      add('Liste: Cover antippen öffnet Vollbild, nächste Berührung schließt es (C8)', opened && hidden && !$('.cover-zoom'),
+        `geöffnet ${opened}, beim Berühren ausgeblendet ${hidden}`);
+      // C4: Liste → Raster → Liste; im Raster öffnet ein Klick aufs Cover kein Vollbild
       $('#viewToggle').click();
       await sleep(200);
       const books = $$('#results .book').slice(0, 2).map((b) => b.getBoundingClientRect());
       add('Cover-Raster: 2 Cover nebeneinander (C4)', doc().body.classList.contains('grid-view') && books.length === 2 && Math.abs(books[0].top - books[1].top) < 2);
       add('Cover-Raster: kein waagrechtes Scrollen (A5)', noOverflow());
-      $('#viewToggle').click();
-      await until(() => $$('#results .book .cover img.loaded').length > 0, 15000); // Open Library ist manchmal langsam
-      const big = $$('#results .book').slice(0, 2).map((b) => b.getBoundingClientRect());
-      const bigImgs = $$('#results .book .cover img.loaded').slice(0, 3).map((i) => i.src);
-      add('Ansicht „Groß“: 1 Cover je Reihe, breit, größere Bilder (C8)', doc().body.classList.contains('large-view')
-        && big[1].top > big[0].bottom - 1 && big[0].width > frame.clientWidth * 0.8 && bigImgs.length > 0 && bigImgs.every((s) => !/_SY360_|-M\.jpg/.test(s)),
-        `${Math.round(big[0].width)} px breit; ${bigImgs.length} Bilder geprüft`);
-      add('Ansicht „Groß“: kein waagrechtes Scrollen (A5)', noOverflow());
+      listCover?.click();
+      const zoomInGrid = !!$('.cover-zoom');
       $('#viewToggle').click();
       await sleep(100);
-      add('Dritter Klick: zurück zur Liste (C8)', !doc().body.classList.contains('grid-view') && !doc().body.classList.contains('large-view'));
+      add('Zweiter Klick: zurück zur Liste; im Raster kein Vollbild (C4)', !doc().body.classList.contains('grid-view') && !zoomInGrid);
     } catch (err) {
       add('Testlauf abgebrochen', false, err.message);
     } finally {

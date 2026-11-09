@@ -3,7 +3,7 @@ import { groupEditions, compareTitle, compareAuthor, normalizeText, searchableSu
 import { exportJson, importJson } from './store.js';
 import { normalizeIsbn } from './isbn.js';
 import { library, loadLibrary, entryFor, onLibraryChange, allTags, refreshEntry } from './library.js';
-import { bookCard, upgradeCovers } from './card.js';
+import { bookCard } from './card.js';
 import { renderSeries } from './series.js';
 import { renderStats } from './stats.js';
 import { $, el, fmt, plural } from './util.js';
@@ -328,23 +328,22 @@ $('#scanBtn').addEventListener('click', async () => {
   runSearch(isbn);
 });
 
-// ---------- Ansicht: Liste → Cover-Raster (2 je Reihe) → Groß (1 je Reihe), pro Gerät gespeichert ----------
-// „Groß“ ist ein Raster mit einer Spalte (gleiche Gesten); die Cover werden dann in höherer Auflösung geladen
-// (hiResCover in card.js). Das Symbol im Knopf zeigt die NÄCHSTE Ansicht. Früher: Einstellung „grid“ (true/false).
-const VIEW_MODES = ['list', 'grid', 'large'];
-const VIEW_TITLES = { grid: 'Zum Cover-Raster', large: 'Zu großen Covern', list: 'Zur Listenansicht' };
+// ---------- Ansicht: Liste oder Cover-Raster (2 je Reihe), pro Gerät gespeichert ----------
+// Das Symbol im Knopf zeigt die NÄCHSTE Ansicht. Eine Ansicht „Groß“ (1 Cover je Reihe) gab es kurz (09.11.2026) –
+// gefiel nicht, entfernt; gespeichertes „large“ wird zum Raster. Früher: Einstellung „grid“ (true/false).
+const VIEW_MODES = ['list', 'grid'];
+const VIEW_TITLES = { grid: 'Zum Cover-Raster', list: 'Zur Listenansicht' };
 function applyViewMode(mode) {
+  if (mode === 'large') mode = 'grid';
   if (!VIEW_MODES.includes(mode)) mode = 'list';
   const next = VIEW_MODES[(VIEW_MODES.indexOf(mode) + 1) % VIEW_MODES.length];
   document.body.classList.toggle('grid-view', mode !== 'list');
-  document.body.classList.toggle('large-view', mode === 'large');
   const btn = $('#viewToggle');
   btn.dataset.mode = mode;
   btn.dataset.next = next;
   btn.setAttribute('aria-pressed', String(mode !== 'list'));
   btn.title = VIEW_TITLES[next];
   btn.setAttribute('aria-label', VIEW_TITLES[next]);
-  upgradeCovers();
 }
 applyViewMode(settings.get('view', settings.get('grid', false) ? 'grid' : 'list'));
 $('#viewToggle').addEventListener('click', () => {

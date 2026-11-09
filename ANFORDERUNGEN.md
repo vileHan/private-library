@@ -40,7 +40,7 @@ Prüfart: **T** = automatischer Test (`tests/index.html`, `tests/ui.html`), **M*
 | C5 | Detailblatt: Cover, Titel, Autor (antippbar → Autorenseite), Reihe/Jahr/Genre („Mehr <Genre> ›“), Knöpfe, Klappentext (5 Zeilen + „Mehr lesen“, fehlt er → Abschnitt weg), Bewertung, Lesedatum, Regale, Notiz, Ausgaben zugeklappt. | T + S |
 | C6 | Detailblatt lässt sich nach unten wegziehen (Griff immer, Inhalt nur ganz oben; > 30 % oder Schnippen schließt). Knöpfe reagieren nicht auf Darüberwischen. | T + H |
 | C7 | Haptik am iPhone bei Besitze/Gelesen/Merken (echter Schalter), kein Doppeltipp-Zoom. | H |
-| C8 | Größere Cover: Ansicht-Schalter oben wechselt Liste → Raster (2 je Reihe) → Groß (1 je Reihe, Cover in höherer Auflösung, gleiche Gesten), pro Gerät gespeichert; Symbol zeigt die nächste Ansicht. Im Detailblatt öffnet ein Tipp aufs Cover ein Vollbild (Tippen, ×, Escape oder Wischen schließt; Escape schließt nur das Vollbild). | T + S + H |
+| C8 | Cover-Vollbild: In der Liste (nicht im Raster) und im Detailblatt öffnet ein echter Tipp aufs Cover ein Vollbild in größerer Fassung; Wischen/Scrollen öffnet nichts. Jede nächste Aktion (Berührung, Mausrad, Taste) schließt es, ohne darunter etwas auszulösen; der Geisterklick nach dem öffnenden Tipp schließt es nicht. Escape schließt nur das Vollbild. | T + H |
 
 ## D – Stöbern und Meine Bücher
 
