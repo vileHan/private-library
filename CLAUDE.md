@@ -23,6 +23,7 @@ Commits laufen mit der GitHub-noreply-Adresse (in der lokalen Git-Konfiguration 
 ## Weitere Funktionen (umgesetzt)
 
 - **Merkliste** („Merken“ ♡). Beim Markieren als „Besitze ich“ wird ein Buch automatisch von der Merkliste genommen.
+- **Meine Bücher, Ausbau 09.11.2026** (ANFORDERUNGEN D8–D10): Status **„Abgebrochen“** (Detailblatt, Feld `abandoned`; Gelesen/Lesedatum heben es auf), Filter-Chips in einer **wischbaren Zeile** (Ausblend-Verlauf, aktiver Chip ins Bild), **Regal-Zeile immer sichtbar** („+ Regal“ bzw. „+ Neues Regal …“; leere Regale pro Gerät in settings `shelves`), **„🎲 Zufallsbuch“** aus Ungelesen/Merkliste/Regal, **Statistik** mit Jahresziel (settings `readingGoals`), Gelesen pro Monat, Seiten pro Jahr, Genres gelesen, Lieblingsautoren, dickstes/dünnstes Buch. Seitenzahlen lädt die Statistik für gelesene Bücher im Hintergrund von der DNB nach (`fillPages`, max. 10 je Öffnen). Leere Regale und Jahresziel sind nicht in der JSON-Sicherung.
 - **Details** pro Buch: Bewertung 1–5 Sterne, Lesedatum (wird bei „Gelesen“ automatisch auf heute gesetzt), **Regale** (eigene Schlagworte), Notiz.
 - **Meine Bücher**: Unteransichten *Liste* (Filter Besitze/Gelesen/Ungelesen/Merkliste/Alle + Regal, Sortierungen inkl. Bewertung und Lesedatum), *Reihen* (eigene Bände, „Alle Bände laden“ zeigt fehlende Bände von der DNB), *Statistik*.
 - **Reihe** kommt aus 245 `$a`/`$p` oder aus 490/830/800, aber nur mit Bandnummer bis 3 Ziffern (so fallen Verlagsreihen mit Bestellnummer heraus).
@@ -65,7 +66,7 @@ Commits laufen mit der GitHub-noreply-Adresse (in der lokalen Git-Konfiguration 
   🔍 Prüfung: Stufe N, X Runden, Ergebnis
   ```
   Leere Zeilen weglassen.
-- **Tests**: `tests/index.html` (Katalog, 44) und `tests/ui.html` (Oberfläche in 360 px, 33; eigene Daten bleiben unberührt, ein Testeintrag wird wieder gelöscht).
+- **Tests**: `tests/index.html` (Katalog, 44) und `tests/ui.html` (Oberfläche in 360 px, 36; eigene Daten bleiben unberührt, ein Testeintrag wird wieder gelöscht).
 - **Prüf-Stempel** `tools/pruefstempel.ps1` (Hash über js, css, index.html, sw.js, supabase, scripts, tests, Workflows; Doku zählt nicht) → `.claude/pruefung.json` (nicht im Repository).
 - **Stop-Hook** (`.claude/settings.json` → `.claude/hooks/stop-pruefung.ps1`): Ist der Stand ungeprüft, hält er Claude vor dem Beenden einer Antwort **einmal** an und fordert die Prüfung. Beim zweiten Mal lässt er durch (keine Endlosschleife). Ausnahme: Arbeit läuft noch (z. B. Import) oder reine Frage – kurz begründen.
 

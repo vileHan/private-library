@@ -82,14 +82,22 @@
           <option value="rating">Beste Bewertung</option>
         </select>
       </div>
-      <div class="chips" role="group" aria-label="Filter">
+      <!-- Eine Zeile, waagrecht wischbar statt umbrechen (Platz, 09.11.2026) -->
+      <div class="chips chips-scroll" role="group" aria-label="Filter">
         <button class="chip" data-filter="owned" aria-pressed="true">Besitze</button>
+        <button class="chip" data-filter="all" aria-pressed="false">Alle</button>
         <button class="chip" data-filter="read" aria-pressed="false">Gelesen</button>
         <button class="chip" data-filter="unread" aria-pressed="false">Ungelesen</button>
         <button class="chip" data-filter="wish" aria-pressed="false">Merkliste</button>
-        <button class="chip" data-filter="all" aria-pressed="false">Alle</button>
-        <select id="tagFilter" class="chip-select" aria-label="Regal" hidden></select>
+        <button class="chip" data-filter="abandoned" aria-pressed="false">Abgebrochen</button>
       </div>
+      <!-- Regale immer sichtbar („+ Regal“, wenn noch keins da ist) und Zufallsbuch -->
+      <div class="lib-row">
+        <select id="tagFilter" class="chip-select" aria-label="Regal"></select>
+        <button id="addShelfBtn" class="chip" type="button">+ Regal</button>
+        <button id="randomBtn" class="chip" type="button" aria-expanded="false" title="Was lese ich als Nächstes?">🎲 Zufallsbuch</button>
+      </div>
+      <div id="randomBox" class="random-box" hidden></div>
       <p class="status" id="libStatus" aria-live="polite"></p>
       <div id="libList" class="list"></div>
       </div>

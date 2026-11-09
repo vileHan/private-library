@@ -225,6 +225,48 @@
         await lib.loadLibrary();
       }
 
+      // D8–D10: Meine Bücher – „Abgebrochen“, Regal-Zeile, Zufallsbuch, Jahresziel. Eigener Testeintrag, danach gelöscht;
+      // die Geräte-Einstellungen (Regale, Jahresziel) werden am Ende wiederhergestellt.
+      {
+        const KEY2 = 'ui-test-dnf';
+        await store.put({ key: KEY2, title: 'Testbuch Abbruch', sortTitle: 'Testbuch Abbruch', subtitle: '', authors: ['Test Autor'], authorSort: 'Autor, Test',
+          year: 2020, genre: 'Fantasy', publisher: '', series: '', volume: '', isbns: ['9780000000002'], coverIsbns: [], coverIds: [], editions: [],
+          owned: true, read: false, readAt: null, wish: false, abandoned: true, rating: null, notes: '', tags: [], ownedIsbns: [],
+          addedAt: '2026-01-01T00:00:00.000Z' });
+        await lib.loadLibrary();
+        try {
+          $('#tab-library').click();
+          $('.segmented button[data-sub="list"]').click();
+          $('.chip[data-filter="abandoned"]').click();
+          await sleep(200);
+          const titles = $$('#libList .book .title').map((t) => t.textContent);
+          const meta = $$('#libList .book').find((b) => b.querySelector('.title').textContent === 'Testbuch Abbruch')?.querySelector('.meta').textContent || '';
+          $('.chip[data-filter="unread"]').click();
+          await sleep(100);
+          const inUnread = $$('#libList .book .title').some((t) => t.textContent === 'Testbuch Abbruch');
+          add('Abgebrochen: eigener Filter, Hinweis in der Infozeile, nicht unter „Ungelesen“ (D8)',
+            titles.includes('Testbuch Abbruch') && /abgebrochen/.test(meta) && !inUnread, `${titles.length} Treffer, „${meta}“, ungelesen ${inUnread}`);
+          // Regal-Zeile: entweder Auswahl oder „+ Regal“ sichtbar, nie beides/keins; Zufallsbuch öffnet und schließt
+          const shelfOk = $('#tagFilter').hidden !== $('#addShelfBtn').hidden;
+          $('#randomBtn').click();
+          await sleep(100);
+          const randomOpen = !$('#randomBox').hidden && !!$('#randomBox .random-head');
+          $$('#randomBox .link-btn').find((b) => b.textContent === 'Schließen')?.click();
+          add('Regal-Zeile immer da („+ Regal“ oder Auswahl), Zufallsbuch öffnet und schließt (D9)',
+            shelfOk && randomOpen && $('#randomBox').hidden, JSON.stringify({ shelfOk, randomOpen }));
+          $('.segmented button[data-sub="stats"]').click();
+          await sleep(100);
+          add('Statistik: Jahresziel-Block und „abgebrochen“-Kachel (D10)',
+            !!$('#statsBox .stat-block.goal') && /abgebrochen/.test($('#statsBox').textContent), '');
+          $('.segmented button[data-sub="list"]').click();
+          $('.chip[data-filter="owned"]').click();
+          $('#tab-search').click();
+        } finally {
+          await store.remove(KEY2);
+          await lib.loadLibrary();
+        }
+      }
+
       // B5: ISBN zeigt das ganze Werk
       ms = await search('9783404015061');
       const r = $('#results .book');

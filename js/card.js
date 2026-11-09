@@ -121,6 +121,7 @@ function metaLine(work, entry) {
   // Nur „Band 2“ statt „Eragon 2“ – lange Reihennamen würden die Zeile sprengen (voller Name im Detailblatt)
   if (work.series) parts.push(work.volume ? `Band ${work.volume}` : work.series);
   if (work.year) parts.push(String(work.year));
+  if (entry?.abandoned) parts.push('abgebrochen'); // vor dem Genre, damit es bei Platzmangel sichtbar bleibt
   if (work.genre) parts.push(shortGenre(work.genre));
   if (entry?.rating) parts.push(`★${entry.rating}`);
   if (entry?.notes?.trim()) parts.push('✎');
@@ -146,6 +147,7 @@ export const actions = {
   },
   read: () => (x) => {
     x.read = !x.read;
+    if (x.read) x.abandoned = false; // gelesen heißt: nicht abgebrochen
     if (x.read && !x.readAt) x.readAt = today();
     if (!x.read) x.readAt = null;
   },
@@ -327,7 +329,7 @@ function attachGridGestures(card, ctx) {
 /** Merkt sich den Stand vor einer Wischgeste – für „Rückgängig“. */
 function snapshot(e) {
   return {
-    owned: !!e?.owned, ownedIsbns: [...(e?.ownedIsbns || [])], wish: !!e?.wish, read: !!e?.read, readAt: e?.readAt ?? null,
+    owned: !!e?.owned, ownedIsbns: [...(e?.ownedIsbns || [])], wish: !!e?.wish, read: !!e?.read, readAt: e?.readAt ?? null, abandoned: !!e?.abandoned,
   };
 }
 
@@ -429,7 +431,12 @@ function openSheet(ctx) {
       if (!edSection.open || editions.length) return;
       catalog.editionDetails(work.isbns)
         .catch(() => work.isbns.map((isbn) => ({ isbn })))
-        .then((list) => { editions = list; renderEditions(); });
+        .then((list) => {
+          editions = list;
+          renderEditions();
+          // Ausgaben (mit Seitenzahl) im eigenen Eintrag merken – für die Seiten-Statistik
+          if (ctx.getEntry() && list.some((ed) => ed.pages)) ctx.change((x) => { x.editions = list; });
+        });
     });
   } else renderEditions();
 
@@ -586,7 +593,13 @@ function buildDetails(box, getEntry, change) {
   const date = el('input', { type: 'date', max: today() });
   date.addEventListener('change', () => change((x) => {
     x.readAt = date.value || null;
-    if (date.value) x.read = true;
+    if (date.value) { x.read = true; x.abandoned = false; }
+  }));
+  // Abgebrochen (zählt nicht als gelesen; setzt „Gelesen“ und das Lesedatum zurück)
+  const dnf = el('input', { type: 'checkbox', class: 'dnf-check' });
+  dnf.addEventListener('change', () => change((x) => {
+    x.abandoned = dnf.checked;
+    if (dnf.checked) { x.read = false; x.readAt = null; }
   }));
   // Regale
   const tagList = el('span', { class: 'tag-list' });
@@ -612,6 +625,7 @@ function buildDetails(box, getEntry, change) {
   box.append(
     el('div', { class: 'row' }, el('span', { class: 'lbl', text: 'Bewertung' }), el('span', { class: 'stars-input' }, ...starBtns)),
     el('label', { class: 'row' }, el('span', { class: 'lbl', text: 'Gelesen am' }), date),
+    el('label', { class: 'row' }, el('span', { class: 'lbl', text: 'Abgebrochen' }), dnf),
     el('div', { class: 'row' }, el('span', { class: 'lbl', text: 'Regale' }), el('span', { class: 'tags-edit' }, tagList, tagInput, datalist)),
     el('label', { class: 'row col' }, el('span', { class: 'lbl', text: 'Notiz' }), notes),
   );
@@ -623,6 +637,7 @@ function buildDetails(box, getEntry, change) {
       b.classList.toggle('on', on);
     });
     date.value = e?.readAt || '';
+    dnf.checked = !!e?.abandoned;
     tagList.replaceChildren(...(e?.tags || []).map((t) => el('span', { class: 'tag' }, t, el('button', {
       type: 'button', class: 'tag-x', 'aria-label': `Regal ${t} entfernen`, text: '×',
       onclick: () => change((x) => { x.tags = x.tags.filter((y) => y !== t); }),

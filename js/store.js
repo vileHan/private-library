@@ -56,6 +56,7 @@ export function entryFromWork(work, existing) {
     read: existing?.read ?? false,
     readAt: existing?.readAt ?? null,      // Datum „YYYY-MM-DD“
     wish: existing?.wish ?? false,         // Merkliste / „Will ich lesen“
+    abandoned: existing?.abandoned ?? false, // abgebrochen (zählt nicht als gelesen, 09.11.2026)
     rating: existing?.rating ?? null,      // 1–5
     notes: existing?.notes ?? '',
     tags: existing?.tags ?? [],            // eigene Regale

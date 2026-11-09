@@ -54,6 +54,9 @@ Prüfart: **T** = automatischer Test (`tests/index.html`, `tests/ui.html`), **M*
 | D5 | Merkliste: „Besitze“ nimmt ein Buch von der Merkliste. „Gelesen“ setzt das Lesedatum auf heute. | S |
 | D6 | Sicherung: Export/Import als JSON. Offline: „Meine Bücher“ funktioniert ohne Netz. | S |
 | D7 | Reihe im Detailblatt („Eragon, Band 2 ›“) antippen → alle Bände der Reihe in Bandfolge (auch mit mehreren Autoren, Bände ohne Nummer nach Jahr dahinter), Leiste „‹ Reihe“, Zurück stellt die Suche wieder her; < 1 s. | T |
+| D8 | Status „Abgebrochen“ (Detailblatt, Meine Angaben): zählt nicht als gelesen (setzt Gelesen/Lesedatum zurück; Gelesen hebt Abgebrochen auf), eigener Filter in Meine Bücher, „abgebrochen“ in der Infozeile, nicht unter „Ungelesen“, Kachel in der Statistik. | T |
+| D9 | Meine Bücher: Filter in einer waagrecht wischbaren Zeile (nichts gequetscht); Regal-Zeile immer sichtbar – ohne Regal „+ Regal“, sonst Auswahl mit „+ Neues Regal …“ (leeres Regal wird pro Gerät gemerkt, Hinweis wie Bücher hineinkommen); „🎲 Zufallsbuch“: zufälliges Buch aus Ungelesen, Merkliste oder einem Regal, „Noch eins“, nicht zweimal hintereinander dasselbe. | T + S |
+| D10 | Statistik: Jahresziel (pro Gerät, „X von Y Büchern“, Balken), dazu Gelesen pro Monat (laufendes Jahr), Seiten pro Jahr, Genres (gelesen), Lieblingsautoren nach Bewertung (ab 2 Büchern), dickstes/dünnstes Buch, Ø Seiten, abgebrochen. | T + S |
 
 ## E – Katalogqualität
 

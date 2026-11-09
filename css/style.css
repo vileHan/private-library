@@ -412,3 +412,28 @@ body.grid-view :is(#results, #libList) > .book .cover.pressing { transform: scal
 .cover-zoom img { width: 100%; height: 100%; max-width: 600px; justify-self: center; object-fit: contain; min-height: 0; }
 .cover-zoom.closing { opacity: 0; transition: opacity .15s; }
 @keyframes zoom-in { from { opacity: 0; } to { opacity: 1; } }
+
+/* ---------- Meine Bücher: Filter in einer wischbaren Zeile, Regal-Zeile, Zufallsbuch (09.11.2026) ---------- */
+.chips-scroll { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch;
+  margin-left: -16px; margin-right: -16px; padding: 0 16px 2px; }
+.chips-scroll::-webkit-scrollbar { display: none; }
+.chips-scroll .chip { flex: 0 0 auto; }
+.lib-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; align-items: center; }
+.lib-row .chip-select { flex: 1 1 140px; }
+.lib-row #randomBtn { flex: 1 1 auto; }
+.random-box { margin-top: 12px; padding: 12px 0 0; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+.random-box .random-head, .random-box > .chips, .random-box > .empty { padding: 0 12px; }
+.random-box .random-again { margin: 10px 12px 12px; width: calc(100% - 24px); }
+.random-box .random-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.random-box .chips { margin: 8px 0 10px; }
+.random-box .book { margin: 0; border-left: 0; border-right: 0; border-radius: 0; }
+
+.goal-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.stat-block.goal .goal-row h3 { margin: 0; }
+/* Wischbare Filterzeile: rechts ausblenden, damit man sieht, dass es weitergeht */
+.chips-scroll { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 40px), transparent);
+  mask-image: linear-gradient(to right, #000 calc(100% - 40px), transparent); }
+.chip-select.active { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+.bar-num { min-width: 3.2em; text-align: right; }
+.random-box .book:last-child { border-bottom: 0; border-radius: 0 0 var(--radius) var(--radius); }
+.chips-scroll.at-end { -webkit-mask-image: none; mask-image: none; }

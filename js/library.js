@@ -1,5 +1,6 @@
 // Zustand der eigenen Bibliothek im Speicher + Änderungen speichern.
 import { store, entryFromWork } from './store.js';
+import { settings } from './settings.js';
 
 export const library = { byKey: new Map(), byIsbn: new Map() };
 const listeners = new Set();
@@ -28,7 +29,7 @@ export function entryFor(work) {
 
 /** Ein Eintrag ohne jede Markierung wird gelöscht. */
 function isEmpty(e) {
-  return !e.owned && !e.read && !e.wish && e.rating == null && !e.notes?.trim() && !e.tags?.length;
+  return !e.owned && !e.read && !e.wish && !e.abandoned && e.rating == null && !e.notes?.trim() && !e.tags?.length;
 }
 
 export async function updateEntry(work, change) {
@@ -58,9 +59,18 @@ export async function refreshEntry(work) {
   for (const i of fresh.isbns || []) library.byIsbn.set(i, fresh.key);
 }
 
-/** Alle vergebenen Regale (Schlagworte), alphabetisch. */
+/** Alle Regale, alphabetisch: vergebene Schlagworte plus leer angelegte Regale („+ Regal“ in Meine Bücher). */
 export function allTags() {
-  const tags = new Set();
+  const tags = new Set(settings.get('shelves', []));
   for (const e of library.byKey.values()) for (const t of e.tags || []) tags.add(t);
   return [...tags].sort((a, b) => a.localeCompare(b, 'de'));
+}
+
+/** Leeres Regal anlegen (pro Gerät gespeichert, bis ein Buch hineinkommt). */
+export function addShelf(name) {
+  const t = name.trim();
+  if (!t) return '';
+  const list = settings.get('shelves', []);
+  if (!list.includes(t)) settings.set('shelves', [...list, t]);
+  return t;
 }

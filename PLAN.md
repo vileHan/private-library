@@ -5,23 +5,23 @@ prüfbare Anforderungen in [ANFORDERUNGEN.md](ANFORDERUNGEN.md). Stand: 09.11.20
 
 ## Als Nächstes (Reihenfolge vom Nutzer, 09.11.2026 – sobald wieder Tokens da sind)
 1. ~~Wischen ab den Knöpfen verbessern~~ → 09.11.2026: Schalter beim Scrollen abgeschaltet, Fläche nur noch mittleres Drittel. Am iPhone nachprüfen.
-2. **Gesamte App analysieren und Feature-Ideen sammeln:** Was bieten ähnliche Apps (Goodreads, StoryGraph, Hardcover, Bookly, Libib, Kindle/Apple Books …), das hier angenehm wäre? Vorschläge dem Nutzer vorlegen.
+2. ~~Feature-Analyse~~ → erledigt; gewählt B, C, F, H (+ Regal-Zeile), umgesetzt 09.11.2026. Übrige Ideen siehe unten.
 3. Wenn dort nichts mehr gefällt: **diese Liste abarbeiten.**
 
 ## Feature-Ideen zur Auswahl (Analyse 09.11.2026, Vergleich Goodreads/StoryGraph/Hardcover/Bookly/Libib/Apple Books)
 Alle kostenlos und lokal machbar (IndexedDB, vorhandener Katalog). Aufwand grob: S < 1 h, M 1–3 h, L > 3 h.
 - **A Lesestatus „Lese ich gerade“ + Fortschritt** (Seite/Prozent, Startdatum) – alle großen Apps haben das; heute gibt es nur „gelesen“. M
-- **B „Abgebrochen“ (DNF)** als eigener Status, zählt nicht als gelesen. S
-- **C Jahresziel / Lese-Challenge** in der Statistik („18 von 24 Büchern 2026“, Fortschrittsbalken). S
+- ~~B Abgebrochen~~ ✓ 09.11.2026
+- ~~C Jahresziel~~ ✓ 09.11.2026
 - **D Mehrfach gelesen** (Re-Reads mit mehreren Lesedaten). S–M
 - **E „Neu in deinen Reihen / von deinen Autoren“**: Nach jedem Monatsimport zeigen, welche neuen Bände zu Reihen erschienen sind, von denen du Bände besitzt (Hardcover/StoryGraph haben Serien-Hinweise). M
-- **F „Was lese ich als Nächstes?“**: Zufallsbuch aus ungelesenen eigenen Büchern bzw. Merkliste; optional eine sortierbare „Als nächstes“-Reihenfolge. S–M
+- ~~F Zufallsbuch~~ ✓ 09.11.2026 (Ungelesen, Merkliste, Regal)
 - **G Zitate/Lieblingsstellen** pro Buch speichern (Bookly, Goodreads). S
-- **H Mehr Statistik**: Seiten pro Jahr/Monat, Genre-Verteilung, Lieblingsautoren, Durchschnittsbewertung, Lesetempo (StoryGraph-Stärke). M
+- ~~H Mehr Statistik~~ ✓ 09.11.2026
 - **I „Mehr wie dieses“** im Detailblatt: beliebte Bücher aus gleichem Genre/Autor-Umfeld (aus der eigenen Datenbank). M
 - **J Wunschliste teilen** (z. B. für Geschenke): Merkliste als Link, der die ISBNs im Link trägt – ohne Server, ohne Konto. M
 - **K Import aus Goodreads/StoryGraph** (CSV-Export → eigene Bibliothek, Abgleich über ISBN). M
-- **L Meine Bücher als Cover-Regal** (gibt es schon über den Raster-Schalter) + Sortierung „zuletzt hinzugefügt“. S
+- ~~L zuletzt hinzugefügt~~ – gab es schon
 - **M Leihe in Bibliotheken** (Onleihe-Suche als Link aus dem Detailblatt). S – nur Link, kein Abruf
 
 ## Mit dem Import am 01.12.2026 (automatisch, schon im Code)

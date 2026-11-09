@@ -2,7 +2,7 @@ import { catalog } from './catalog.js';
 import { groupEditions, compareTitle, compareAuthor, normalizeText, searchableSubtitle } from './works.js';
 import { exportJson, importJson } from './store.js';
 import { normalizeIsbn } from './isbn.js';
-import { library, loadLibrary, entryFor, onLibraryChange, allTags, refreshEntry } from './library.js';
+import { library, loadLibrary, entryFor, onLibraryChange, allTags, addShelf, refreshEntry } from './library.js';
 import { bookCard } from './card.js';
 import { renderSeries } from './series.js';
 import { renderStats } from './stats.js';
@@ -388,14 +388,82 @@ $('#viewToggle').addEventListener('click', () => {
 // ---------- Meine Bücher ----------
 const libView = { sub: 'list', filter: 'owned', tag: '' };
 
+// Regale: Auswahl immer sichtbar, sobald es eins gibt; „+ Regal“ legt ein neues (zunächst leeres) an (09.11.2026).
+const NEW_SHELF = '__new__';
 function renderTagFilter() {
   const sel = $('#tagFilter');
   const tags = allTags();
   if (libView.tag && !tags.includes(libView.tag)) libView.tag = '';
   sel.hidden = !tags.length;
-  sel.replaceChildren(el('option', { value: '', text: 'Alle Regale' }), ...tags.map((t) => el('option', { value: t, text: `Regal: ${t}` })));
+  $('#addShelfBtn').hidden = !!tags.length; // mit Regalen steckt „+ Neues Regal“ in der Auswahl
+  sel.replaceChildren(el('option', { value: '', text: 'Alle Regale' }), ...tags.map((t) => el('option', { value: t, text: `Regal: ${t}` })),
+    el('option', { value: NEW_SHELF, text: '+ Neues Regal …' }));
   sel.value = libView.tag;
 }
+
+function newShelf() {
+  const name = addShelf(window.prompt('Name des neuen Regals (z. B. „Urlaub“, „Lieblinge“):') || '');
+  if (name) {
+    libView.tag = name;
+    libView.filter = 'all';
+    document.querySelectorAll('.chip[data-filter]').forEach((c) => c.setAttribute('aria-pressed', String(c.dataset.filter === 'all')));
+  }
+  renderLibrary();
+}
+$('#addShelfBtn').addEventListener('click', newShelf);
+
+// „Was lese ich als Nächstes?“ – Zufallsbuch aus ungelesenen eigenen Büchern, der Merkliste oder einem Regal
+const random = { source: 'unread', pickKey: '' };
+const RANDOM_SOURCES = {
+  unread: { label: 'Ungelesen', pick: (e) => e.owned && !e.read && !e.abandoned },
+  wish: { label: 'Merkliste', pick: (e) => e.wish && !e.read },
+};
+function renderRandom(roll = false) {
+  const box = $('#randomBox');
+  const tags = allTags();
+  if (random.source.startsWith('tag:') && !tags.includes(random.source.slice(4))) random.source = 'unread';
+  const test = random.source.startsWith('tag:')
+    ? ((t) => (e) => (e.tags || []).includes(t) && !e.read && !e.abandoned)(random.source.slice(4))
+    : RANDOM_SOURCES[random.source].pick;
+  const pool = [...library.byKey.values()].filter(test);
+  const src = (key, label) => el('button', {
+    type: 'button', class: 'chip', 'aria-pressed': String(random.source === key), text: label,
+    onclick: () => { random.source = key; renderRandom(true); },
+  });
+  const shelfSel = tags.length ? el('select', { class: 'chip-select', 'aria-label': 'Aus Regal' },
+    el('option', { value: '', text: 'Aus Regal …' }), ...tags.map((t) => el('option', { value: `tag:${t}`, text: `Regal: ${t}` }))) : null;
+  if (shelfSel) {
+    shelfSel.value = random.source.startsWith('tag:') ? random.source : '';
+    shelfSel.classList.toggle('active', random.source.startsWith('tag:'));
+    shelfSel.addEventListener('change', () => { if (shelfSel.value) { random.source = shelfSel.value; renderRandom(true); } });
+  }
+  let result;
+  if (!pool.length) {
+    result = el('p', { class: 'empty', text: 'Hier ist gerade nichts Ungelesenes.' });
+  } else {
+    // Das gezeigte Buch bleibt stehen, auch wenn man es gerade als gelesen markiert – neu gewürfelt wird nur auf Wunsch
+    if (roll || !random.pickKey || !library.byKey.has(random.pickKey)) {
+      // Nicht zweimal hintereinander dasselbe Buch, wenn es eine Auswahl gibt
+      const choices = pool.length > 1 ? pool.filter((e) => e.key !== random.pickKey) : pool;
+      random.pickKey = choices[Math.floor(Math.random() * choices.length)].key;
+    }
+    result = bookCard(library.byKey.get(random.pickKey));
+  }
+  box.replaceChildren(...[
+    el('div', { class: 'random-head' },
+      el('strong', { text: 'Was lese ich als Nächstes?' }),
+      el('button', { type: 'button', class: 'link-btn', text: 'Schließen', onclick: () => toggleRandom(false) })),
+    el('div', { class: 'chips' }, src('unread', RANDOM_SOURCES.unread.label), src('wish', RANDOM_SOURCES.wish.label), shelfSel),
+    result,
+    pool.length > 1 ? el('button', { type: 'button', class: 'chip random-again', text: `🎲 Noch eins (${fmt.format(pool.length)} zur Auswahl)`, onclick: () => renderRandom(true) }) : null,
+  ].filter(Boolean));
+}
+function toggleRandom(open = $('#randomBox').hidden) {
+  $('#randomBox').hidden = !open;
+  $('#randomBtn').setAttribute('aria-expanded', String(open));
+  if (open) renderRandom(true);
+}
+$('#randomBtn').addEventListener('click', () => toggleRandom());
 
 function renderLibrary() {
   renderTagFilter();
@@ -403,8 +471,9 @@ function renderLibrary() {
   const items = [...library.byKey.values()].filter((e) => {
     if (libView.filter === 'owned' && !e.owned) return false;
     if (libView.filter === 'read' && !e.read) return false;
-    if (libView.filter === 'unread' && (!e.owned || e.read)) return false;
+    if (libView.filter === 'unread' && (!e.owned || e.read || e.abandoned)) return false;
     if (libView.filter === 'wish' && !e.wish) return false;
+    if (libView.filter === 'abandoned' && !e.abandoned) return false;
     if (libView.tag && !(e.tags || []).includes(libView.tag)) return false;
     return tokens.length ? matchesTokens(e, tokens, `${e.genre || ''} ${(e.tags || []).join(' ')} ${e.notes || ''}`) : true;
   });
@@ -425,10 +494,29 @@ function renderLibrary() {
   if (!items.length) {
     box.append(el('p', {
       class: 'empty',
-      text: total ? 'Nichts gefunden.' : 'Noch keine Bücher. Suche ein Buch und tippe auf „Besitze“ oder „Merken“.',
+      // Regal-Hinweis nur, wenn das Regal wirklich leer ist – sonst blendet nur der Filter alles aus
+      text: libView.tag && ![...library.byKey.values()].some((e) => (e.tags || []).includes(libView.tag))
+        ? `Im Regal „${libView.tag}“ steht noch nichts. Bücher kommen über „⋯“ → Regale hinein.`
+        : libView.tag ? 'In diesem Regal passt nichts zum Filter.'
+        : total ? 'Nichts gefunden.' : 'Noch keine Bücher. Suche ein Buch und tippe auf „Besitze“ oder „Merken“.',
     }));
   }
+  if (!$('#randomBox').hidden) renderRandom();
+  // Aktiven Filter in der wischbaren Zeile sichtbar halten (z. B. „Alle“ nach Wahl eines Regals)
+  const row = document.querySelector('.chips-scroll');
+  const active = row?.querySelector('.chip[aria-pressed="true"]');
+  if (row && active && (active.offsetLeft < row.scrollLeft || active.offsetLeft + active.offsetWidth > row.scrollLeft + row.clientWidth)) {
+    row.scrollLeft = active.offsetLeft - 16;
+  }
+  markChipsEnd();
 }
+// Ausblend-Verlauf rechts nur, solange die Filterzeile noch weitergeht
+function markChipsEnd() {
+  const row = document.querySelector('.chips-scroll');
+  if (row) row.classList.toggle('at-end', row.scrollLeft + row.clientWidth >= row.scrollWidth - 2);
+}
+document.querySelector('.chips-scroll')?.addEventListener('scroll', markChipsEnd, { passive: true });
+window.addEventListener('resize', markChipsEnd);
 
 function renderSub() {
   for (const b of document.querySelectorAll('.segmented button')) {
@@ -448,6 +536,7 @@ document.querySelectorAll('.segmented button').forEach((b) => b.addEventListener
 $('#libFilter').addEventListener('input', renderLibrary);
 $('#libSort').addEventListener('change', renderLibrary);
 $('#tagFilter').addEventListener('change', (ev) => {
+  if (ev.target.value === NEW_SHELF) { ev.target.value = libView.tag; newShelf(); return; }
   libView.tag = ev.target.value;
   // Ein Regal zeigt alle seine Bücher – egal ob im Besitz, gelesen oder gemerkt.
   if (libView.tag) {
