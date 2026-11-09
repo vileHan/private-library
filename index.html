@@ -32,6 +32,8 @@
       <button role="tab" id="tab-library" aria-controls="view-library" aria-selected="false" data-view="library">
         Meine Bücher <span class="count" id="libCount"></span>
       </button>
+      <button role="tab" id="tab-random" class="tab-dice" aria-controls="view-random" aria-selected="false" data-view="random"
+              aria-label="Zufallsbuch – was lese ich als Nächstes?" title="Was lese ich als Nächstes?">🎲</button>
     </nav>
   </header>
 
@@ -54,11 +56,20 @@
       <button id="moreBtn" class="more" hidden>Mehr laden</button>
     </section>
 
+    <section id="view-random" role="tabpanel" aria-labelledby="tab-random" hidden>
+      <div id="randomBox" class="random-page"></div>
+    </section>
+
     <section id="view-library" role="tabpanel" aria-labelledby="tab-library" hidden>
       <div class="segmented" role="group" aria-label="Ansicht">
         <button data-sub="list" aria-pressed="true">Liste</button>
         <button data-sub="series" aria-pressed="false">Reihen</button>
+        <button data-sub="shelves" aria-pressed="false">Regale</button>
         <button data-sub="stats" aria-pressed="false">Statistik</button>
+      </div>
+
+      <div id="sub-shelves" hidden>
+        <div id="shelvesBox" class="list"></div>
       </div>
 
       <div id="sub-series" hidden>
@@ -91,13 +102,6 @@
         <button class="chip" data-filter="wish" aria-pressed="false">Merkliste</button>
         <button class="chip" data-filter="abandoned" aria-pressed="false">Abgebrochen</button>
       </div>
-      <!-- Regale immer sichtbar („+ Regal“, wenn noch keins da ist) und Zufallsbuch -->
-      <div class="lib-row">
-        <select id="tagFilter" class="chip-select" aria-label="Regal"></select>
-        <button id="addShelfBtn" class="chip" type="button">+ Regal</button>
-        <button id="randomBtn" class="chip" type="button" aria-expanded="false" title="Was lese ich als Nächstes?">🎲 Zufallsbuch</button>
-      </div>
-      <div id="randomBox" class="random-box" hidden></div>
       <p class="status" id="libStatus" aria-live="polite"></p>
       <div id="libList" class="list"></div>
       </div>

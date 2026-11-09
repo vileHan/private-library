@@ -24,10 +24,6 @@ Alle kostenlos und lokal machbar (IndexedDB, vorhandener Katalog). Aufwand grob:
 - ~~L zuletzt hinzugefügt~~ – gab es schon
 - **M Leihe in Bibliotheken** (Onleihe-Suche als Link aus dem Detailblatt). S – nur Link, kein Abruf
 
-## Meine Bücher entzerren (Wunsch 10.11.2026, Aufbau vom Nutzer zu wählen)
-- Zufallsbuch als eigener Reiter: Würfel-Kästchen rechts in der Leiste „Suche | Meine Bücher“. Seite mit kurzer Erklärung im leeren Feld, Quellen „Ungelesen“ und „Gemerkt“ als Knöpfe (beide anwählbar), „Regale ▾“ als Aufklappliste mit mehreren Häkchen.
-- Regale: eigene Verwaltung (anlegen, umbenennen, löschen) – Varianten siehe Bericht 10.11.2026 (A: Regale im Zufall-/Listen-Filter, B: Regale als 4. Unteransicht „Liste · Reihen · Regale · Statistik“, C: Leiste unten mit 4 Reitern).
-
 ## Mit dem Import am 01.12.2026 (automatisch, schon im Code)
 - Pappbilderbücher (~5.900) und Spielleiter-Schirme fallen weg.
 - Känguru-Reihe mit vollen Titeln und Band 1–5; Box-Bände ohne Autor werden eingegliedert.

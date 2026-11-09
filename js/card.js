@@ -80,6 +80,13 @@ function openCoverZoom(src, title) {
   document.body.append(box);
 }
 
+/** Kleines Cover eines eigenen Eintrags (z. B. Vorschau-Streifen in der Regal-Übersicht). */
+export function coverThumb(entry) {
+  const box = el('div', { class: 'thumb' }, el('div', { class: 'cover' }, el('span', { class: 'ph' }), el('img', { alt: '', loading: 'lazy', decoding: 'async' })));
+  setCover(box, coverUrls(ownedIsbnsOf(entry), entry.coverIds, entry.coverIsbns || [], !!entry.fromDb), entry.title);
+  return box;
+}
+
 /** Lädt das Cover in ein Element mit .cover > img + .ph (Platzhalter-Buchstabe). */
 function setCover(root, urls, title) {
   const img = root.querySelector('.cover img');

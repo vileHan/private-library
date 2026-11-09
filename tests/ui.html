@@ -246,14 +246,36 @@
           const inUnread = $$('#libList .book .title').some((t) => t.textContent === 'Testbuch Abbruch');
           add('Abgebrochen: eigener Filter, Hinweis in der Infozeile, nicht unter „Ungelesen“ (D8)',
             titles.includes('Testbuch Abbruch') && /abgebrochen/.test(meta) && !inUnread, `${titles.length} Treffer, „${meta}“, ungelesen ${inUnread}`);
-          // Regal-Zeile: entweder Auswahl oder „+ Regal“ sichtbar, nie beides/keins; Zufallsbuch öffnet und schließt
-          const shelfOk = $('#tagFilter').hidden !== $('#addShelfBtn').hidden;
-          $('#randomBtn').click();
+          // D9 (Variante B): Liste ohne Regal-Zeile; Unteransicht „Regale“ – anlegen, umbenennen, löschen; Würfel-Reiter
+          const W = frame.contentWindow;
+          const lsBefore = W.localStorage.getItem('bibliothek-einstellungen');
+          const [pr, cf] = [W.prompt, W.confirm];
+          const listClean = !$('#tagFilter') && !$('#randomBtn');
+          $('.segmented button[data-sub="shelves"]').click();
           await sleep(100);
-          const randomOpen = !$('#randomBox').hidden && !!$('#randomBox .random-head');
-          $$('#randomBox .link-btn').find((b) => b.textContent === 'Schließen')?.click();
-          add('Regal-Zeile immer da („+ Regal“ oder Auswahl), Zufallsbuch öffnet und schließt (D9)',
-            shelfOk && randomOpen && $('#randomBox').hidden, JSON.stringify({ shelfOk, randomOpen }));
+          W.prompt = () => 'UI-Testregal';
+          $('#shelvesBox .shelf-add').click();
+          await sleep(200);
+          const opened = $('#shelvesBox .shelf-title')?.textContent === 'UI-Testregal';
+          W.prompt = () => 'UI-Testregal 2';
+          $$('#shelvesBox .link-btn').find((b) => b.textContent === 'Umbenennen').click();
+          await sleep(300);
+          const renamed = $('#shelvesBox .shelf-title')?.textContent === 'UI-Testregal 2';
+          W.confirm = () => true;
+          $$('#shelvesBox .link-btn').find((b) => b.textContent === 'Löschen').click();
+          await sleep(300);
+          const deleted = !lib.allTags().includes('UI-Testregal 2') && !$('#shelvesBox .shelf-title');
+          W.prompt = pr; W.confirm = cf;
+          add('Liste ohne Regal-Zeile; Regale: anlegen, umbenennen, löschen (D9)', listClean && opened && renamed && deleted,
+            JSON.stringify({ listClean, opened, renamed, deleted }));
+          $('#tab-random').click();
+          await sleep(100);
+          const rnd = { hint: !!$('#randomBox .random-hint'), chips: $$('#randomBox .chip').map((c) => c.textContent).join('|'),
+            shelves: !!$('#randomBox details.multi'), dice: !!$('#randomBox .dice-btn'), visible: !$('#view-random').hidden };
+          add('Würfel-Reiter: Erklärung, „Ungelesen“, „Gemerkt“, „Regale ▾“, Würfeln (D9)',
+            rnd.hint && /Ungelesen/.test(rnd.chips) && /Gemerkt/.test(rnd.chips) && rnd.shelves && rnd.dice && rnd.visible, JSON.stringify(rnd));
+          if (lsBefore === null) W.localStorage.removeItem('bibliothek-einstellungen'); else W.localStorage.setItem('bibliothek-einstellungen', lsBefore);
+          $('#tab-library').click();
           $('.segmented button[data-sub="stats"]').click();
           await sleep(100);
           add('Statistik: Jahresziel-Block und „abgebrochen“-Kachel (D10)',

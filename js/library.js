@@ -66,6 +66,25 @@ export function allTags() {
   return [...tags].sort((a, b) => a.localeCompare(b, 'de'));
 }
 
+/** Regal umbenennen: in allen Einträgen und in der Liste der leeren Regale. */
+export async function renameShelf(oldName, newName) {
+  const t = newName.trim();
+  if (!t || t === oldName) return oldName;
+  for (const e of [...library.byKey.values()]) {
+    if ((e.tags || []).includes(oldName)) await updateEntry(e, (x) => { x.tags = [...new Set(x.tags.map((y) => (y === oldName ? t : y)))]; });
+  }
+  settings.set('shelves', [...new Set(settings.get('shelves', []).map((s) => (s === oldName ? t : s)))]);
+  return t;
+}
+
+/** Regal löschen: Die Bücher bleiben, nur die Zuordnung verschwindet (Einträge ohne sonstige Angaben fallen weg). */
+export async function deleteShelf(name) {
+  for (const e of [...library.byKey.values()]) {
+    if ((e.tags || []).includes(name)) await updateEntry(e, (x) => { x.tags = x.tags.filter((y) => y !== name); });
+  }
+  settings.set('shelves', settings.get('shelves', []).filter((s) => s !== name));
+}
+
 /** Leeres Regal anlegen (pro Gerät gespeichert, bis ein Buch hineinkommt). */
 export function addShelf(name) {
   const t = name.trim();
