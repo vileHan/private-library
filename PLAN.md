@@ -3,9 +3,10 @@
 Nur was noch zu tun ist. Erledigtes steht in der Git-Historie, Entscheidungen und Details in [CLAUDE.md](CLAUDE.md),
 prüfbare Anforderungen in [ANFORDERUNGEN.md](ANFORDERUNGEN.md). Stand: 09.11.2026.
 
-## Am iPhone ausprobieren (nur dort prüfbar)
-- Wischen, das auf einem Knopf beginnt (Knöpfe jetzt ohne Label, Schalter nur in der Mitte): scrollt die Liste? Falls nicht: Entscheidung Haptik oder freies Wischen.
-- Reihen-Link im Detailblatt per Finger.
+## Als Nächstes (Reihenfolge vom Nutzer, 09.11.2026 – sobald wieder Tokens da sind)
+1. **Wischen ab den Knöpfen verbessern.** Stand: Normales Wischen klappt einwandfrei; wer es drauf anlegt, schafft es noch, dass ein Wischen auf einem Knopf hängen bleibt (vermutlich, wenn es in der Knopfmitte über dem iOS-Schalter beginnt). Nutzer ist „soweit zufrieden, könnte besser sein“. Ideen: Schalter-Fläche weiter verkleinern, Schalter erst nach kurzer Ruhe aktivieren, oder Haptik gegen freies Wischen abwägen (Entscheidung Nutzer).
+2. **Gesamte App analysieren und Feature-Ideen sammeln:** Was bieten ähnliche Apps (Goodreads, StoryGraph, Hardcover, Bookly, Libib, Kindle/Apple Books …), das hier angenehm wäre? Vorschläge dem Nutzer vorlegen.
+3. Wenn dort nichts mehr gefällt: **diese Liste abarbeiten.**
 
 ## Mit dem Import am 01.12.2026 (automatisch, schon im Code)
 - Pappbilderbücher (~5.900) und Spielleiter-Schirme fallen weg.
