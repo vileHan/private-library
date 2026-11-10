@@ -59,6 +59,28 @@ export async function refreshEntry(work) {
   for (const i of fresh.isbns || []) library.byIsbn.set(i, fresh.key);
 }
 
+/**
+ * Alle eigenen Einträge aus dem Katalog auffrischen (Band, Reihe, Titel, Jahr, Cover …) – bisher geschah das nur,
+ * wenn ein Buch zufällig in einer Suche auftauchte; ältere Einträge zeigten dann z. B. keinen Band (Nutzer 10.11.2026).
+ * Läuft beim Start im Hintergrund, höchstens alle 12 Stunden. Gibt die Zahl geänderter Einträge zurück.
+ */
+export async function refreshAllFromDb(worksByKeys, { force = false } = {}) {
+  const last = settings.get('lastRefresh', 0);
+  if (!force && Date.now() - last < 12 * 3600 * 1000) return 0;
+  const entries = [...library.byKey.values()]; // auch per ISBN gescannte: gleicher Werkschlüssel wie im Katalog
+  if (!entries.length) return 0;
+  const works = await worksByKeys(entries.map((e) => e.key));
+  let changed = 0;
+  for (const w of works) {
+    const before = JSON.stringify(library.byKey.get(w.key));
+    await refreshEntry(w);
+    if (JSON.stringify(library.byKey.get(w.key)) !== before) changed++;
+  }
+  settings.set('lastRefresh', Date.now());
+  if (changed) await loadLibrary();
+  return changed;
+}
+
 /** Alle Regale, alphabetisch: vergebene Schlagworte plus leer angelegte Regale („+ Regal“ in Meine Bücher). */
 export function allTags() {
   const tags = new Set(settings.get('shelves', []));

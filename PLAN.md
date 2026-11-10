@@ -13,6 +13,8 @@ Vorher die App einmal schließen und neu öffnen, damit die neue Version ankommt
 6. **Würfel-Reiter 🎲:** Ungelesen/Gemerkt/Regale ▾ (mehrere Häkchen), Aufklappliste schließt beim Tippen daneben, Würfeln.
 7. **Statistik:** Jahresziel festlegen; nach kurzer Zeit erscheinen Seitenzahlen.
 8. **Sicherung:** Exportieren → Datei in „Dateien“ speichern; testweise auf einem zweiten Gerät (iPad) importieren.
+9. **Darstellung:** Meine Bücher → „Darstellung“: Papier & Tinte ↔ Klassisch, Farben durchprobieren (hell und dunkel); welche Farbe passt zur Beschenkten?
+10. **Geschenk-Link** (aus dem Chat, nicht im Repository): in Safari öffnen → Gruß; dann „Zum Home-Bildschirm“ → App öffnen: Name und Gruß auch dort (einmal)? Karte drucken, falten, QR-Code scannen.
 
 ## Als Nächstes (Reihenfolge vom Nutzer, 09.11.2026 – sobald wieder Tokens da sind)
 1. ~~Wischen ab den Knöpfen verbessern~~ → 09.11.2026: Schalter beim Scrollen abgeschaltet, Fläche nur noch mittleres Drittel. Am iPhone nachprüfen.

@@ -127,6 +127,22 @@ export async function runAll() {
   results.push({ name: 'Biss: Verlagsreihe „Carlsen“ gilt nicht als Buchreihe', ok: biss.length >= 1 && biss.every((w) => !/carlsen/i.test(w.series)),
     detail: biss.map((w) => `${w.title} / ${w.series || '–'}`).join('; ') });
 
+  // Dungeon Crawler Carl (Analyse 10.11.2026): Band 1 heißt wie die Reihe und hat keine Nummer, Bände 2–5 schon →
+  // Band 1 wird ergänzt, Titel aus dem Untertitel ohne „: Roman“
+  const dcc = (await grouped('Dinniman Dungeon Crawler Carl', 1)).filter((w) => /Dinniman/.test(w.authors.join()) && w.series === 'Dungeon Crawler Carl');
+  const dcc1 = dcc.find((w) => w.volume === '1');
+  results.push({ name: 'Dungeon Crawler Carl: erster Band ohne Nummer wird Band 1', ok: !!dcc1 && dcc1.title === 'Entertainment ist Pflicht - Überleben nicht',
+    detail: dcc.map((w) => `${w.title} / ${w.volume || '–'}`).join('; ') });
+  // Gegenfall (Prüfrunde 10.11.2026): Heißt ein Buch des Autors genau wie die Reihe („Little Brother“, ohne Reihenangabe),
+  // ist das der Band 1 – das unnummerierte „Homeland“ bekommt dann KEINEN Band 1
+  const lb = groupEditions([
+    { isbns: ['9780000000101'], authors: ['Cory Doctorow'], authorsSort: ['Doctorow, Cory'], title: 'Little Brother', sortTitle: 'Little Brother', subtitle: '', series: '', volume: '', looseSeries: '', year: 2008, genres: [], themes: [] },
+    { isbns: ['9780000000102'], authors: ['Cory Doctorow'], authorsSort: ['Doctorow, Cory'], title: 'Homeland', sortTitle: 'Homeland', subtitle: '', series: 'Little Brother', volume: '', looseSeries: '', year: 2013, genres: [], themes: [] },
+    { isbns: ['9780000000103'], authors: ['Cory Doctorow'], authorsSort: ['Doctorow, Cory'], title: 'Zweiter Teil', sortTitle: 'Zweiter Teil', subtitle: '', series: 'Little Brother', volume: '2', looseSeries: '', year: 2014, genres: [], themes: [] },
+  ]);
+  results.push({ name: 'Band-1-Regel greift nicht, wenn ein Buch des Autors wie die Reihe heißt (Little Brother)',
+    ok: !lb.find((w) => w.title === 'Homeland')?.volume, detail: lb.map((w) => `${w.title} / ${w.volume || '–'}`).join('; ') });
+
   // Känguru (Analyse 09.11.2026): „Die Känguru-Chroniken“ blieb als „Chroniken“ übrig (Reihe „Die Känguru“ vorne
   // abgeschnitten), Band 4 fehlte (steht nur im Box-Datensatz ohne Autor). Erwartet: volle Titel, Bände 1–5.
   const kang = (await grouped('Marc-Uwe Kling Känguru', 2)).filter((w) => /Kling/.test(w.authors.join()) && w.series);

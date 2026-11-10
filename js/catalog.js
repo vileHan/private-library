@@ -134,6 +134,19 @@ export const catalog = {
 
   get canBrowse() { return useDb(); },
 
+  /** Katalog-Werke zu Werkschlüsseln (für das Auffrischen eigener Einträge), je 40 Schlüssel pro Abruf. */
+  async worksByKeys(keys) {
+    if (!useDb() || !keys.length) return [];
+    const out = [];
+    for (let i = 0; i < keys.length; i += 40) {
+      const part = keys.slice(i, i + 40).map((k) => `"${k.replace(/["\\]/g, '\\$&')}"`).join(',');
+      const res = await fetch(`${sb.url}/rest/v1/works?select=*&id=in.(${encodeURIComponent(part)})`, { headers: { apikey: sb.anonKey } });
+      if (!res.ok) throw new Error(`Datenbank antwortet mit Fehler ${res.status}`);
+      out.push(...(await res.json()).map(toWork));
+    }
+    return out;
+  },
+
   /** Alle Bände einer Reihe als Werke. */
   async seriesWorks(series, authorSort) {
     if (useDb()) {

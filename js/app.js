@@ -2,7 +2,7 @@ import { catalog } from './catalog.js';
 import { groupEditions, compareTitle, compareAuthor, normalizeText, searchableSubtitle } from './works.js';
 import { exportJson, importJson } from './store.js';
 import { normalizeIsbn } from './isbn.js';
-import { library, loadLibrary, entryFor, onLibraryChange, refreshEntry } from './library.js';
+import { library, loadLibrary, entryFor, onLibraryChange, refreshEntry, refreshAllFromDb } from './library.js';
 import { bookCard } from './card.js';
 import { renderSeries } from './series.js';
 import { renderStats } from './stats.js';
@@ -12,6 +12,8 @@ import { $, el, fmt, plural, ignoreScrollBriefly } from './util.js';
 import { scanIsbn } from './scan.js';
 import { settings } from './settings.js';
 import { GENRES } from './genres.js';
+import { applyTheme, renderLook } from './theme.js';
+import { initGift, showGreeting, giftData } from './gift.js';
 
 onLibraryChange(() => {
   const owned = [...library.byKey.values()].filter((e) => e.owned).length;
@@ -507,3 +509,17 @@ renderGenreChips();
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('sw.js').catch(() => {});
 }
+// Eigene Einträge im Hintergrund mit dem Katalog abgleichen (Band, Reihe, Cover …), höchstens alle 12 Stunden
+refreshAllFromDb((keys) => catalog.worksByKeys(keys)).then((n) => {
+  if (n && !$('#view-library').hidden) renderSub();
+}).catch(() => {});
+
+// Darstellung und Geschenk (10.11.2026)
+applyTheme();
+initGift();
+$('#lookBox').addEventListener('toggle', () => {
+  if (!$('#lookBox').open) return;
+  renderLook($('#lookControls'), () => (giftData()
+    ? [el('button', { type: 'button', class: 'link-btn', text: 'Geburtstagsgruß noch einmal ansehen ›', onclick: () => showGreeting() })]
+    : []));
+});

@@ -11,6 +11,8 @@
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="Bibliothek">
+  <!-- Stil/Akzentfarbe sofort setzen (kein Aufblitzen des alten Stils), Rest in js/theme.js -->
+  <script>try { const s = JSON.parse(localStorage.getItem("bibliothek-einstellungen")) || {}; const st = s.style === "classic" ? "classic" : "paper"; document.documentElement.dataset.style = st; document.documentElement.dataset.accent = s.accent || (st === "paper" ? "tinte" : "salbei"); } catch {}</script>
   <link rel="stylesheet" href="css/style.css">
   <script type="module" src="js/app.js"></script>
 </head>
@@ -113,6 +115,10 @@
           <button id="exportBtn" type="button">Exportieren</button>
           <label class="button">Importieren<input id="importInput" type="file" accept="application/json,.json" hidden></label>
         </div>
+      </details>
+      <details class="data look" id="lookBox">
+        <summary>Darstellung</summary>
+        <div id="lookControls"></div>
       </details>
     </section>
   </main>

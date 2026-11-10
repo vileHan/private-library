@@ -43,7 +43,8 @@ export function workKeyOf(edition) {
 
 /** „das Vermächtnis der Drachenreiter ; Roman zum Film“ → „Das Vermächtnis der Drachenreiter“ */
 function mainSubtitle(s = '') {
-  const t = s.split(/\s+;\s+/)[0].trim();
+  // „Entertainment ist Pflicht - Überleben nicht : Roman“ → ohne „: Roman“ (Untertitel wird zum Titel, Dungeon Crawler Carl 1)
+  const t = s.split(/\s+;\s+/)[0].replace(/\s+:\s+(ein(e)?\s+)?(roman|thriller|krimi(nalroman)?|fantasy(-?roman)?)$/i, '').trim();
   return t ? t.charAt(0).toUpperCase() + t.slice(1) : '';
 }
 
@@ -231,6 +232,14 @@ const NUMBER_MAX = 10;
  * durchzählen – überall soll „Band 1“, „Band 2“ stehen. Hat auch nur ein Band eine Nummer, bleibt alles, wie die DNB es angibt.
  */
 export function numberSeries(works) {
+  // Titel je Autor: Heißt ein anderes Buch des Autors genau wie die Reihe („Little Brother“), ist DAS der eigentliche
+  // Band 1 (ohne Reihenangabe) – dann bekommt das unnummerierte Buch (Homeland) keinen Band 1 (Prüfrunde 10.11.2026).
+  const titlesByAuthor = new Map();
+  for (const w of works) {
+    const a = normalizeText(w.authorSort || '');
+    if (!titlesByAuthor.has(a)) titlesByAuthor.set(a, new Set());
+    titlesByAuthor.get(a).add(titleKey(w.title));
+  }
   const bySeries = new Map();
   for (const w of works) {
     if (!w.series) continue;
@@ -239,7 +248,20 @@ export function numberSeries(works) {
     bySeries.get(k).push(w);
   }
   for (const list of bySeries.values()) {
-    if (list.length > NUMBER_MAX || list.some((w) => w.volume)) continue;
+    if (list.some((w) => w.volume)) {
+      // Fehlender Band 1: Der erste Band heißt oft nur wie die Reihe („Dungeon Crawler Carl : Entertainment ist
+      // Pflicht …“), die DNB vergibt ihm keine Nummer, die Folgebände schon (ab 2). Gibt es genau EIN Buch ohne
+      // Nummer, ist Band 1 frei und das Buch nicht jünger als Band 2, ist es Band 1 (Analyse 10.11.2026).
+      const unnumbered = list.filter((w) => !w.volume);
+      const vols = list.filter((w) => w.volume).map((w) => Number(w.volume));
+      const second = list.find((w) => Number(w.volume) === 2);
+      const seriesTitleTaken = titlesByAuthor.get(normalizeText(list[0].authorSort || ''))?.has(titleKey(list[0].series))
+        && titleKey(unnumbered[0]?.title || '') !== titleKey(list[0].series);
+      if (unnumbered.length === 1 && !vols.includes(1) && second && !seriesTitleTaken
+        && (!unnumbered[0].year || !second.year || unnumbered[0].year <= second.year)) unnumbered[0].volume = '1';
+      continue;
+    }
+    if (list.length > NUMBER_MAX) continue;
     list.sort((a, b) => (a.year || 9999) - (b.year || 9999) || compareTitle(a, b));
     list.forEach((w, i) => { w.volume = String(i + 1); });
   }

@@ -225,6 +225,67 @@
         await lib.loadLibrary();
       }
 
+      // D4b: Alle eigenen Einträge werden beim Start aus dem Katalog aufgefrischt (fehlender Band), eigene Angaben bleiben
+      {
+        const KEY3 = 'paolini christopher|auftrag des aeltesten';
+        const had = (await store.getAll()).some((x) => x.key === KEY3);
+        if (!had) {
+          await store.put({ key: KEY3, title: 'Der Auftrag des Ältesten', sortTitle: 'Auftrag des Ältesten', subtitle: '', authors: ['Christopher Paolini'],
+            authorSort: 'Paolini, Christopher', year: 2006, genre: '', publisher: '', series: '', volume: '', isbns: ['9783570128039'], coverIsbns: [],
+            coverIds: [], editions: [], owned: true, read: false, readAt: null, wish: false, abandoned: false, rating: null, notes: 'Testnotiz', tags: [],
+            ownedIsbns: [], addedAt: '2025-01-01T00:00:00Z' });
+          await lib.loadLibrary();
+          try {
+            const { catalog } = await imp('catalog.js');
+            await lib.refreshAllFromDb((k) => catalog.worksByKeys(k), { force: true });
+            const e = (await store.getAll()).find((x) => x.key === KEY3);
+            add('Eigene Einträge werden aus dem Katalog aufgefrischt: Band ergänzt, Notiz bleibt (D4)',
+              e && e.series === 'Eragon' && e.volume === '2' && e.notes === 'Testnotiz' && e.owned, e ? `${e.series} ${e.volume}` : 'fehlt');
+          } finally {
+            await store.remove(KEY3);
+            await lib.loadLibrary();
+          }
+        }
+      }
+
+      // F1/F2: Darstellung (Stil, Akzentfarbe) und Geschenk-Link – Einstellungen danach wiederhergestellt
+      {
+        const W = frame.contentWindow;
+        const lsBefore = W.localStorage.getItem('bibliothek-einstellungen');
+        const theme = await imp('theme.js');
+        const gift = await imp('gift.js');
+        const box = doc().createElement('div');
+        theme.renderLook(box);
+        [...box.querySelectorAll('.chip')].find((b) => b.textContent === 'Klassisch').click();
+        const classic = doc().documentElement.dataset.style === 'classic';
+        theme.renderLook(box);
+        box.querySelector('.swatch[aria-label="Bordeaux"]').click();
+        const bordeaux = doc().documentElement.dataset.accent === 'bordeaux';
+        [...box.querySelectorAll('.chip')].find((b) => b.textContent === 'Papier & Tinte').click();
+        const paper = doc().documentElement.dataset.style === 'paper';
+        add('Darstellung: Stil und Akzentfarbe umschaltbar (F1)', classic && bordeaux && paper, JSON.stringify({ classic, bordeaux, paper }));
+        const data = { n: 'Anna', m: 'Alles Liebe! ✨', c: 'pflaume' };
+        const code = gift.encodeGift(data);
+        const back = gift.giftFromUrl({ hash: `#g=${code}`, search: '' });
+        add('Geschenk-Link: Daten hin und zurück, Titel „Annas“/„Klaus’ Bibliothek“ (F2)',
+          JSON.stringify(back) === JSON.stringify(data) && gift.libraryTitle('Anna') === 'Annas Bibliothek' && gift.libraryTitle('Klaus') === 'Klaus’ Bibliothek'
+            && !gift.giftFromUrl({ hash: '#g=kaputt!', search: '' }), code.length + ' Zeichen');
+        // Mit gespeichertem Geschenk: „Geburtstagsgruß noch einmal ansehen“ bleibt nach einem Farbwechsel stehen
+        const { settings } = await imp('settings.js');
+        settings.set('gift', { n: 'Anna' });
+        $('#tab-library').click();
+        const look = $('#lookBox');
+        look.open = true;
+        look.dispatchEvent(new W.Event('toggle'));
+        $('#lookControls .swatch[aria-label="Petrol"]').click();
+        const greetBtn = $$('#lookControls .link-btn').some((b) => /Geburtstagsgruß/.test(b.textContent));
+        look.open = false;
+        $('#tab-search').click();
+        add('Darstellung: Gruß-Knopf bleibt nach Farbwechsel (F2)', greetBtn, '');
+        if (lsBefore === null) W.localStorage.removeItem('bibliothek-einstellungen'); else W.localStorage.setItem('bibliothek-einstellungen', lsBefore);
+        theme.applyTheme();
+      }
+
       // D8–D10: Meine Bücher – „Abgebrochen“, Regal-Zeile, Zufallsbuch, Jahresziel. Eigener Testeintrag, danach gelöscht;
       // die Geräte-Einstellungen (Regale, Jahresziel) werden am Ende wiederhergestellt.
       {

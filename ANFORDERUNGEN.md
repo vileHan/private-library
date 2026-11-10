@@ -70,6 +70,13 @@ Prüfart: **T** = automatischer Test (`tests/index.html`, `tests/ui.html`), **M*
 | E5 | Titel sauber: keine Werbetexte, kein „ : Roman“, kein „ / Ill. von“. Namen mit Punkt nach Initialen. Stichprobe: höchstens 3 unsaubere Titel unter 200. | M |
 | E6 | Cover: Anteil mit Cover je Jahrgang wird gemessen und berichtet (Ziel: steigend; Quellen nur kostenlos und erlaubt). | M |
 
+## F – Darstellung und Geschenk (10.11.2026)
+
+| ID | Kriterium | Prüfart |
+|---|---|---|
+| F1 | Darstellung (Meine Bücher → „Darstellung“): Stil „Papier & Tinte“ (Standard; Cremepapier, Buchschrift für Titel, ruhige Kopfleiste) oder „Klassisch“, 6 Akzentfarben (Tinte, Salbei, Bordeaux, Ocker, Pflaume, Petrol), hell und dunkel lesbar, pro Gerät gespeichert, kein Aufblitzen beim Laden. | T + S |
+| F2 | Geschenk-Link …/#g=<Code>: Name in der Kopfleiste („Annas Bibliothek“), optional Akzentfarbe, Geburtstagsgruß beim ersten Öffnen (je Gerät/App einmal, später unter „Darstellung“ wieder abrufbar). Daten nur im Link und im Gerätespeicher, nie im Repository. Druckbare Karte karte.html#g=<Code> mit QR-Code und Anleitung. | T + S + H |
+
 ## Eingang (neue Wünsche, noch nicht eingeordnet)
 
 -

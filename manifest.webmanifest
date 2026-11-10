@@ -3,7 +3,6 @@
   "short_name": "Bibliothek",
   "description": "Private Bücherliste: nachsehen, welche Bücher ich besitze und gelesen habe.",
   "lang": "de",
-  "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "background_color": "#f6f3ec",
