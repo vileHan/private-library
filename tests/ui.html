@@ -294,7 +294,31 @@
         look.open = false;
         $('#tab-search').click();
         add('Darstellung: Gruß-Knopf bleibt nach Farbwechsel (F2)', greetBtn, '');
+        // Kurzlink: Code aus der Adresse; Abruf mit gestubbtem fetch (Daten, unbekannt, Fehler, hängt)
+        const cu = (hash) => gift.codeFromUrl({ hash, search: '' });
+        const codesOk = cu('#fuer-Abc') === 'abc' && cu('#fuer-x') === '' && cu('#g=abc') === '' && cu('#fuer-anna-7k') === 'anna-7k';
+        const realFetch = W.fetch;
+        W.fetch = async () => new W.Response(JSON.stringify({ n: 'Anna', m: 'Hallo' }), { status: 200 });
+        const okData = await gift.giftFromCode('anna');
+        W.fetch = async () => new W.Response('null', { status: 200 });
+        const unknown = await gift.giftFromCode('gibtsnicht');
+        W.fetch = async () => { throw new TypeError('offline'); };
+        const offline = await gift.giftFromCode('anna');
+        // Netz hängt: das gespeicherte Geschenk ist trotzdem sofort da (Titel + 🎂), nicht erst nach der Antwort
+        W.fetch = () => new Promise(() => {});
+        settings.set('gift', { n: 'Anna' });
+        settings.set('giftSeen', true);
+        const hist = W.location.hash;
+        W.history.replaceState(null, '', '#fuer-anna');
+        gift.initGift();
+        const instant = $('.top h1').textContent === 'Annas Bibliothek' && !!$('#giftBtn');
+        W.history.replaceState(null, '', W.location.pathname + hist);
+        W.fetch = realFetch;
+        gift.clearGift();
+        add('Geschenk-Kurzlink: Code aus der Adresse, Abruf (Daten/unbekannt/offline), Name sofort trotz hängendem Netz (F2)',
+          codesOk && okData?.n === 'Anna' && unknown === null && offline === null && instant, JSON.stringify({ codesOk, ok: okData?.n, unknown, offline, instant }));
         // 🎂 in der Kopfleiste (nur mit Geschenk), Melodie ~4 s, „Geschenk entfernen“ nimmt den Knopf wieder weg
+        settings.set('gift', { n: 'Anna' });
         settings.set('giftSeen', true);
         await gift.initGift();
         const cake = !!$('#giftBtn');

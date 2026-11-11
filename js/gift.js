@@ -37,6 +37,7 @@ export async function giftFromCode(code) {
   try {
     const res = await fetch(`${sb.url}/rest/v1/rpc/gift_by_code`, {
       method: 'POST', headers: { apikey: sb.anonKey, 'Content-Type': 'application/json' }, body: JSON.stringify({ code }),
+      signal: AbortSignal.timeout?.(3000), // hängende Verbindung (Funkloch): nach 3 s aufgeben
     });
     if (!res.ok) return null;
     const data = await res.json();
@@ -57,7 +58,9 @@ const isStandalone = () => window.navigator.standalone === true || window.matchM
  * so kennt auch die installierte App (eigener Speicher!) das Geschenk.
  */
 export async function initGift() {
-  // Kurzlink #fuer-<code>: Daten aus der Datenbank holen (offline: das zuletzt gespeicherte Geschenk bleibt)
+  // Erst das gespeicherte Geschenk sofort zeigen (kein Aufblitzen von „Meine Bibliothek“, auch bei schlechtem Netz),
+  // dann den Link prüfen: Kurzlink #fuer-<code> fragt die Datenbank (max. 3 s); offline bleibt das Gespeicherte.
+  showGift();
   const code = codeFromUrl();
   const fromUrl = giftFromUrl() || (code ? await giftFromCode(code) : null);
   if (fromUrl && JSON.stringify(fromUrl) !== JSON.stringify(giftData())) {
@@ -65,7 +68,12 @@ export async function initGift() {
     settings.set('giftSeen', false);
     if (ACCENTS[fromUrl.c]) settings.set('accent', fromUrl.c);
     applyTheme();
+    showGift();
   }
+}
+
+/** Gespeichertes Geschenk anzeigen: Titel, 🎂-Knopf, Gruß (falls noch nicht gesehen und nicht schon offen). */
+function showGift() {
   const gift = giftData();
   if (!gift) return;
   const title = libraryTitle(gift.n);
@@ -80,7 +88,7 @@ export async function initGift() {
       onclick: () => showGreeting({ music: true }),
     }));
   }
-  if (!settings.get('giftSeen', false)) showGreeting();
+  if (!settings.get('giftSeen', false) && !document.querySelector('.gift-greeting')) showGreeting();
 }
 
 /**

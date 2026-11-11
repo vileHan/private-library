@@ -22,7 +22,7 @@ for (const [code, data] of Object.entries(gifts)) {
      on conflict (code) do update set data = excluded.data, updated_at = now()`,
     [code, data],
   );
-  console.log(`Gespeichert: #fuer-${code}`);
+  console.log(`Gespeichert: ein Geschenk (Code mit ${code.length} Zeichen)`); // Code nicht ins öffentliche Log
 }
 const n = (await client.query('select count(*)::int as n from gifts')).rows[0].n;
 console.log(`Geschenke in der Datenbank: ${n}`);
