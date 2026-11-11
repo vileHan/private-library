@@ -326,6 +326,29 @@
         gift.clearGift();
         add('Geschenk: 🎂-Knopf in der Kopfleiste, Melodie 3–8 s, Entfernen räumt auf (F2)', cake && dur > 3 && dur < 8 && !$('#giftBtn')
           && $('.top h1').textContent === 'Meine Bibliothek', `Melodie ${dur.toFixed(1)} s`);
+        // Gruß ohne Infotexte (nur Gruß + „Los geht’s“), „Los geht’s“ → Konfetti über der App (fängt keine Berührung ab);
+        // Geschenk mit Farbe „rosa“ startet in Rosa (F2, 12.11.2026)
+        settings.set('gift', { n: 'Anna', m: 'Hallo', c: 'rosa' });
+        settings.set('giftSeen', true);
+        gift.showGreeting();
+        const g = $('.gift-greeting');
+        const slim = !!g && !g.querySelector('.gift-intro, .gift-install, .gift-music') && g.querySelectorAll('button').length === 1;
+        g?.querySelector('.dice-btn').click();
+        const burst = $('.confetti-burst');
+        const burstOk = W.matchMedia('(prefers-reduced-motion: reduce)').matches
+          || (!!burst && W.getComputedStyle(burst).pointerEvents === 'none' && W.getComputedStyle(burst).position === 'fixed');
+        burst?.remove();
+        await new Promise((r) => setTimeout(r, 350));
+        const greetGone = !$('.gift-greeting');
+        settings.set('gift', null);
+        W.history.replaceState(null, '', '#g=' + gift.encodeGift({ n: 'Anna', c: 'rosa' }));
+        await gift.initGift();
+        $('.gift-greeting')?.remove();
+        const rosa = doc().documentElement.dataset.accent === 'rosa'
+          && W.getComputedStyle(doc().documentElement).getPropertyValue('--accent').trim() !== '';
+        gift.clearGift();
+        add('Geschenk: Gruß nur mit „Los geht’s“, danach Konfetti; Farbe Rosa (F2)', slim && burstOk && greetGone && rosa,
+          JSON.stringify({ slim, burstOk, greetGone, rosa }));
         if (lsBefore === null) W.localStorage.removeItem('bibliothek-einstellungen'); else W.localStorage.setItem('bibliothek-einstellungen', lsBefore);
         theme.applyTheme();
       }

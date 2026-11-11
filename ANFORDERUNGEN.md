@@ -74,8 +74,8 @@ Prüfart: **T** = automatischer Test (`tests/index.html`, `tests/ui.html`), **M*
 
 | ID | Kriterium | Prüfart |
 |---|---|---|
-| F1 | Darstellung (Meine Bücher → „Darstellung“): Stil „Papier & Tinte“ (Standard; Cremepapier, Buchschrift für Titel, ruhige Kopfleiste) oder „Klassisch“, 6 Akzentfarben (Tinte, Salbei, Bordeaux, Ocker, Pflaume, Petrol), hell und dunkel lesbar, pro Gerät gespeichert, kein Aufblitzen beim Laden. | T + S |
-| F2 | Geschenk-Link …/#g=<Code>: Name in der Kopfleiste („Annas Bibliothek“), optional Akzentfarbe, Geburtstagsgruß beim ersten Öffnen (je Gerät/App einmal, später unter „Darstellung“ wieder abrufbar). Daten nur im Link und im Gerätespeicher, nie im Repository. Druckbare Karte karte.html#g=<Code> mit QR-Code und Anleitung. | T + S + H |
+| F1 | Darstellung (Meine Bücher → „Darstellung“): Stil „Papier & Tinte“ (Standard; Cremepapier, Buchschrift für Titel, ruhige Kopfleiste) oder „Klassisch“, 7 Akzentfarben (Tinte, Salbei, Bordeaux, Ocker, Pflaume, Petrol, Rosa), hell und dunkel lesbar, pro Gerät gespeichert, kein Aufblitzen beim Laden. | T + S |
+| F2 | Geschenk-Link …/#g=<Code>: Name in der Kopfleiste („Annas Bibliothek“), optional Akzentfarbe, Geburtstagsgruß beim ersten Öffnen (nur Gruß und „Los geht’s“, danach Konfetti über der App; je Gerät/App einmal, später per 🎂 wieder abrufbar). Daten nur im Link und im Gerätespeicher, nie im Repository. Druckbare Karte karte.html#g=<Code> mit QR-Code und Anleitung. | T + S + H |
 
 ## Eingang (neue Wünsche, noch nicht eingeordnet)
 

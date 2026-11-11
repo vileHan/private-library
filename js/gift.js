@@ -49,7 +49,6 @@ export async function giftFromCode(code) {
 export const libraryTitle = (name) => `${name}${/[sßxz]$/i.test(name) ? '’' : 's'} Bibliothek`;
 
 export const giftData = () => settings.get('gift', null);
-const isStandalone = () => window.navigator.standalone === true || window.matchMedia?.('(display-mode: standalone)').matches;
 
 /**
  * Beim Start aufrufen: Neuen Geschenk-Link übernehmen (nur wenn er sich vom gespeicherten unterscheidet – sonst würde
@@ -145,10 +144,14 @@ export function clearGift() {
 export function showGreeting({ music = false } = {}) {
   const gift = giftData();
   if (!gift) return;
+  // Nur der Gruß und „Los geht’s“ (Infotexte entfernt, 12.11.2026). „Los geht’s“ schließt mit einer Konfetti-Explosion
+  // über der Bibliothek; lief das Ständchen noch nicht (iOS: Ton erst nach einer Berührung), startet es jetzt.
   const close = () => {
     settings.set('giftSeen', true);
+    start();
     box.classList.add('closing');
     setTimeout(() => box.remove(), 300);
+    burstConfetti();
   };
   const confetti = el('div', { class: 'gift-confetti', 'aria-hidden': 'true' },
     ...Array.from({ length: 18 }, (_, i) => el('span', {
@@ -162,15 +165,65 @@ export function showGreeting({ music = false } = {}) {
       el('h2', { text: `Alles Gute zum Geburtstag, ${gift.n}!` }),
       gift.m ? el('p', { class: 'gift-message', text: gift.m }) : null,
       gift.v ? el('p', { class: 'gift-from', text: `– ${gift.v}` }) : null,
-      el('p', { class: 'gift-intro', text: 'Hier sammelst du alle deine Bücher: Suche ein Buch und tippe auf „Besitze“, „Gelesen“ oder „Merken“. Unter „Meine Bücher“ findest du Regale und Statistik, mit 🎲 ein Zufallsbuch.' }),
-      isStandalone() ? null : el('p', { class: 'gift-install', text: 'Tipp: Über „Teilen“ → „Zum Home-Bildschirm“ wird daraus eine App auf deinem Handy.' }),
-      el('button', { type: 'button', class: 'link-btn gift-music', text: '🎵 Ständchen abspielen', onclick: (ev) => { ev.stopPropagation(); playMelody(); } }),
       el('button', { type: 'button', class: 'dice-btn', text: 'Los geht’s 📚', onclick: close })));
   document.body.append(box);
-  // Melodie sofort versuchen (klappt, wenn der Gruß per Knopf geöffnet wurde); sonst beim ersten Antippen des Grußes
-  // – iOS erlaubt Ton erst nach einer Berührung. Nicht beim Tipp auf „Los geht’s“ (der schließt).
+  // Melodie sofort versuchen (klappt, wenn der Gruß per 🎂 geöffnet wurde); sonst beim ersten Antippen des Grußes
+  // oder spätestens mit „Los geht’s“ – iOS erlaubt Ton erst nach einer Berührung.
   let played = false;
-  const start = () => { if (!played) { played = true; playMelody(); } };
+  function start() { if (!played) { played = true; playMelody(); } }
   if (music || navigator.userActivation?.isActive) start();
-  box.addEventListener('pointerdown', (ev) => { if (!ev.target.closest('.dice-btn, .gift-music')) start(); });
+  box.addEventListener('pointerdown', start);
+}
+
+/**
+ * Konfetti-Explosion (12.11.2026): Papierschnipsel fliegen aus der Bildschirmmitte, fallen und verblassen (~3 s).
+ * Ein Canvas über der App ohne Berührungen (pointer-events: none) – man kann sofort weitertippen. Bei „Bewegung
+ * reduzieren“ entfällt sie. Farben: Akzentfarbe plus ein paar fröhliche Töne.
+ */
+export function burstConfetti({ count = 140, duration = 3000 } = {}) {
+  if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return null;
+  document.querySelector('.confetti-burst')?.remove();
+  const canvas = el('canvas', { class: 'confetti-burst', 'aria-hidden': 'true' });
+  document.body.append(canvas);
+  const ctx = canvas.getContext('2d');
+  if (!ctx) { canvas.remove(); return null; }
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const w = window.innerWidth, h = window.innerHeight;
+  canvas.width = w * dpr; canvas.height = h * dpr;
+  ctx.scale(dpr, dpr);
+  const accent = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#b03d6e';
+  const colors = [accent, accent, '#f4a3c4', '#ffd166', '#7bdcb5', '#8fb8ff', '#ff8a65', '#c39bf0'];
+  const pieces = Array.from({ length: count }, () => {
+    const angle = Math.random() * Math.PI * 2;
+    const speed = 5 + Math.random() * 9;
+    return {
+      x: w / 2, y: h * 0.42,
+      vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed - 4,
+      size: 6 + Math.random() * 6, rot: Math.random() * Math.PI, spin: (Math.random() - 0.5) * 0.4,
+      flip: Math.random() * Math.PI, color: colors[Math.floor(Math.random() * colors.length)],
+      round: Math.random() < 0.25,
+    };
+  });
+  const t0 = performance.now();
+  const frame = (now) => {
+    const t = now - t0;
+    if (t > duration || !canvas.isConnected) { canvas.remove(); return; }
+    ctx.clearRect(0, 0, w, h);
+    ctx.globalAlpha = t > duration - 800 ? Math.max(0, (duration - t) / 800) : 1;
+    for (const p of pieces) {
+      p.vx *= 0.97; p.vy = p.vy * 0.97 + 0.32; // Luftwiderstand, Schwerkraft
+      p.x += p.vx; p.y += p.vy; p.rot += p.spin; p.flip += 0.15;
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.rot);
+      ctx.scale(1, Math.abs(Math.cos(p.flip)) * 0.8 + 0.2); // Schnipsel dreht sich in der Luft
+      ctx.fillStyle = p.color;
+      if (p.round) { ctx.beginPath(); ctx.arc(0, 0, p.size / 2, 0, Math.PI * 2); ctx.fill(); }
+      else ctx.fillRect(-p.size / 2, -p.size / 3, p.size, p.size * 0.66);
+      ctx.restore();
+    }
+    requestAnimationFrame(frame);
+  };
+  requestAnimationFrame(frame);
+  return canvas;
 }

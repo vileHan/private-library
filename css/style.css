@@ -525,6 +525,7 @@ html[data-accent="bordeaux"] { --accent: #7d2f3c; --accent-soft: #f2dfe2; --acce
 html[data-accent="ocker"]    { --accent: #8a6417; --accent-soft: #f3e8d0; --accent-text: #fff; }
 html[data-accent="pflaume"]  { --accent: #5d3f73; --accent-soft: #ebe2f1; --accent-text: #fff; }
 html[data-accent="petrol"]   { --accent: #1d6470; --accent-soft: #d8ecee; --accent-text: #fff; }
+html[data-accent="rosa"]     { --accent: #b03d6e; --accent-soft: #f7e0ea; --accent-text: #fff; }
 @media (prefers-color-scheme: dark) {
   html:not([data-scheme="light"])[data-accent="tinte"]    { --accent: #8fb0d6; --accent-soft: #22303f; --accent-text: #0f1722; }
   html:not([data-scheme="light"])[data-accent="salbei"]   { --accent: #7fb8a5; --accent-soft: #263b35; --accent-text: #10201b; }
@@ -532,6 +533,7 @@ html[data-accent="petrol"]   { --accent: #1d6470; --accent-soft: #d8ecee; --acce
   html:not([data-scheme="light"])[data-accent="ocker"]    { --accent: #e1b45f; --accent-soft: #3a3020; --accent-text: #1e1505; }
   html:not([data-scheme="light"])[data-accent="pflaume"]  { --accent: #c0a2d8; --accent-soft: #33283d; --accent-text: #1a1022; }
   html:not([data-scheme="light"])[data-accent="petrol"]   { --accent: #79c2cc; --accent-soft: #1f3538; --accent-text: #0a1c1f; }
+  html:not([data-scheme="light"])[data-accent="rosa"]     { --accent: #f19ac0; --accent-soft: #3f2431; --accent-text: #2a0b19; }
 }
 html[data-scheme="dark"][data-accent="tinte"]    { --accent: #8fb0d6; --accent-soft: #22303f; --accent-text: #0f1722; }
 html[data-scheme="dark"][data-accent="salbei"]   { --accent: #7fb8a5; --accent-soft: #263b35; --accent-text: #10201b; }
@@ -539,6 +541,7 @@ html[data-scheme="dark"][data-accent="bordeaux"] { --accent: #e0919d; --accent-s
 html[data-scheme="dark"][data-accent="ocker"]    { --accent: #e1b45f; --accent-soft: #3a3020; --accent-text: #1e1505; }
 html[data-scheme="dark"][data-accent="pflaume"]  { --accent: #c0a2d8; --accent-soft: #33283d; --accent-text: #1a1022; }
 html[data-scheme="dark"][data-accent="petrol"]   { --accent: #79c2cc; --accent-soft: #1f3538; --accent-text: #0a1c1f; }
+html[data-scheme="dark"][data-accent="rosa"]     { --accent: #f19ac0; --accent-soft: #3f2431; --accent-text: #2a0b19; }
 
 /* Darstellung (Einstellungen in Meine Bücher) */
 .look .row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 10px 0; }
@@ -557,13 +560,13 @@ html[data-scheme="dark"][data-accent="petrol"]   { --accent: #79c2cc; --accent-s
 .gift-emoji { font-size: 2.6rem; }
 .gift-message { font-family: var(--serif, inherit); font-size: 1.05rem; line-height: 1.55; margin: 0 0 8px; white-space: pre-line; }
 .gift-from { font-style: italic; color: var(--muted); margin: 0 0 14px; }
-.gift-intro, .gift-install { font-size: .9rem; color: var(--muted); line-height: 1.5; margin: 10px 0; }
 .gift-card .dice-btn { margin-top: 8px; }
+/* Konfetti-Explosion nach „Los geht’s“ (burstConfetti in js/gift.js) – liegt über der App, fängt keine Berührung ab */
+.confetti-burst { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 75; pointer-events: none; }
 .gift-confetti span { position: absolute; top: -10%; font-size: 1.4rem; animation: gift-fall linear infinite; opacity: .85; }
 @keyframes gift-fall { to { transform: translateY(120vh) rotate(260deg); } }
 @media (prefers-reduced-motion: reduce) { .gift-confetti { display: none; } }
 .gift-actions { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; margin: 8px 0 0; }
-.gift-music { display: block; margin: 4px auto 10px; }
 /* Titel bleibt einzeilig, auch mit längerem Namen („Célines Bibliothek“) und drei Knöpfen daneben */
 .top h1 { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 html[data-style="paper"] .top h1 { font-size: clamp(1.05rem, 5vw, 1.35rem); }

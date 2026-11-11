@@ -13,6 +13,7 @@ export const ACCENTS = {
   ocker: { label: 'Ocker', color: '#8a6417' },
   pflaume: { label: 'Pflaume', color: '#5d3f73' },
   petrol: { label: 'Petrol', color: '#1d6470' },
+  rosa: { label: 'Rosa', color: '#b03d6e' },
 };
 
 export function currentLook() {
