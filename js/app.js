@@ -521,7 +521,7 @@ $('#lookBox').addEventListener('toggle', () => {
   if (!$('#lookBox').open) return;
   renderLook($('#lookControls'), () => (giftData()
     ? [el('p', { class: 'gift-actions' },
-        el('button', { type: 'button', class: 'link-btn', text: 'Geburtstagsgruß noch einmal ansehen ›', onclick: () => showGreeting() }),
+        el('button', { type: 'button', class: 'link-btn', text: 'Geburtstagsgruß noch einmal ansehen ›', onclick: () => showGreeting({ music: true }) }),
         el('button', {
           type: 'button', class: 'link-btn danger', text: 'Geschenk von diesem Gerät entfernen',
           onclick: () => { if (window.confirm('Name und Geburtstagsgruß von diesem Gerät entfernen? Bücher und Einstellungen bleiben.')) { clearGift(); $('#lookBox').open = false; } },

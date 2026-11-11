@@ -294,6 +294,14 @@
         look.open = false;
         $('#tab-search').click();
         add('Darstellung: Gruß-Knopf bleibt nach Farbwechsel (F2)', greetBtn, '');
+        // 🎂 in der Kopfleiste (nur mit Geschenk), Melodie ~4 s, „Geschenk entfernen“ nimmt den Knopf wieder weg
+        settings.set('giftSeen', true);
+        gift.initGift();
+        const cake = !!$('#giftBtn');
+        const dur = gift.playMelody();
+        gift.clearGift();
+        add('Geschenk: 🎂-Knopf in der Kopfleiste, Melodie 3–8 s, Entfernen räumt auf (F2)', cake && dur > 3 && dur < 8 && !$('#giftBtn')
+          && $('.top h1').textContent === 'Meine Bibliothek', `Melodie ${dur.toFixed(1)} s`);
         if (lsBefore === null) W.localStorage.removeItem('bibliothek-einstellungen'); else W.localStorage.setItem('bibliothek-einstellungen', lsBefore);
         theme.applyTheme();
       }

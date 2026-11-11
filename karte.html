@@ -24,7 +24,6 @@
     .back #qr svg, .back #qr img { width: 100%; height: 100%; }
     .back ol { text-align: left; padding-left: 5mm; margin: 0; font-size: 10.5pt; }
     .back li { margin-bottom: 2.5mm; }
-    .back .url { margin-top: auto; font-size: 8pt; color: var(--muted); word-break: break-all; }
     .err { color: #b33; text-align: center; padding: 40px 16px; }
     @media print {
       body { background: #fff; }
@@ -63,7 +62,6 @@
             <li>Unten auf <b>Teilen</b> tippen → <b>„Zum Home-Bildschirm“</b>.</li>
             <li>Die App auf dem Home-Bildschirm öffnen – und loslegen: Bücher suchen, „Besitze“, „Gelesen“ oder „Merken“ antippen.</li>
           </ol>
-          <div class="url">${esc(appUrl)}</div>
         </section>`;
       const qr = window.qrcode(0, 'M');
       qr.addData(appUrl);

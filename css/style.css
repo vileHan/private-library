@@ -563,3 +563,8 @@ html[data-scheme="dark"][data-accent="petrol"]   { --accent: #79c2cc; --accent-s
 @keyframes gift-fall { to { transform: translateY(120vh) rotate(260deg); } }
 @media (prefers-reduced-motion: reduce) { .gift-confetti { display: none; } }
 .gift-actions { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; margin: 8px 0 0; }
+.gift-music { display: block; margin: 4px auto 10px; }
+/* Titel bleibt einzeilig, auch mit längerem Namen („Célines Bibliothek“) und drei Knöpfen daneben */
+.top h1 { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+html[data-style="paper"] .top h1 { font-size: clamp(1.05rem, 5vw, 1.35rem); }
+.top-actions { flex: 0 0 auto; }

@@ -50,7 +50,50 @@ export function initGift() {
   const h1 = document.querySelector('.top h1');
   if (h1) h1.textContent = title;
   document.title = title;
+  // 🎂 in der Kopfleiste: Gruß jederzeit erneut abspielen (gibt es nur, wenn die App über einen Geschenk-Link kam)
+  const actions = document.querySelector('.top-actions');
+  if (actions && !document.getElementById('giftBtn')) {
+    actions.prepend(el('button', {
+      id: 'giftBtn', type: 'button', class: 'icon-btn', 'aria-label': 'Geburtstagsgruß abspielen', title: 'Geburtstagsgruß', text: '🎂',
+      onclick: () => showGreeting({ music: true }),
+    }));
+  }
   if (!settings.get('giftSeen', false)) showGreeting();
+}
+
+/**
+ * Leise „Happy Birthday“-Melodie (gemeinfrei), nur Töne, ~4 Sekunden, per Web Audio erzeugt – keine Datei, nichts
+ * wird geladen. Spieluhr-Klang (Dreieckswelle, kurz angeschlagen, ausklingend). Am iPhone spielt Web Audio erst nach
+ * einer Berührung und ist bei eingeschaltetem Stumm-Schalter still.
+ */
+let audio = null;
+let playingUntil = 0; // nicht doppelt übereinander abspielen
+export function playMelody() {
+  try {
+    audio ??= new (window.AudioContext || window.webkitAudioContext)();
+    if (audio.currentTime < playingUntil) return playingUntil - audio.currentTime;
+    if (audio.state === 'suspended') audio.resume();
+    const beat = 0.34;
+    // [Halbtöne über G4, Länge in Schlägen] – erste zwei Zeilen
+    const notes = [[0, .75], [0, .25], [2, 1], [0, 1], [5, 1], [4, 2], [0, .75], [0, .25], [2, 1], [0, 1], [7, 1], [5, 2]];
+    let t = audio.currentTime + 0.05;
+    for (const [semi, len] of notes) {
+      const freq = 392 * 2 ** (semi / 12);
+      const osc = audio.createOscillator();
+      const gain = audio.createGain();
+      osc.type = 'triangle';
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0.0001, t);
+      gain.gain.exponentialRampToValueAtTime(0.09, t + 0.02); // leise
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + Math.max(0.3, len * beat * 1.4));
+      osc.connect(gain).connect(audio.destination);
+      osc.start(t);
+      osc.stop(t + len * beat * 1.5);
+      t += len * beat;
+    }
+    playingUntil = t;
+    return t - audio.currentTime; // Dauer in Sekunden
+  } catch { return 0; }
 }
 
 /**
@@ -65,10 +108,11 @@ export function clearGift() {
   const h1 = document.querySelector('.top h1');
   if (h1) h1.textContent = 'Meine Bibliothek';
   document.title = 'Meine Bibliothek';
+  document.getElementById('giftBtn')?.remove();
 }
 
 /** Der Geburtstagsgruß als Vollbild. */
-export function showGreeting() {
+export function showGreeting({ music = false } = {}) {
   const gift = giftData();
   if (!gift) return;
   const close = () => {
@@ -90,6 +134,13 @@ export function showGreeting() {
       gift.v ? el('p', { class: 'gift-from', text: `– ${gift.v}` }) : null,
       el('p', { class: 'gift-intro', text: 'Hier sammelst du alle deine Bücher: Suche ein Buch und tippe auf „Besitze“, „Gelesen“ oder „Merken“. Unter „Meine Bücher“ findest du Regale und Statistik, mit 🎲 ein Zufallsbuch.' }),
       isStandalone() ? null : el('p', { class: 'gift-install', text: 'Tipp: Über „Teilen“ → „Zum Home-Bildschirm“ wird daraus eine App auf deinem Handy.' }),
+      el('button', { type: 'button', class: 'link-btn gift-music', text: '🎵 Ständchen abspielen', onclick: (ev) => { ev.stopPropagation(); playMelody(); } }),
       el('button', { type: 'button', class: 'dice-btn', text: 'Los geht’s 📚', onclick: close })));
   document.body.append(box);
+  // Melodie sofort versuchen (klappt, wenn der Gruß per Knopf geöffnet wurde); sonst beim ersten Antippen des Grußes
+  // – iOS erlaubt Ton erst nach einer Berührung. Nicht beim Tipp auf „Los geht’s“ (der schließt).
+  let played = false;
+  const start = () => { if (!played) { played = true; playMelody(); } };
+  if (music || navigator.userActivation?.isActive) start();
+  box.addEventListener('pointerdown', (ev) => { if (!ev.target.closest('.dice-btn, .gift-music')) start(); });
 }
