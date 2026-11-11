@@ -1,4 +1,5 @@
-// Geschenk-Link (10.11.2026): Ein persönlicher Link …/#g=<Daten> macht aus der App ein Geschenk:
+// Geschenk-Link (10.11.2026): Ein persönlicher Link …/#fuer-<code> (Daten in der Datenbank, Tabelle gifts) oder
+// …/#g=<Daten> (alle Daten im Link) macht aus der App ein Geschenk:
 //  • Name in der Kopfleiste („Annas Bibliothek“)            • eigene Akzentfarbe (optional)
 //  • Geburtstagsgruß beim ersten Öffnen (einmal pro Gerät/App, danach unter „Darstellung“ wieder abrufbar)
 // Die Daten stehen nur im Link (hinter „#“ – wird nicht an den Server geschickt) und danach im Speicher des Geräts,
@@ -6,6 +7,7 @@
 import { settings } from './settings.js';
 import { el } from './util.js';
 import { ACCENTS, applyTheme } from './theme.js';
+import { CONFIG } from './config.js';
 
 export function encodeGift(data) {
   const b = btoa(unescape(encodeURIComponent(JSON.stringify(data))));
@@ -24,6 +26,24 @@ export function giftFromUrl(loc = window.location) {
   return m ? decodeGift(m) : null;
 }
 
+/** Kurzlink …/#fuer-<code> (seit 10.11.2026): Code aus der Adresse */
+export function codeFromUrl(loc = window.location) {
+  return (loc.hash.match(/^#fuer-([a-z0-9-]{3,40})$/i) || [])[1]?.toLowerCase() || '';
+}
+/** Geschenk zum Kurzcode aus der Datenbank (Tabelle gifts, Funktion gift_by_code); null, wenn unbekannt/offline. */
+export async function giftFromCode(code) {
+  const sb = CONFIG.supabase;
+  if (!code || !sb) return null;
+  try {
+    const res = await fetch(`${sb.url}/rest/v1/rpc/gift_by_code`, {
+      method: 'POST', headers: { apikey: sb.anonKey, 'Content-Type': 'application/json' }, body: JSON.stringify({ code }),
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data && typeof data.n === 'string' ? data : null;
+  } catch { return null; }
+}
+
 /** „Anna“ → „Annas Bibliothek“, „Klaus“ → „Klaus’ Bibliothek“ */
 export const libraryTitle = (name) => `${name}${/[sßxz]$/i.test(name) ? '’' : 's'} Bibliothek`;
 
@@ -36,8 +56,10 @@ const isStandalone = () => window.navigator.standalone === true || window.matchM
  * Der Link bleibt in der Adresse stehen: Beim „Zum Home-Bildschirm“ übernimmt das iPhone ihn als Startadresse,
  * so kennt auch die installierte App (eigener Speicher!) das Geschenk.
  */
-export function initGift() {
-  const fromUrl = giftFromUrl();
+export async function initGift() {
+  // Kurzlink #fuer-<code>: Daten aus der Datenbank holen (offline: das zuletzt gespeicherte Geschenk bleibt)
+  const code = codeFromUrl();
+  const fromUrl = giftFromUrl() || (code ? await giftFromCode(code) : null);
   if (fromUrl && JSON.stringify(fromUrl) !== JSON.stringify(giftData())) {
     settings.set('gift', fromUrl);
     settings.set('giftSeen', false);
@@ -104,7 +126,7 @@ export function playMelody() {
 export function clearGift() {
   settings.set('gift', null);
   settings.set('giftSeen', false);
-  if (/[#&]g=/.test(location.hash)) history.replaceState(null, '', location.pathname + location.search);
+  if (/[#&]g=|^#fuer-/.test(location.hash)) history.replaceState(null, '', location.pathname + location.search);
   const h1 = document.querySelector('.top h1');
   if (h1) h1.textContent = 'Meine Bibliothek';
   document.title = 'Meine Bibliothek';

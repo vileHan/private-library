@@ -296,7 +296,7 @@
         add('Darstellung: Gruß-Knopf bleibt nach Farbwechsel (F2)', greetBtn, '');
         // 🎂 in der Kopfleiste (nur mit Geschenk), Melodie ~4 s, „Geschenk entfernen“ nimmt den Knopf wieder weg
         settings.set('giftSeen', true);
-        gift.initGift();
+        await gift.initGift();
         const cake = !!$('#giftBtn');
         const dur = gift.playMelody();
         gift.clearGift();

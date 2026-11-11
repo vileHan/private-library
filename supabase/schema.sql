@@ -367,3 +367,20 @@ create table if not exists import_state (
 );
 alter table import_state enable row level security; -- keine Policy: für die App unsichtbar
 alter table schema_version enable row level security;
+
+-- Geschenk-Links (10.11.2026): Kurzlink …/#fuer-<code> statt langem Link mit allen Daten. Name und Gruß liegen hier,
+-- NICHT im öffentlichen Repository; eingetragen über den Workflow „Geschenke speichern“ aus dem GitHub-Secret GIFTS.
+-- Die App sieht die Tabelle nicht (keine Policy), sondern holt genau EIN Geschenk über gift_by_code(code).
+create table if not exists gifts (
+  code text primary key,
+  data jsonb not null,
+  updated_at timestamptz not null default now()
+);
+alter table gifts enable row level security; -- keine Policy: Liste nicht abrufbar
+create or replace function gift_by_code(code text)
+returns jsonb
+language sql stable security definer
+set search_path = public
+as $$ select g.data from gifts g where g.code = lower(gift_by_code.code) $$;
+revoke all on function gift_by_code(text) from public;
+grant execute on function gift_by_code(text) to anon, authenticated;

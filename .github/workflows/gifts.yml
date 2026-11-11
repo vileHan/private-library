@@ -1,0 +1,21 @@
+name: Geschenke speichern
+
+# Schreibt die Geschenke aus dem Secret GIFTS in die Datenbank (Tabelle gifts). Dauer: ~1 Minute.
+# Name und Gruß stehen nur im Secret und in der Datenbank – nie im Repository oder im Log.
+on:
+  workflow_dispatch:
+
+jobs:
+  gifts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install --no-audit --no-fund
+      - run: node scripts/gifts.mjs
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          GIFTS: ${{ secrets.GIFTS }}

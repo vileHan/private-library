@@ -38,14 +38,16 @@
   <div class="sheet" id="sheet"></div>
   <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
   <script type="module">
-    import { giftFromUrl } from './js/gift.js';
+    import { giftFromUrl, codeFromUrl, giftFromCode } from './js/gift.js';
     const sheet = document.getElementById('sheet');
-    const gift = giftFromUrl();
+    // Kurzlink karte.html#fuer-<code> (Daten aus der Datenbank) oder karte.html#g=<Daten>
+    const short = codeFromUrl();
+    const gift = short ? await giftFromCode(short) : giftFromUrl();
     const code = (location.hash.match(/[#&]g=([\w-]+)/) || [])[1];
-    if (!gift || !code) {
-      sheet.innerHTML = '<p class="err">Kein Geschenk-Code im Link (…/karte.html#g=…).</p>';
+    if (!gift || (!short && !code)) {
+      sheet.innerHTML = '<p class="err">Kein Geschenk gefunden (…/karte.html#fuer-name).</p>';
     } else {
-      const appUrl = new URL(`./#g=${code}`, location.href).href;
+      const appUrl = new URL(short ? `./#fuer-${short}` : `./#g=${code}`, location.href).href;
       const esc = (s) => String(s || '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
       sheet.innerHTML = `
         <section class="card front">
