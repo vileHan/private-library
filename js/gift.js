@@ -53,6 +53,20 @@ export function initGift() {
   if (!settings.get('giftSeen', false)) showGreeting();
 }
 
+/**
+ * Geschenk von DIESEM Gerät entfernen (z. B. nach einem Test auf dem eigenen Handy): Name, Gruß und Merkzeichen weg,
+ * Kopfleiste wieder „Meine Bibliothek“. Andere Geräte (das der Beschenkten) sind davon nicht betroffen.
+ * Achtung: Steht der Link noch in der Adresszeile, würde er beim nächsten Laden wieder übernommen – deshalb entfernen.
+ */
+export function clearGift() {
+  settings.set('gift', null);
+  settings.set('giftSeen', false);
+  if (/[#&]g=/.test(location.hash)) history.replaceState(null, '', location.pathname + location.search);
+  const h1 = document.querySelector('.top h1');
+  if (h1) h1.textContent = 'Meine Bibliothek';
+  document.title = 'Meine Bibliothek';
+}
+
 /** Der Geburtstagsgruß als Vollbild. */
 export function showGreeting() {
   const gift = giftData();

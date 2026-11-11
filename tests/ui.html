@@ -264,6 +264,18 @@
         [...box.querySelectorAll('.chip')].find((b) => b.textContent === 'Papier & Tinte').click();
         const paper = doc().documentElement.dataset.style === 'paper';
         add('Darstellung: Stil und Akzentfarbe umschaltbar (F1)', classic && bordeaux && paper, JSON.stringify({ classic, bordeaux, paper }));
+        // Modus: Dunkel / Hell erzwingen, Automatisch folgt dem Handy (data-scheme entfällt)
+        const bg = () => W.getComputedStyle(doc().documentElement).getPropertyValue('--bg').trim();
+        theme.renderLook(box);
+        [...box.querySelectorAll('.chip')].find((b) => b.textContent === 'Dunkel').click();
+        const dark = doc().documentElement.dataset.scheme === 'dark' && bg() === '#1c1a17';
+        theme.renderLook(box);
+        [...box.querySelectorAll('.chip')].find((b) => b.textContent === 'Hell').click();
+        const light = doc().documentElement.dataset.scheme === 'light' && bg() === '#f7f1e5';
+        theme.renderLook(box);
+        [...box.querySelectorAll('.chip')].find((b) => b.textContent === 'Automatisch').click();
+        const auto = !('scheme' in doc().documentElement.dataset);
+        add('Darstellung: Modus Hell/Dunkel/Automatisch (F1)', dark && light && auto, JSON.stringify({ dark, light, auto }));
         const data = { n: 'Anna', m: 'Alles Liebe! ✨', c: 'pflaume' };
         const code = gift.encodeGift(data);
         const back = gift.giftFromUrl({ hash: `#g=${code}`, search: '' });

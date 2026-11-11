@@ -12,7 +12,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="Bibliothek">
   <!-- Stil/Akzentfarbe sofort setzen (kein Aufblitzen des alten Stils), Rest in js/theme.js -->
-  <script>try { const s = JSON.parse(localStorage.getItem("bibliothek-einstellungen")) || {}; const st = s.style === "classic" ? "classic" : "paper"; document.documentElement.dataset.style = st; document.documentElement.dataset.accent = s.accent || (st === "paper" ? "tinte" : "salbei"); } catch {}</script>
+  <script>try { const s = JSON.parse(localStorage.getItem("bibliothek-einstellungen")) || {}; const st = s.style === "classic" ? "classic" : "paper"; document.documentElement.dataset.style = st; document.documentElement.dataset.accent = s.accent || (st === "paper" ? "tinte" : "salbei"); if (s.scheme === "light" || s.scheme === "dark") document.documentElement.dataset.scheme = s.scheme; } catch {}</script>
   <link rel="stylesheet" href="css/style.css">
   <script type="module" src="js/app.js"></script>
 </head>

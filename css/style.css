@@ -13,7 +13,7 @@
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-scheme="light"]) {
     --bg: #171a19;
     --surface: #202423;
     --text: #ece8df;
@@ -26,6 +26,19 @@
     --ph: #2c3130;
     color-scheme: dark;
   }
+}
+:root[data-scheme="dark"] {
+  --bg: #171a19;
+  --surface: #202423;
+  --text: #ece8df;
+  --muted: #a39d92;
+  --line: #333836;
+  --accent: #7fb8a5;
+  --accent-text: #10201b;
+  --accent-soft: #263b35;
+  --gold: #e0b465;
+  --ph: #2c3130;
+  color-scheme: dark;
 }
 
 * { box-sizing: border-box; }
@@ -487,8 +500,9 @@ html[data-style="paper"] {
   --serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
 }
 @media (prefers-color-scheme: dark) {
-  html[data-style="paper"] { --bg: #1c1a17; --surface: #25221e; --text: #efe5d3; --muted: #a99f8f; --line: #3a352e; --ph: #302c26; }
+  html:not([data-scheme="light"])[data-style="paper"] { --bg: #1c1a17; --surface: #25221e; --text: #efe5d3; --muted: #a99f8f; --line: #3a352e; --ph: #302c26; }
 }
+html[data-scheme="dark"][data-style="paper"] { --bg: #1c1a17; --surface: #25221e; --text: #efe5d3; --muted: #a99f8f; --line: #3a352e; --ph: #302c26; }
 html[data-style="paper"] .top { background: var(--bg); color: var(--text); border-bottom: 1px solid var(--line); }
 html[data-style="paper"] .top h1 { font-family: var(--serif); font-size: 1.35rem; font-weight: 600; letter-spacing: 0; color: var(--accent); }
 html[data-style="paper"] .icon-btn { border-color: var(--line); color: var(--accent); }
@@ -512,13 +526,19 @@ html[data-accent="ocker"]    { --accent: #8a6417; --accent-soft: #f3e8d0; --acce
 html[data-accent="pflaume"]  { --accent: #5d3f73; --accent-soft: #ebe2f1; --accent-text: #fff; }
 html[data-accent="petrol"]   { --accent: #1d6470; --accent-soft: #d8ecee; --accent-text: #fff; }
 @media (prefers-color-scheme: dark) {
-  html[data-accent="tinte"]    { --accent: #8fb0d6; --accent-soft: #22303f; --accent-text: #0f1722; }
-  html[data-accent="salbei"]   { --accent: #7fb8a5; --accent-soft: #263b35; --accent-text: #10201b; }
-  html[data-accent="bordeaux"] { --accent: #e0919d; --accent-soft: #3d2328; --accent-text: #22090e; }
-  html[data-accent="ocker"]    { --accent: #e1b45f; --accent-soft: #3a3020; --accent-text: #1e1505; }
-  html[data-accent="pflaume"]  { --accent: #c0a2d8; --accent-soft: #33283d; --accent-text: #1a1022; }
-  html[data-accent="petrol"]   { --accent: #79c2cc; --accent-soft: #1f3538; --accent-text: #0a1c1f; }
+  html:not([data-scheme="light"])[data-accent="tinte"]    { --accent: #8fb0d6; --accent-soft: #22303f; --accent-text: #0f1722; }
+  html:not([data-scheme="light"])[data-accent="salbei"]   { --accent: #7fb8a5; --accent-soft: #263b35; --accent-text: #10201b; }
+  html:not([data-scheme="light"])[data-accent="bordeaux"] { --accent: #e0919d; --accent-soft: #3d2328; --accent-text: #22090e; }
+  html:not([data-scheme="light"])[data-accent="ocker"]    { --accent: #e1b45f; --accent-soft: #3a3020; --accent-text: #1e1505; }
+  html:not([data-scheme="light"])[data-accent="pflaume"]  { --accent: #c0a2d8; --accent-soft: #33283d; --accent-text: #1a1022; }
+  html:not([data-scheme="light"])[data-accent="petrol"]   { --accent: #79c2cc; --accent-soft: #1f3538; --accent-text: #0a1c1f; }
 }
+html[data-scheme="dark"][data-accent="tinte"]    { --accent: #8fb0d6; --accent-soft: #22303f; --accent-text: #0f1722; }
+html[data-scheme="dark"][data-accent="salbei"]   { --accent: #7fb8a5; --accent-soft: #263b35; --accent-text: #10201b; }
+html[data-scheme="dark"][data-accent="bordeaux"] { --accent: #e0919d; --accent-soft: #3d2328; --accent-text: #22090e; }
+html[data-scheme="dark"][data-accent="ocker"]    { --accent: #e1b45f; --accent-soft: #3a3020; --accent-text: #1e1505; }
+html[data-scheme="dark"][data-accent="pflaume"]  { --accent: #c0a2d8; --accent-soft: #33283d; --accent-text: #1a1022; }
+html[data-scheme="dark"][data-accent="petrol"]   { --accent: #79c2cc; --accent-soft: #1f3538; --accent-text: #0a1c1f; }
 
 /* Darstellung (Einstellungen in Meine Bücher) */
 .look .row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 10px 0; }
@@ -542,3 +562,4 @@ html[data-accent="petrol"]   { --accent: #1d6470; --accent-soft: #d8ecee; --acce
 .gift-confetti span { position: absolute; top: -10%; font-size: 1.4rem; animation: gift-fall linear infinite; opacity: .85; }
 @keyframes gift-fall { to { transform: translateY(120vh) rotate(260deg); } }
 @media (prefers-reduced-motion: reduce) { .gift-confetti { display: none; } }
+.gift-actions { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; margin: 8px 0 0; }

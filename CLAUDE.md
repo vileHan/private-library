@@ -66,7 +66,7 @@ Commits laufen mit der GitHub-noreply-Adresse (in der lokalen Git-Konfiguration 
   🔍 Prüfung: Stufe N, X Runden, Ergebnis
   ```
   Leere Zeilen weglassen.
-- **Tests**: `tests/index.html` (Katalog, 46) und `tests/ui.html` (Oberfläche in 360 px, 42; eigene Daten bleiben unberührt, ein Testeintrag wird wieder gelöscht).
+- **Tests**: `tests/index.html` (Katalog, 46) und `tests/ui.html` (Oberfläche in 360 px, 43; eigene Daten bleiben unberührt, ein Testeintrag wird wieder gelöscht).
 - **Prüf-Stempel** `tools/pruefstempel.ps1` (Hash über js, css, index.html, sw.js, supabase, scripts, tests, Workflows; Doku zählt nicht) → `.claude/pruefung.json` (nicht im Repository).
 - **Stop-Hook** (`.claude/settings.json` → `.claude/hooks/stop-pruefung.ps1`): Ist der Stand ungeprüft, hält er Claude vor dem Beenden einer Antwort **einmal** an und fordert die Prüfung. Beim zweiten Mal lässt er durch (keine Endlosschleife). Ausnahme: Arbeit läuft noch (z. B. Import) oder reine Frage – kurz begründen.
 
@@ -229,7 +229,7 @@ Ziel: Die Daten werden **einmal aufbereitet** und nicht bei jeder Suche neu.
 
 ## Darstellung, Geschenk, Auffrischen (10.11.2026)
 
-- **Stil „Papier & Tinte“** (Standard) oder „Klassisch“, **6 Akzentfarben** – `js/theme.js`, Meine Bücher → „Darstellung“, pro Gerät (settings `style`, `accent`). Titel in Buchschrift (Iowan Old Style/Palatino/Georgia, nichts wird geladen). Inline-Skript im `<head>` setzt Stil/Farbe vor dem ersten Zeichnen.
-- **Geschenk-Link** `…/#g=<Base64url JSON {n,m,c,v}>` (`js/gift.js`): Name in der Kopfleiste, Farbe, Geburtstagsgruß beim ersten Öffnen (settings `gift`, `giftSeen`; gilt je Speicher – Safari und die installierte App haben getrennten Speicher, darum erscheint er in beiden einmal). Ein neuer Link überschreibt nur, wenn er sich vom gespeicherten unterscheidet. **Manifest ohne `start_url`**, damit „Zum Home-Bildschirm“ den Link mit `#g` übernimmt. Druckkarte `karte.html#g=…` mit QR-Code (qrcode-generator von jsDelivr). **Persönliche Daten nie ins Repository** – Beispielname in Code/Tests ist „Anna“.
+- **Modus Automatisch/Hell/Dunkel** (settings `scheme`, data-scheme an <html>; Dunkel-Regeln in style.css gelten im Media-Query nur ohne data-scheme="light" und zusätzlich immer bei data-scheme="dark"). **Stil „Papier & Tinte“** (Standard) oder „Klassisch“, **6 Akzentfarben** – `js/theme.js`, Meine Bücher → „Darstellung“, pro Gerät (settings `style`, `accent`). Titel in Buchschrift (Iowan Old Style/Palatino/Georgia, nichts wird geladen). Inline-Skript im `<head>` setzt Stil/Farbe vor dem ersten Zeichnen.
+- **Geschenk-Link** `…/#g=<Base64url JSON {n,m,c,v}>` (`js/gift.js`): Name in der Kopfleiste, Farbe, Geburtstagsgruß beim ersten Öffnen (settings `gift`, `giftSeen`; gilt je Speicher – Safari und die installierte App haben getrennten Speicher, darum erscheint er in beiden einmal). Ein neuer Link überschreibt nur, wenn er sich vom gespeicherten unterscheidet. **Manifest ohne `start_url`**, damit „Zum Home-Bildschirm“ den Link mit `#g` übernimmt. Druckkarte `karte.html#g=…` mit QR-Code (qrcode-generator von jsDelivr). **Persönliche Daten nie ins Repository** – Beispielname in Code/Tests ist „Anna“. „Geschenk von diesem Gerät entfernen“ (Darstellung) zum gefahrlosen Testen.
 - **Eigene Einträge auffrischen**: `refreshAllFromDb` (library.js) beim Start, höchstens alle 12 h, REST `works?id=in.(…)` je 40 Schlüssel (300 Einträge ≈ 0,9 s, ~145 KB).
 - **Fehlender Band 1** (`numberSeries`): genau ein Buch ohne Nummer in einer nummerierten Reihe, Band 1 frei, nicht jünger als Band 2, und kein anderes Buch des Autors heißt wie die Reihe (Doctorow „Little Brother“) → Band 1 (Dungeon Crawler Carl, Eagle Rider). Hochrechnung: ~219 Reihen. Wirkt ab Import 01.12.2026.
