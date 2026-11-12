@@ -2,7 +2,7 @@
 import { library, loadLibrary } from './library.js';
 import { store } from './store.js';
 import { catalog } from './catalog.js';
-import { el, fmt, plural, pageCount } from './util.js';
+import { el, fmt, plural, pageCount, emptyState } from './util.js';
 import { settings } from './settings.js';
 
 function topCounts(values, n = 6) {
@@ -153,7 +153,7 @@ export function renderStats(container) {
     bars('Bewertungen', [5, 4, 3, 2, 1].map((n) => [`${'★'.repeat(n)}`, rated.filter((e) => e.rating === n).length]).filter((r) => r[1])),
   ].filter(Boolean);
   container.append(...blocks);
-  if (!all.length) container.append(el('p', { class: 'empty', text: 'Noch keine Daten – markiere ein paar Bücher.' }));
+  if (!all.length) container.append(emptyState({ icon: '📊', title: 'Noch keine Statistik', text: 'Markiere ein paar Bücher als „Besitze“ oder „Gelesen“ – dann füllt sich diese Seite.' }));
   if (read.length && !perYear.length) container.append(el('p', { class: 'status', text: 'Tipp: Unter „Details“ kannst du eintragen, wann du ein Buch gelesen hast.' }));
   fillPages(read, container);
 }

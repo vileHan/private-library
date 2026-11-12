@@ -285,15 +285,26 @@
         // Mit gespeichertem Geschenk: „Geburtstagsgruß noch einmal ansehen“ bleibt nach einem Farbwechsel stehen
         const { settings } = await imp('settings.js');
         settings.set('gift', { n: 'Anna' });
-        $('#tab-library').click();
-        const look = $('#lookBox');
-        look.open = true;
-        look.dispatchEvent(new W.Event('toggle'));
+        $('#tab-settings').click();
+        const settingsShown = !$('#view-settings').hidden && $('#view-library').hidden;
         $('#lookControls .swatch[aria-label="Petrol"]').click();
         const greetBtn = $$('#lookControls .link-btn').some((b) => /Geburtstagsgruß/.test(b.textContent));
-        look.open = false;
         $('#tab-search').click();
-        add('Darstellung: Gruß-Knopf bleibt nach Farbwechsel (F2)', greetBtn, '');
+        add('Einstellungen als eigener Reiter; Gruß-Knopf bleibt nach Farbwechsel (F2, F3)', settingsShown && greetBtn, JSON.stringify({ settingsShown, greetBtn }));
+        // F3: Reiterleiste unten fest; Laden zeigt Platzhalter (leer) bzw. blendet alte Treffer ab, danach echte Karten
+        const bar = $('.tabbar').getBoundingClientRect();
+        const barOk = W.getComputedStyle($('.tabbar')).position === 'fixed' && Math.abs(bar.bottom - W.innerHeight) < 2 && $$('.tabbar [role="tab"]').length === 4;
+        $('#searchClear').click();
+        $('#searchInput').value = 'kind';
+        $('#searchForm').requestSubmit();
+        const skel = $$('#results .skel-card').length === 4 && !$('#results .book');
+        await until(() => $$('#results .book').length > 0);
+        $('#searchInput').value = 'liebe';
+        $('#searchForm').requestSubmit();
+        const stale = $('#results').classList.contains('stale') && $$('#results .book').length > 0;
+        await until(() => !$('#results').classList.contains('stale'));
+        const clean = !$('#results .skel-card');
+        add('Reiter unten; Lade-Platzhalter bzw. abgeblendete alte Treffer (F3)', barOk && skel && stale && clean, JSON.stringify({ barOk, skel, stale, clean }));
         // Kurzlink: Code aus der Adresse; Abruf mit gestubbtem fetch (Daten, unbekannt, Fehler, hängt)
         const cu = (hash) => gift.codeFromUrl({ hash, search: '' });
         const codesOk = cu('#fuer-Abc') === 'abc' && cu('#fuer-x') === '' && cu('#g=abc') === '' && cu('#fuer-anna-7k') === 'anna-7k';

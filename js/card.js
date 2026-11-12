@@ -389,6 +389,14 @@ function openSheet(ctx) {
       authorLine,
       el('ul', { class: 'sheet-facts' }, ...facts.map((t) => el('li', {}, t)))));
   setCover(head, coverUrls(ownedIsbnsOf(entry), work.coverIds, work.coverIsbns || [], !!(work.fromDb || entry?.fromDb)), work.title);
+  // Hintergrund: dasselbe Cover stark verschwommen (12.11.2026) – erst wenn ein echtes Cover geladen ist
+  const hero = el('div', { class: 'sheet-hero', 'aria-hidden': 'true' });
+  const headImg = head.querySelector('.cover img');
+  headImg.addEventListener('load', () => {
+    if (!headImg.classList.contains('loaded')) return; // Platzhalterbild der Quelle → nächste Quelle wird versucht
+    hero.style.backgroundImage = `url("${headImg.src.replace(/"/g, '%22')}")`;
+    hero.classList.add('on');
+  });
   // Cover antippen → Vollbild (nur wenn ein echtes Cover geladen ist)
   const headCover = head.querySelector('.cover');
   onTap(headCover, () => {
@@ -474,7 +482,7 @@ function openSheet(ctx) {
       requestAnimationFrame(() => { blurbMore.hidden = blurbText.scrollHeight <= blurbText.clientHeight + 2; });
     });
 
-  body.replaceChildren(...[head, bar, blurbBox, detBox, isbnCount ? edSection : null].filter(Boolean));
+  body.replaceChildren(...[hero, head, bar, blurbBox, detBox, isbnCount ? edSection : null].filter(Boolean));
   const refresh = (e) => {
     entry = e;
     paintToggles(bar, e);

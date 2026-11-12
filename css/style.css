@@ -571,3 +571,102 @@ html[data-scheme="dark"][data-accent="rosa"]     { --accent: #f19ac0; --accent-s
 .top h1 { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 html[data-style="paper"] .top h1 { font-size: clamp(1.05rem, 5vw, 1.35rem); }
 .top-actions { flex: 0 0 auto; }
+
+/* =====================================================================================================
+   Paket 1 (12.11.2026): Reiter unten, Einstellungen als eigener Reiter, Lade-Platzhalter, leere Seiten,
+   Detailblatt mit verschwommenem Cover im Hintergrund.
+   ===================================================================================================== */
+.top { padding-bottom: 6px; }
+.top-row { margin-bottom: 0; min-height: 44px; }
+/* Reiterleiste unten: Symbol + Beschriftung, aktiver Reiter in der Akzentfarbe */
+.tabbar {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; gap: 0;
+  display: flex; justify-content: center;
+  padding: 4px max(8px, env(safe-area-inset-left)) calc(4px + env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-right));
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+  -webkit-backdrop-filter: saturate(1.6) blur(14px); backdrop-filter: saturate(1.6) blur(14px);
+  border-top: 1px solid var(--line);
+}
+.tabbar button {
+  flex: 1 1 0; max-width: 140px; min-width: 0; position: relative; opacity: 1; border: 0; border-radius: 12px;
+  display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 2px 4px;
+  color: var(--muted); font-size: .68rem; font-weight: 600; letter-spacing: .01em; touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+.tabbar button[aria-selected="true"], html[data-style] .tabbar button[aria-selected="true"] { color: var(--accent); border-bottom: 0; }
+.tabbar button:active { background: var(--accent-soft); }
+.tab-ico { width: 25px; height: 25px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round;
+  transition: transform .2s ease-out; }
+.tab-ico .dot { fill: currentColor; stroke: none; }
+.tabbar button[aria-selected="true"] .tab-ico { stroke-width: 2.2; transform: translateY(-1px); }
+.tab-lbl { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+/* Anzahl eigener Bücher als kleines Abzeichen am Symbol */
+.tabbar .count:not(:empty), html[data-style="paper"] .tabbar .count:not(:empty) {
+  position: absolute; top: 2px; left: calc(50% + 8px); margin: 0; min-width: 18px; padding: 0 5px;
+  background: var(--accent); color: var(--accent-text); font-size: .62rem; line-height: 16px; border-radius: 99px;
+}
+main { padding-bottom: calc(86px + env(safe-area-inset-bottom)); }
+.toast { bottom: calc(76px + env(safe-area-inset-bottom)); }
+/* Raster-Schalter nur, wo es Bücherlisten gibt */
+body[data-view="random"] #viewToggle, body[data-view="settings"] #viewToggle { display: none; }
+
+/* Einstellungen */
+#view-settings .data { margin-top: 0; margin-bottom: 14px; padding: 14px 16px; }
+#view-settings .data h2 { margin: 0 0 6px; font-size: .8rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+html[data-style="paper"] #view-settings .data { border-color: transparent; box-shadow: 0 1px 2px rgba(60, 40, 10, .08), 0 2px 10px rgba(60, 40, 10, .05); }
+
+/* Lade-Platzhalter: schimmernde graue Flächen in Kartenform */
+.skel-card { display: grid; grid-template-columns: 80px 1fr; grid-template-areas: "cover info" "cover actions"; grid-template-rows: 1fr auto;
+  gap: 6px 12px; padding: 10px; border-radius: var(--radius); background: var(--surface); border: 1px solid var(--line); pointer-events: none; }
+html[data-style="paper"] .skel-card { border-color: transparent; box-shadow: 0 1px 2px rgba(60, 40, 10, .08), 0 2px 10px rgba(60, 40, 10, .05); }
+.skel-card .cover { grid-area: cover; }
+.skel-card .info { grid-area: info; display: flex; flex-direction: column; gap: 9px; padding-top: 4px; }
+.skel-card .actions { grid-area: actions; display: flex; gap: 6px; margin: 0; }
+@media (max-width: 370px) { .skel-card { grid-template-columns: 72px 1fr; } .skel-card .cover { width: 72px; height: 108px; } }
+.sk { display: block; height: 12px; border-radius: 6px; }
+.sk.w80 { width: 80%; height: 15px; } .sk.w50 { width: 50%; } .sk.w65 { width: 65%; } .sk.thin { height: 9px; }
+.sk.pill { width: 68px; height: 26px; border-radius: 99px; }
+.skel-card .cover, .sk {
+  --sk: color-mix(in srgb, var(--text) 11%, var(--surface));
+  background: linear-gradient(100deg, var(--sk) 30%, color-mix(in srgb, var(--text) 4%, var(--surface)) 50%, var(--sk) 70%) 0 0 / 300% 100%;
+  animation: shimmer 1.3s linear infinite;
+}
+@keyframes shimmer { from { background-position: 100% 0; } to { background-position: 0 0; } }
+#results.stale { opacity: .55; transition: opacity .2s; }
+/* Cover weich einblenden statt plötzlich */
+.cover img { transition: opacity .35s ease-out; }
+@media (prefers-reduced-motion: reduce) {
+  .skel-card .cover, .sk { animation: none; }
+  .cover img, .tab-ico { transition: none; }
+}
+
+/* Leere Seiten: Symbol, Überschrift, Satz, Knopf */
+.empty { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 36px 20px; }
+.empty-icon { font-size: 2.4rem; line-height: 1; margin-bottom: 6px; opacity: .85; }
+.empty-title { margin: 0; font-size: 1.05rem; font-weight: 650; color: var(--text); }
+html[data-style="paper"] .empty-title { font-family: var(--serif); font-size: 1.15rem; }
+.empty-text { margin: 0; max-width: 300px; line-height: 1.45; font-size: .92rem; }
+.empty-action { margin-top: 12px; border: 0; border-radius: 99px; padding: 10px 20px; font-weight: 700; cursor: pointer;
+  background: var(--accent); color: var(--accent-text); touch-action: manipulation; }
+
+/* Detailblatt: Cover stark verschwommen als Hintergrund oben (wie Musik-/Buch-Apps), läuft nach unten aus */
+.sheet-panel { overflow: hidden; }
+.sheet-body { position: relative; overflow-x: hidden; }
+.sheet-hero {
+  position: absolute; left: 0; right: 0; top: -20px; height: 300px; z-index: 0; pointer-events: none;
+  background: center 30% / cover no-repeat; filter: blur(30px) saturate(1.5); transform: scale(1.25);
+  opacity: 0; transition: opacity .45s ease-out;
+  -webkit-mask-image: linear-gradient(#000 35%, transparent); mask-image: linear-gradient(#000 35%, transparent);
+}
+.sheet-hero.on { opacity: .5; }
+@media (prefers-color-scheme: dark) { html:not([data-scheme="light"]) .sheet-hero.on { opacity: .55; } }
+html[data-scheme="dark"] .sheet-hero.on { opacity: .55; }
+.sheet-body > :not(.sheet-hero) { position: relative; z-index: 1; }
+.sheet-head .cover { box-shadow: 0 6px 18px rgba(0,0,0,.28); }
+.sheet-close { background: color-mix(in srgb, var(--surface) 75%, transparent); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
+/* Raster-Ansicht: Platzhalter in Cover-Form (2 je Reihe), nicht im Listen-Aufbau */
+body.grid-view #results > .skel-card { grid-column: auto; display: flex; flex-direction: column; gap: 8px; padding: 6px; }
+body.grid-view #results > .skel-card .cover { width: 100%; height: auto; aspect-ratio: 2 / 3; border-radius: 8px; }
+body.grid-view #results > .skel-card .info { display: none; }
+body.grid-view #results > .skel-card .actions { justify-content: center; gap: 10px; }
+body.grid-view #results > .skel-card .sk.pill { width: 42px; height: 42px; border-radius: 12px; }

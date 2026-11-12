@@ -3,7 +3,7 @@ import { catalog } from './catalog.js';
 import { normalizeText, compareTitle } from './works.js';
 import { library, entryFor } from './library.js';
 import { bookCard } from './card.js';
-import { el, fmt } from './util.js';
+import { el, fmt, emptyState } from './util.js';
 
 const loaded = new Map(); // Reihen-Schlüssel → vollständige Bandliste von der DNB
 
@@ -28,7 +28,7 @@ export function renderSeries(container) {
   const list = [...groups.entries()].sort((a, b) => a[1].series.localeCompare(b[1].series, 'de'));
   container.replaceChildren();
   if (!list.length) {
-    container.append(el('p', { class: 'empty', text: 'Noch keine Reihen. Markiere ein Buch, das zu einer Reihe gehört (z. B. Eragon oder Harry Potter).' }));
+    container.append(emptyState({ icon: '📖', title: 'Noch keine Reihen', text: 'Markiere ein Buch, das zu einer Reihe gehört (z. B. Eragon oder Harry Potter) – dann erscheint die Reihe hier.' }));
     return;
   }
   for (const [key, g] of list) container.append(seriesBlock(key, g, () => renderSeries(container)));

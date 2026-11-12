@@ -139,3 +139,12 @@ export function pageCount(text) {
   const n = Number(String(text || '').match(/(\d{2,5})\s*(Seiten|S\b|pages|p\b)/i)?.[1]);
   return Number.isFinite(n) && n > 0 ? n : null;
 }
+
+/** Freundliche leere Seite (12.11.2026): Symbol, Überschrift, Satz und optional ein Knopf { text, onclick }. */
+export function emptyState({ icon, title, text, action }) {
+  return el('div', { class: 'empty' },
+    el('div', { class: 'empty-icon', 'aria-hidden': 'true', text: icon }),
+    el('p', { class: 'empty-title', text: title }),
+    text ? el('p', { class: 'empty-text', text }) : null,
+    action ? el('button', { type: 'button', class: 'empty-action', text: action.text, onclick: action.onclick }) : null);
+}

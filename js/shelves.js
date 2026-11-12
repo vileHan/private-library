@@ -2,7 +2,7 @@
 // Cover-Streifen, „+ Neues Regal“, Antippen öffnet die Bücher darin; Umbenennen und Löschen (Bücher bleiben erhalten).
 import { library, allTags, addShelf, renameShelf, deleteShelf } from './library.js';
 import { bookCard, coverThumb } from './card.js';
-import { el, plural } from './util.js';
+import { el, plural, emptyState } from './util.js';
 import { compareTitle } from './works.js';
 
 const state = { open: '' }; // geöffnetes Regal ('' = Übersicht)
@@ -65,6 +65,6 @@ function renderShelf(container, name, rerender) {
     el('h2', { class: 'shelf-title', text: name }),
     el('p', { class: 'status', text: books.length ? plural(books.length, 'Buch', 'Bücher') : '' }),
     ...books.map((e) => bookCard(e)),
-    books.length ? null : el('p', { class: 'empty', text: `Im Regal „${name}“ steht noch nichts. Bücher kommen über „⋯“ → Regale hinein.` }),
+    books.length ? null : emptyState({ icon: '🗂️', title: 'Noch leer', text: `Bücher kommen über „⋯“ → Regale in „${name}“.` }),
   ].filter(Boolean));
 }

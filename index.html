@@ -29,15 +29,27 @@
         </button>
       </div>
     </div>
-    <nav class="tabs" role="tablist">
-      <button role="tab" id="tab-search" aria-controls="view-search" aria-selected="true" data-view="search">Suche</button>
-      <button role="tab" id="tab-library" aria-controls="view-library" aria-selected="false" data-view="library">
-        Meine Bücher <span class="count" id="libCount"></span>
-      </button>
-      <button role="tab" id="tab-random" class="tab-dice" aria-controls="view-random" aria-selected="false" data-view="random"
-              aria-label="Zufallsbuch – was lese ich als Nächstes?" title="Was lese ich als Nächstes?">🎲</button>
-    </nav>
   </header>
+  <!-- Reiter unten wie in üblichen Handy-Apps (Daumen erreicht sie leicht, 12.11.2026) -->
+  <nav class="tabs tabbar" role="tablist" aria-label="Bereiche">
+    <button role="tab" id="tab-search" aria-controls="view-search" aria-selected="true" data-view="search">
+      <svg class="tab-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5 21 21"/></svg>
+      <span class="tab-lbl">Suche</span>
+    </button>
+    <button role="tab" id="tab-library" aria-controls="view-library" aria-selected="false" data-view="library">
+      <svg class="tab-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h4v16H4zM10 4h4v16h-4zM16.2 4.6l3.8-1 3.5 15.5-3.8.9z" transform="translate(-1 0)"/></svg>
+      <span class="tab-lbl">Meine Bücher</span><span class="count" id="libCount"></span>
+    </button>
+    <button role="tab" id="tab-random" aria-controls="view-random" aria-selected="false" data-view="random"
+            aria-label="Zufall – was lese ich als Nächstes?" title="Was lese ich als Nächstes?">
+      <svg class="tab-ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="3.5" width="17" height="17" rx="4"/><circle class="dot" cx="8.5" cy="8.5" r="1.3"/><circle class="dot" cx="15.5" cy="15.5" r="1.3"/><circle class="dot" cx="12" cy="12" r="1.3"/><circle class="dot" cx="15.5" cy="8.5" r="1.3"/><circle class="dot" cx="8.5" cy="15.5" r="1.3"/></svg>
+      <span class="tab-lbl">Zufall</span>
+    </button>
+    <button role="tab" id="tab-settings" aria-controls="view-settings" aria-selected="false" data-view="settings">
+      <svg class="tab-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+      <span class="tab-lbl">Einstellungen</span>
+    </button>
+  </nav>
 
   <main>
     <section id="view-search" role="tabpanel" aria-labelledby="tab-search">
@@ -107,19 +119,22 @@
       <p class="status" id="libStatus" aria-live="polite"></p>
       <div id="libList" class="list"></div>
       </div>
+    </section>
 
-      <details class="data">
-        <summary>Daten sichern</summary>
+    <!-- Einstellungen als eigener Reiter (vorher zugeklappt unter Meine Bücher, 12.11.2026) -->
+    <section id="view-settings" role="tabpanel" aria-labelledby="tab-settings" hidden>
+      <section class="data look" id="lookBox">
+        <h2>Darstellung</h2>
+        <div id="lookControls"></div>
+      </section>
+      <section class="data">
+        <h2>Daten sichern</h2>
         <p>Deine Markierungen, Bewertungen und Notizen liegen nur auf diesem Gerät. Exportiere sie regelmäßig als Sicherung.</p>
         <div class="data-actions">
           <button id="exportBtn" type="button">Exportieren</button>
           <label class="button">Importieren<input id="importInput" type="file" accept="application/json,.json" hidden></label>
         </div>
-      </details>
-      <details class="data look" id="lookBox">
-        <summary>Darstellung</summary>
-        <div id="lookControls"></div>
-      </details>
+      </section>
     </section>
   </main>
 

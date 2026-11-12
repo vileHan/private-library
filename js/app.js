@@ -8,7 +8,7 @@ import { renderSeries } from './series.js';
 import { renderStats } from './stats.js';
 import { renderShelves } from './shelves.js';
 import { renderRandom, updateRandomCount } from './random.js';
-import { $, el, fmt, plural, ignoreScrollBriefly } from './util.js';
+import { $, el, fmt, plural, ignoreScrollBriefly, emptyState } from './util.js';
 import { scanIsbn } from './scan.js';
 import { settings } from './settings.js';
 import { GENRES } from './genres.js';
@@ -20,6 +20,24 @@ onLibraryChange(() => {
   $('#libCount').textContent = owned ? fmt.format(owned) : '';
   if (!$('#view-random').hidden) updateRandomCount($('#randomBox'));
 });
+
+/**
+ * Lade-Platzhalter (12.11.2026): graue, sanft schimmernde Karten statt leerer Fläche. Stehen schon Bücher da
+ * (Live-Suche tippt weiter), bleiben sie leicht abgeblendet stehen, statt zu flackern.
+ */
+function showSkeleton(box) {
+  if (box.querySelector('.book')) { box.classList.add('stale'); return; }
+  const card = () => el('div', { class: 'skel-card', 'aria-hidden': 'true' },
+    el('div', { class: 'cover' }),
+    el('div', { class: 'info' }, el('span', { class: 'sk w80' }), el('span', { class: 'sk w50' }), el('span', { class: 'sk w65 thin' })),
+    el('div', { class: 'actions' }, el('span', { class: 'sk pill' }), el('span', { class: 'sk pill' }), el('span', { class: 'sk pill' })));
+  box.replaceChildren(...Array.from({ length: 4 }, card));
+}
+function clearSkeleton() {
+  const box = $('#results');
+  box.classList.remove('stale');
+  box.querySelectorAll('.skel-card').forEach((s) => s.remove());
+}
 
 function matchesTokens(entry, tokens, extra = '') {
   const hay = normalizeText([entry.title, searchableSubtitle(entry.subtitle), ...(entry.authors || []), entry.series, extra].join(' '));
@@ -57,6 +75,7 @@ const search = { query: '', editions: [], works: [], total: 0, next: null, contr
 function renderResults() {
   const box = $('#results');
   box.replaceChildren();
+  box.classList.remove('stale');
   const fromDb = search.works.length > 0;
   const works = fromDb ? search.works : groupEditions(search.editions);
   if (fromDb) works.forEach((w) => refreshEntry(w).catch(() => {})); // eigene Einträge mit Katalogdaten auffrischen
@@ -106,7 +125,13 @@ function renderResults() {
     if (owned.length) box.append(el('h2', { class: 'section-title', text: `Weitere Treffer (${others.length})` }));
     for (const w of others) box.append(bookCard(w));
   }
-  if (!owned.length && !others.length) box.append(el('p', { class: 'empty', text: 'Keine passenden Bücher gefunden.' }));
+  if (!owned.length && !others.length) {
+    box.append(emptyState({
+      icon: '🔍', title: 'Keine passenden Bücher',
+      text: 'Tipp: Nur den Nachnamen oder ein Wort aus dem Titel versuchen – oder den Barcode scannen.',
+      action: { text: 'Barcode scannen ›', onclick: () => $('#scanBtn').click() },
+    }));
+  }
 
   const loaded = Math.min(search.total, (search.next ?? search.total + 1) - 1);
   const status = $('#searchStatus');
@@ -136,6 +161,7 @@ async function runSearch(query, append = false) {
     $('#moreBtn').hidden = true;
     status.classList.remove('error');
     status.textContent = 'Suche läuft …';
+    showSkeleton($('#results'));
   } else {
     $('#moreBtn').disabled = true;
     $('#moreBtn').textContent = 'Lädt …';
@@ -150,6 +176,7 @@ async function runSearch(query, append = false) {
     renderResults();
   } catch (err) {
     if (err.name === 'AbortError') return;
+    clearSkeleton();
     status.classList.add('error');
     status.textContent = navigator.onLine === false
       ? 'Keine Internetverbindung. „Meine Bücher“ funktioniert trotzdem.'
@@ -227,6 +254,7 @@ const browseTitle = () => (browse.mode === 'series' ? browse.value.series : brow
 function renderBrowse() {
   const box = $('#results');
   box.replaceChildren();
+  box.classList.remove('stale');
   $('#browseBar').hidden = false;
   $('#browseTitle').textContent = browseTitle();
   $('#browseKind').textContent = BROWSE_KINDS[browse.mode];
@@ -264,7 +292,7 @@ function renderBrowse() {
     for (const w of list) box.append(bookCard(w));
     status.textContent = 'Die beliebtesten zuerst.';
   }
-  if (!list.length) box.append(el('p', { class: 'empty', text: 'Keine Bücher gefunden.' }));
+  if (!list.length) box.append(emptyState({ icon: '🔍', title: 'Keine Bücher gefunden', text: 'Hier gibt es (noch) keine Bücher im Katalog.' }));
   const more = $('#moreBtn');
   more.hidden = !browse.next;
   more.disabled = false;
@@ -276,7 +304,7 @@ async function loadBrowse(append = false) {
   const controller = new AbortController();
   browse.controller = controller;
   const status = $('#searchStatus');
-  if (append) { $('#moreBtn').disabled = true; $('#moreBtn').textContent = 'Lädt …'; } else status.textContent = 'Lädt …';
+  if (append) { $('#moreBtn').disabled = true; $('#moreBtn').textContent = 'Lädt …'; } else { status.textContent = 'Lädt …'; showSkeleton($('#results')); }
   try {
     if (browse.mode === 'author') {
       browse.works = await catalog.authorWorks(browse.value);
@@ -298,6 +326,7 @@ async function loadBrowse(append = false) {
     renderBrowse();
   } catch (err) {
     if (err.name === 'AbortError') return;
+    clearSkeleton();
     status.classList.add('error');
     status.textContent = `Laden hat nicht geklappt: ${err.message}`;
     $('#moreBtn').disabled = false;
@@ -420,10 +449,13 @@ function renderLibrary() {
   const total = library.byKey.size;
   $('#libStatus').textContent = total ? `${fmt.format(items.length)} von ${plural(total, 'Eintrag', 'Einträgen')}` : '';
   if (!items.length) {
-    box.append(el('p', {
-      class: 'empty',
-      text: total ? 'Nichts gefunden.' : 'Noch keine Bücher. Suche ein Buch und tippe auf „Besitze“ oder „Merken“.',
-    }));
+    box.append(total
+      ? emptyState({ icon: '🔍', title: 'Nichts gefunden', text: 'Kein Buch passt zu diesem Filter.' })
+      : emptyState({
+        icon: '📚', title: 'Noch keine Bücher',
+        text: 'Suche ein Buch oder scanne den Barcode und tippe auf „Besitze“ oder „Merken“.',
+        action: { text: 'Bücher suchen ›', onclick: () => { showView('search'); $('#searchInput').focus(); } },
+      }));
   }
   // Aktiven Filter in der wischbaren Zeile sichtbar halten
   const row = document.querySelector('.chips-scroll');
@@ -495,8 +527,10 @@ function showView(name) {
     btn.setAttribute('aria-selected', String(active));
     $(`#view-${btn.dataset.view}`).hidden = !active;
   }
+  document.body.dataset.view = name; // z. B. Raster-Schalter nur bei Listen zeigen
   if (name === 'library') renderSub();
   else if (name === 'random') renderRandom($('#randomBox'));
+  else if (name === 'settings') renderSettings();
   else if (browse.mode) renderBrowse();
   else if (search.query) renderResults();
   window.scrollTo(0, 0);
@@ -517,14 +551,13 @@ refreshAllFromDb((keys) => catalog.worksByKeys(keys)).then((n) => {
 // Darstellung und Geschenk (10.11.2026)
 applyTheme();
 initGift();
-$('#lookBox').addEventListener('toggle', () => {
-  if (!$('#lookBox').open) return;
+function renderSettings() {
   renderLook($('#lookControls'), () => (giftData()
     ? [el('p', { class: 'gift-actions' },
         el('button', { type: 'button', class: 'link-btn', text: 'Geburtstagsgruß noch einmal ansehen ›', onclick: () => showGreeting({ music: true }) }),
         el('button', {
           type: 'button', class: 'link-btn danger', text: 'Geschenk von diesem Gerät entfernen',
-          onclick: () => { if (window.confirm('Name und Geburtstagsgruß von diesem Gerät entfernen? Bücher und Einstellungen bleiben.')) { clearGift(); $('#lookBox').open = false; } },
+          onclick: () => { if (window.confirm('Name und Geburtstagsgruß von diesem Gerät entfernen? Bücher und Einstellungen bleiben.')) { clearGift(); renderSettings(); } },
         }))]
     : []));
-});
+}
