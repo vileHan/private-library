@@ -3,7 +3,38 @@
 Nur was noch zu tun ist. Erledigtes steht in der Git-Historie, Entscheidungen und Details in [CLAUDE.md](CLAUDE.md),
 prüfbare Anforderungen in [ANFORDERUNGEN.md](ANFORDERUNGEN.md). Stand: 09.11.2026.
 
-## Am iPhone testen (Merkliste für den Nutzer, Stand 10.11.2026)
+## Neueste 20 Änderungen zum Ausprobieren (Stand 12.11.2026) – zu Beginn der nächsten Sitzung zuerst zeigen
+Vorher die App ganz schließen und neu öffnen (ggf. zweimal), damit Version v65 ankommt.
+
+**Geschenk**
+1. **Kurzlink** (Link aus dem Chat) öffnen, am besten im privaten Safari-Tab: App startet in der Geschenkfarbe, Name in der Kopfleiste.
+2. **Gruß schlank:** nur Torte, Gruß, Text und „Los geht’s 📚“ – keine Infotexte mehr.
+3. **„Los geht’s“** → Konfetti-Explosion über der Bibliothek + leise Melodie (Stumm-Schalter aus!).
+4. **🎂 oben** spielt den Gruß mit Melodie erneut ab.
+5. **Karte** (Link aus dem Chat): drucken (A4 quer, falten), QR-Code scannen → landet beim Kurzlink.
+
+**App-Gefühl (Paket 1)**
+6. **Reiter unten** (Suche · Meine Bücher · Zufall · Einstellungen): liegt über dem Home-Balken, gut mit dem Daumen zu treffen? Zahl der eigenen Bücher als Abzeichen.
+7. **Einstellungen** als eigener Reiter (Darstellung, Daten sichern) – „Meine Bücher“ zeigt nur noch Bücher.
+8. **Laden:** neue Suche zeigt schimmernde Platzhalter-Karten (im Raster in Cover-Form); beim Weitertippen werden alte Treffer nur abgeblendet statt zu flackern.
+9. **Cover** blenden weich ein.
+10. **Leere Seiten** mit Symbol, Überschrift und Knopf: Suche „xqzvw“ („Barcode scannen ›“), leere Reihen/Statistik/Regal, „Noch keine Bücher“ („Bücher suchen ›“).
+11. **Detailblatt:** Cover als Hintergrund oben (jetzt weniger verschwommen) – gefällt es bei hellen und dunklen Covern? Angaben gut lesbar?
+
+**Bedienung (Paket 3)**
+12. **Knöpfe rasten ein:** Besitze/Gelesen/Merken drücken sich kurz ein, Symbol springt – Stärke/Tempo okay?
+13. **Kein „Rückgängig“ mehr in der Liste** (im Raster nach Gesten weiterhin „↶ Rückgängig“).
+14. **Weiche Übergänge:** Autor/Genre/Reihe im Detailblatt antippen → Seite schiebt sich von rechts herein; zurück von links.
+15. **Reiter- und Unteransichtswechsel** (Liste/Reihen/Regale/Statistik) blenden kurz ein.
+16. **Zurück per Wischen vom linken Rand** (installierte App): auf einer Autoren-/Reihenseite ganz links ansetzen und nach rechts ziehen – Seite folgt, „‹“-Kreis färbt sich, zurück zur Suche. Stört es beim normalen Scrollen?
+17. **Regal:** Regal öffnen → vom Rand wischen → Regal-Übersicht.
+18. **In Safari** (nicht installiert): die Safari-eigene Randgeste führt ebenso eine Ebene zurück.
+19. **Zweimal schnell „‹“** → bleibt in der App (vorher flog man raus).
+20. **Android (falls zur Hand):** Zurück-Taste auf Autorenseite → Suche; bei offenem Detailblatt schließt sie nur das Blatt.
+
+**Offen zur Entscheidung:** Soll ein abgewähltes Buch im Filter „Besitze“ sofort verschwinden (heute bleibt es bis zum nächsten Öffnen stehen)? · Dungeon Crawler Carl Band 1 kommt mit dem Import am 01.12.2026 · „Meine Bücher“ weiter aufräumen (Varianten zeigen).
+
+## Am iPhone testen (ältere Liste, Stand 10.11.2026)
 Vorher die App einmal schließen und neu öffnen, damit die neue Version ankommt (ggf. zweimal).
 1. **Wischen ab den Knöpfen:** schnell hintereinander durch die Trefferliste wischen und dabei auf Besitze/Gelesen/Merken ansetzen – scrollt die Liste, löst nichts aus? Normaler Tipp löst genau einmal aus, Haptik in der Knopfmitte.
 2. **Cover-Vollbild:** Cover in der Liste antippen → groß; danach weiterwischen → Bild weg und Liste scrollt in derselben Bewegung.
