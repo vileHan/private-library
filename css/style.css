@@ -373,7 +373,7 @@ body.sheet-open { overflow: hidden; }
 .haptic-switch {
   /* Nur die Mitte des Knopfs (nicht die Ränder): Hält der native iOS-Schalter eine Wischgeste fest, scrollt ein
      Wischen ab dem Rand trotzdem; der Tipp selbst wird am ganzen Knopf erkannt (onTap am Label), Haptik in der Mitte. */
-  position: absolute; inset: 0 30%; width: auto; height: auto; margin: 0; opacity: .011; cursor: pointer; z-index: 1;
+  position: absolute; inset: 0 18%; width: auto; height: auto; margin: 0; opacity: .011; cursor: pointer; z-index: 1;
   touch-action: pan-x pan-y; /* ein Wischen, das auf dem Knopf beginnt, soll die Liste scrollen (09.11.2026) */
 }
 .toggle:has(.haptic-switch:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
@@ -719,3 +719,6 @@ body.edge-swiping main { box-shadow: -1px 0 0 color-mix(in srgb, var(--text) 14%
 .sheet.instant .cover img[src] { opacity: 1; }
 /* Bereits geladene Cover (goodCovers in card.js) ohne Einblenden zeigen – kein Flackern beim Neuaufbau einer Liste */
 .cover img.instant { transition: none; }
+/* Haptik-Fläche (13.11.2026): in Listen etwas größer (mittlere ~64 % statt 40 % – Rand bleibt fürs Weiterwischen frei);
+   im Detailblatt der ganze Knopf (dort wird kaum über die Knöpfe gewischt) */
+.sheet-actions .haptic-switch { inset: 0; }

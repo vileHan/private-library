@@ -100,6 +100,7 @@ export function cleanSeriesName(s = '') {
 export function isPublisherSeries(series = '', publisher = '') {
   if (!series) return false;
   if (/^\s*\.\.\./.test(series)) return true; // „... Druck der Mariannenpresse“
+  if (/-box\b/i.test(series)) return true; // Verlags-Sammelbox („Fitzek-Box, Band 1–10“), keine Reihe (13.11.2026)
   const s = normalizeText(series);
   if (IMPRINTS.test(s) || PUBLISHER_SERIES.test(s)) return true;
   const pubWord = normalizeText(publisher).split(' ').find((w) => w.length >= 4);
