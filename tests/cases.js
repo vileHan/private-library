@@ -273,6 +273,8 @@ export async function runAll() {
     [String(isPublisherSeries('Maxi Pixi', 'Hamburg : Carlsen')), 'true'],
     [String(isPublisherSeries('Die Bibliothek der flüsternden Schatten', 'Berlin : Ueberreuter')), 'false'],
     [String(isPublisherSeries('Selcouth', 'Köln : Lübbe')), 'false'],
+    [String(isPublisherSeries('Bild am Sonntag - Mega Thriller!', 'Hamburg : Axel Springer')), 'true'],
+    [String(isPublisherSeries('Bild-am-Sonntag-Mega-Thriller', 'München : Droemer')), 'true'],
     [cleanSeriesName('Band ... der "Children of blood and bone"-Trilogie'), 'Children of blood and bone'],
     [cleanSeriesName('Selcouth-Reihe'), 'Selcouth'],
     [cleanSeriesName('Die Känguru-Werke'), 'Die Känguru'],
