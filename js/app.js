@@ -14,7 +14,7 @@ import { settings } from './settings.js';
 import { GENRES } from './genres.js';
 import { applyTheme, renderLook } from './theme.js';
 import { initGift, showGreeting, giftData, clearGift } from './gift.js';
-import { registerBack, enterLevel, goBack, attachEdgeSwipe, currentDepth, rewindTo } from './nav.js';
+import { registerBack, enterLevel, goBack, attachEdgeSwipe, currentDepth, rewindTo, captureView, swipingBack } from './nav.js';
 
 onLibraryChange(() => {
   const owned = [...library.byKey.values()].filter((e) => e.owned).length;
@@ -341,15 +341,18 @@ async function loadBrowse(append = false) {
 const browseStack = [];
 let browseBaseDepth = 0; // Verlaufstiefe vor der ersten Stöbern-Seite (zum Zurückspulen bei neuer Suche)
 
-function startBrowse(mode, value) {
+function startBrowse(mode, value, fromSheet = null) {
   cancelLive();
   search.controller?.abort();
   // Aus einem anderen Reiter gestartet, während im Such-Reiter noch gestöbert wurde: neuer Stapel, Herkunft = dieser Reiter
   if (browse.mode && $('#view-search').hidden) { browse.mode = null; browseStack.length = 0; }
   if (!browse.mode) browseBaseDepth = currentDepth();
+  // snap: Abbild der Seite davor – beim Wischen vom Rand erscheint es unter der aktuellen Seite (wie am iPhone);
+  // fromSheet: kam man aus einem Detailblatt, öffnet „zurück“ es wieder
+  const common = { scroll: window.scrollY, snap: captureView(), fromSheet };
   browseStack.push(browse.mode
-    ? { kind: 'browse', mode: browse.mode, value: browse.value, works: browse.works, next: browse.next, scroll: window.scrollY }
-    : { kind: 'origin', view: document.body.dataset.view || 'search', input: $('#searchInput').value, scroll: window.scrollY });
+    ? { kind: 'browse', mode: browse.mode, value: browse.value, works: browse.works, next: browse.next, ...common }
+    : { kind: 'origin', view: document.body.dataset.view || 'search', input: $('#searchInput').value, ...common });
   enterLevel(); // Eintrag im Verlauf: Wischen vom Rand / Android-Zurück führt eine Stufe zurück
   Object.assign(browse, { mode, value, works: [], next: null });
   showView('search');
@@ -373,8 +376,9 @@ function endBrowse(restore = true) {
   if (prev?.kind === 'browse') {
     Object.assign(browse, { mode: prev.mode, value: prev.value, works: prev.works, next: prev.next });
     renderBrowse();
-    animateIn($('#view-search'), 'back');
+    if (!swipingBack()) animateIn($('#view-search'), 'back'); // beim Wischen war die Seite schon zu sehen
     window.scrollTo(0, prev.scroll || 0);
+    reopenSheet(prev.fromSheet, $('#view-search'));
     return;
   }
   Object.assign(browse, { mode: null, value: '', works: [], next: null });
@@ -393,15 +397,33 @@ function endBrowse(restore = true) {
   renderGenreChips();
   const view = prev?.view || 'search';
   if (view !== 'search') showView(view); // z. B. zurück zu Meine Bücher oder Zufall
-  animateIn($(`#view-${view}`), 'back'); // zurück: von links
+  const viewEl = $(`#view-${view}`);
+  if (swipingBack()) viewEl.classList.remove('enter-fade'); else animateIn(viewEl, 'back'); // zurück: von links
   window.scrollTo(0, prev?.scroll || 0);
+  reopenSheet(prev?.fromSheet, viewEl);
+}
+
+/** Nach „zurück“ das Detailblatt wieder öffnen, aus dem man kam – über die sichtbare Karte desselben Buchs. */
+function reopenSheet(fromSheet, viewEl) {
+  if (!fromSheet) return;
+  const card = [...viewEl.querySelectorAll('.book[data-key]')].find((c) => c.dataset.key === fromSheet.key && c.offsetParent);
+  const btn = card?.querySelector('.more-btn');
+  if (btn) btn.click(); else fromSheet.reopen?.();
+  // Oberste Ebene (Suche, Meine Bücher, Zufall): Verlaufseintrag für das Blatt, damit Android-Zurück nur das Blatt
+  // schließt statt die App zu verlassen (Prüfrunde 13.11.2026; der popstate-Zweig für Blätter schließt es nur)
+  if (currentDepth() === 0) enterLevel();
 }
 
 const DEFAULT_STATUS = $('#searchStatus').textContent;
 $('#browseBack').addEventListener('click', () => goBack());
 // Stöbern-Seite: „zurück“ (‹, Wischen vom Rand, Android-Zurück) → vorherige Suche
-registerBack(() => (browse.mode && !$('#view-search').hidden ? () => endBrowse() : null));
-document.addEventListener('browse', (ev) => startBrowse(ev.detail.mode, ev.detail.value));
+registerBack(() => {
+  if (!browse.mode || $('#view-search').hidden) return null;
+  const fn = () => endBrowse();
+  fn.snapshot = browseStack.at(-1)?.snap; // vorige Seite für die Wischgeste
+  return fn;
+});
+document.addEventListener('browse', (ev) => startBrowse(ev.detail.mode, ev.detail.value, ev.detail.fromSheet || null));
 // Suchfeld geleert (auch per ✕ im Feld) → zurück zur Startansicht mit den Genres
 $('#searchInput').addEventListener('input', () => {
   if ($('#searchInput').value.trim()) return;

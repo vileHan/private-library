@@ -350,6 +350,7 @@
         const sheetBackOk = $('#sheet').hidden && !$('#browseBar').hidden && W.history.state?.bibBack === true;
         $('#browseBack').click();
         await until(() => $('#browseBar').hidden, 1500);
+        if (!$('#sheet').hidden) { $('#sheet .sheet-close').click(); await until(() => $('#sheet').hidden, 1000); } // Blatt kam per „zurück“ wieder
         // Zurück führt dorthin, woher man kam: Meine Bücher → Autor → Reihe → zurück = Autor → zurück = Meine Bücher
         $('#tab-library').click();
         const browseTo = (mode, value) => doc().dispatchEvent(new W.CustomEvent('browse', { detail: { mode, value } }));
@@ -365,7 +366,19 @@
         const toLibrary = !$('#view-library').hidden && $('#view-search').hidden && $('#browseBar').hidden;
         $('#tab-search').click();
         const searchKept = $('#searchInput').value === 'liebe';
-        add('Knopf rastet ein; Übergang; Zurück per Rand-Wischen, doppeltes ‹, offenes Blatt, Zurück zur Herkunft (Meine Bücher, Autor ← Reihe) (F4)', toastOk && undoOk && slideOk && edgeOk && doubleOk && sheetBackOk && toAuthor && toLibrary && searchKept, JSON.stringify({ toastOk, undoOk, slideOk, edgeOk, doubleOk, sheetBackOk, toAuthor, toLibrary, searchKept }));
+        // Aus dem Detailblatt zum Genre/Autor und zurück → dasselbe Detailblatt ist wieder offen (13.11.2026)
+        const firstCard = $$('#results .book')[0];
+        const firstTitle = firstCard.querySelector('.title').textContent;
+        firstCard.querySelector('.more-btn').click();
+        await until(() => !$('#sheet').hidden);
+        $('#sheet .author .link-btn').click();
+        await until(() => !$('#browseBar').hidden && $$('#results .book').length > 0 && $('#sheet').hidden, 4000);
+        $('#browseBack').click();
+        await until(() => $('#browseBar').hidden && !$('#sheet').hidden, 2000);
+        const sheetReopened = !$('#sheet').hidden && firstTitle.startsWith($('#sheet .sheet-title').textContent.slice(0, 12));
+        $('#sheet .sheet-close').click();
+        await until(() => $('#sheet').hidden, 1000);
+        add('Knopf rastet ein; Übergang; Zurück per Rand-Wischen, doppeltes ‹, offenes Blatt, Zurück zur Herkunft (Meine Bücher, Autor ← Reihe) (F4)', toastOk && undoOk && slideOk && edgeOk && doubleOk && sheetBackOk && toAuthor && toLibrary && searchKept && sheetReopened, JSON.stringify({ toastOk, undoOk, slideOk, edgeOk, doubleOk, sheetBackOk, toAuthor, toLibrary, searchKept, sheetReopened }));
         // Kurzlink: Code aus der Adresse; Abruf mit gestubbtem fetch (Daten, unbekannt, Fehler, hängt)
         const cu = (hash) => gift.codeFromUrl({ hash, search: '' });
         const codesOk = cu('#fuer-Abc') === 'abc' && cu('#fuer-x') === '' && cu('#g=abc') === '' && cu('#fuer-anna-7k') === 'anna-7k';

@@ -681,12 +681,6 @@ body.grid-view #results > .skel-card .sk.pill { width: 42px; height: 42px; borde
 
 
 /* ---------- Zurück per Wischen vom linken Rand (js/nav.js) ---------- */
-.edge-back {
-  position: fixed; left: 0; top: 50%; z-index: 35; width: 40px; height: 40px; border-radius: 50%; pointer-events: none;
-  display: grid; place-items: center; font-size: 1.6rem; line-height: 1; padding-bottom: 3px;
-  background: var(--surface); color: var(--muted); box-shadow: 0 2px 10px rgba(0,0,0,.25); transform: translate(-44px, -50%);
-}
-.edge-back.ready { background: var(--accent); color: var(--accent-text); }
 /* Kurzmeldung im Dunkelmodus etwas heller als der Hintergrund (Prüfrunde 12.11.2026) */
 @media (prefers-color-scheme: dark) { html:not([data-scheme="light"]) .toast { background: #46413a; } }
 html[data-scheme="dark"] .toast { background: #46413a; }
@@ -701,3 +695,14 @@ html[data-scheme="dark"] .toast { background: #46413a; }
 @media (prefers-reduced-motion: reduce) { .enter-fwd, .enter-back, .enter-fade { animation: none; } }
 /* Auf dem schärferen Cover-Hintergrund (blur 14 px) bleiben die Angaben im Kopf kräftiger lesbar */
 .sheet-head .sheet-facts { color: color-mix(in srgb, var(--text) 80%, var(--surface)); }
+
+/* ---------- Wischen vom linken Rand nach iPhone-Vorbild (js/nav.js, 13.11.2026) ---------- */
+/* Während der Geste liegt die aktuelle Seite (main) über einem Abbild der vorigen Seite */
+body.edge-swiping main { position: relative; z-index: 2; background: var(--bg); min-height: 100vh;
+  box-shadow: -10px 0 28px rgba(0, 0, 0, .22); will-change: transform; }
+.edge-under { position: fixed; inset: 0; z-index: 1; overflow: hidden; pointer-events: none; background: var(--bg); will-change: transform; }
+.edge-under::after { content: ""; position: absolute; inset: 0; background: #000; opacity: var(--dim, .18); }
+.edge-under-main { max-width: 760px; margin: 0 auto; padding: 14px 16px 0; }
+.edge-under-main > section { animation: none !important; }
+/* Während der Wischgeste ragt main über den Rand – kein waagrechtes Scrollen entstehen lassen */
+html:has(body.edge-swiping), body.edge-swiping { overflow-x: clip; }

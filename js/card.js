@@ -6,7 +6,7 @@ import { ownedIsbnsOf } from './store.js';
 import { formatIsbn } from './isbn.js';
 import { $, el, escapeHtml, today, haptic, pop, switchToggle, wireToggle, onTap } from './util.js';
 import { genreGroup } from './genres.js';
-import { registerOverlay } from './nav.js';
+import { registerOverlay, inEdgeZone } from './nav.js';
 
 // Untertitel wie „Roman“ oder „Thriller“ sind nur Gattungsangaben – die stehen schon beim Genre.
 const GENERIC_SUBTITLE = /^(ein(e|en)?\s+)?([\wäöüß-]+\s+)?[\wäöüß-]*(roman|thriller|krimi|kriminalroman|erzählung|erzählungen|novelle|geschichten|gedichte)(\s.*)?$/i;
@@ -178,6 +178,7 @@ function paintToggles(root, e) {
 export function bookCard(work, opts = {}) {
   const card = $('#bookTpl').content.firstElementChild.cloneNode(true);
   if (opts.compact) card.classList.add('compact');
+  if (work.key) card.dataset.key = work.key; // zum Wiederfinden (Detailblatt nach „zurück“ wieder öffnen)
   let entry = entryFor(work);
   card.querySelector('.title').textContent = (opts.prefix || '') + fullTitle(work);
   card.querySelector('.author').textContent = (work.authors || []).join(', ') || 'Unbekannter Autor';
@@ -279,7 +280,7 @@ function attachGridGestures(card, ctx) {
     lastTouchEnd = now;
   }, { passive: false });
   cover.addEventListener('pointerdown', (ev) => {
-    if (!isGrid()) return;
+    if (!isGrid() || inEdgeZone(ev.clientX)) return; // am linken Rand gehört die Geste dem „Zurück“-Wischen
     start = { x: ev.clientX, y: ev.clientY, id: ev.pointerId, swiping: false, held: false };
     clearTimeout(holdTimer);
     cover.classList.add('pressing'); // sichtbar: Cover drückt sich während des Haltens langsam ein
@@ -375,9 +376,11 @@ function openSheet(ctx) {
 
   // Kopf: Cover, voller Titel, Autor, alle Angaben
   // Autor und Genre führen zum Stöbern (Autorenseite bzw. beliebteste Bücher des Genres), siehe js/app.js
+  // Zurück von Autor/Genre/Reihe öffnet dieses Detailblatt wieder (13.11.2026): Schlüssel des Buchs mitgeben;
+  // app.js sucht nach dem Zurück die Karte dazu und öffnet ihr Blatt (sonst dieses ctx als Ersatz).
   const browseTo = (mode, value) => {
     sheetClose?.();
-    document.dispatchEvent(new CustomEvent('browse', { detail: { mode, value } }));
+    document.dispatchEvent(new CustomEvent('browse', { detail: { mode, value, fromSheet: { key: work.key, reopen: () => openSheet(ctx) } } }));
   };
   const link = (text, mode, value) => el('button', { type: 'button', class: 'link-btn', text, onclick: () => browseTo(mode, value) });
   const group = catalog.canBrowse ? genreGroup(work.genre) : '';

@@ -45,6 +45,8 @@ export function goBack() {
   if (history.state?.bibBack) history.back(); // → popstate führt die Aktion aus
   else { backAction()?.(); pending = Date.now() + 400; }
 }
+// Scrollstand verwaltet die App selbst (Stöbern-Stapel, Regal) – sonst springt die Seite beim Zurück nach oben
+try { history.scrollRestoration = 'manual'; } catch { /* alte Browser */ }
 window.addEventListener('popstate', () => {
   if (ignorePop) { ignorePop--; return; } // Zurückspulen, kein „zurück“
   pending = 0;
@@ -60,90 +62,146 @@ window.addEventListener('popstate', () => {
 /** Gibt es gerade eine Seite davor? */
 export const canGoBack = () => !!backAction();
 
+// ---------- Abbild der vorigen Seite (für die Wischgeste) ----------
+/** Abbild der gerade sichtbaren Ansicht samt Scrollstand – wird beim Wischen unter die aktuelle Seite gelegt. */
+export function captureView() {
+  const view = document.querySelector('main > section:not([hidden])');
+  if (!view) return null;
+  const node = view.cloneNode(true);
+  node.classList.remove('enter-fwd', 'enter-back', 'enter-fade');
+  node.setAttribute('aria-hidden', 'true');
+  // Eingaben übernehmen (Werte gehören nicht zum DOM-Baum)
+  const src = view.querySelectorAll('input, select');
+  node.querySelectorAll('input, select').forEach((d, i) => {
+    const s = src[i];
+    if (!s) return;
+    if (s.type === 'checkbox') d.checked = s.checked; else if (s.tagName === 'SELECT') d.value = s.value; else d.setAttribute('value', s.value);
+  });
+  const main = document.querySelector('main');
+  return { node, scroll: window.scrollY, top: main.getBoundingClientRect().top + window.scrollY };
+}
+
+let swiping = false;
+/** Läuft gerade ein Zurück per Wischgeste? (Dann keine zweite Einblend-Animation – die Seite war schon zu sehen.) */
+export const swipingBack = () => swiping;
+
 // ---------- Wischen vom linken Rand (nur installierte iPhone-App, sonst hat das System eine eigene Geste) ----------
-// Weicher (13.11.2026): Die Seite folgt dem Finger fast 1:1 und wird leicht blasser; beim Loslassen gleitet sie nach
-// rechts hinaus, danach kommt die vorige Seite von links herein (animateIn 'back'). Ein schneller Schwung reicht auch
-// bei kurzer Strecke. Nicht weit genug → federt weich zurück.
-const EDGE = 18;      // Startzone am linken Rand in px (Seitenrand ist 16 px – darin liegt kaum etwas zum Antippen)
-const TRIGGER = 90;   // ab dieser Strecke nach rechts geht es zurück …
-const FLICK = 0.45;   // … oder ab dieser Geschwindigkeit (px/ms) mit mindestens 40 px
-const FOLLOW = 0.9;   // Anteil, mit dem die Seite dem Finger folgt
+// Nach iPhone-Vorbild (13.11.2026): Die Seite folgt dem Finger 1:1, darunter erscheint die vorige Seite (Abbild,
+// leicht versetzt und abgedunkelt). Beim Loslassen entscheidet zuerst der Schwung: nach rechts „geworfen“ = zurück,
+// nach links geworfen = bleiben – egal wie weit gezogen; ohne Schwung zählt, ob mehr als 45 % der Breite erreicht ist.
+const EDGE = 24;        // Startzone am linken Rand in px
+const FLICK = 0.35;     // px/ms – ab diesem Schwung entscheidet die Richtung
+const HALF = 0.45;      // Anteil der Breite, ab dem es ohne Schwung zurückgeht
+const PARALLAX = 0.3;   // vorige Seite startet um 30 % nach links versetzt
+
+/** Liegt die Berührung in der Startzone der Wischgeste? (Andere Gesten, z. B. im Cover-Raster, halten sich raus.) */
+export const inEdgeZone = (x) => attached && x <= EDGE;
 
 let attached = false;
 export function attachEdgeSwipe({ force = false } = {}) {
   const standaloneIos = window.navigator.standalone === true;
   if (attached || (!force && !standaloneIos)) return attached;
   attached = true;
-  let start = null;
-  let hint = null;
-  let busy = false; // Ausgleiten/Zurückfedern läuft noch
+  let g = null;      // laufende Geste
+  let busy = false;  // Ausgleiten/Zurückfedern läuft noch
   const main = document.querySelector('main');
-  const setMain = (x, transition = '') => {
+  const W = () => window.innerWidth;
+
+  const paint = (x, transition = '') => {
     main.style.transition = transition;
-    main.style.transform = x ? `translateX(${x}px)` : '';
-    main.style.opacity = x ? String(1 - Math.min(0.25, x / window.innerWidth * 0.4)) : '';
+    main.style.transform = x ? `translate3d(${x}px, 0, 0)` : '';
+    if (g?.under) {
+      const p = Math.min(1, x / W());
+      g.under.style.transition = transition;
+      g.under.style.transform = `translate3d(${-(1 - p) * PARALLAX * W()}px, 0, 0)`;
+      g.under.style.setProperty('--dim', String(0.18 * (1 - p)));
+    }
   };
-  const clearHint = () => { hint?.remove(); hint = null; };
+  const cleanup = () => {
+    document.body.classList.remove('edge-swiping');
+    g?.under?.remove();
+    g?.hint?.remove();
+    main.style.transition = main.style.transform = '';
+    g = null;
+    busy = false;
+  };
 
   document.addEventListener('touchstart', (ev) => {
-    start = null;
+    if (busy) return;
+    g = null;
     const t = ev.touches[0];
-    if (busy || ev.touches.length !== 1 || t.clientX > EDGE || document.body.classList.contains('sheet-open')
-      || document.querySelector('.cover-zoom, .gift-greeting') || !document.getElementById('scanner')?.hidden || !canGoBack()) return;
-    start = { x: t.clientX, y: t.clientY, active: false, lastX: t.clientX, lastT: performance.now(), v: 0 };
-  }, { passive: true });
+    if (ev.touches.length !== 1 || t.clientX > EDGE || document.body.classList.contains('sheet-open')
+      || document.querySelector('.cover-zoom, .gift-greeting') || !document.getElementById('scanner')?.hidden) return;
+    const action = backAction();
+    if (!action) return;
+    g = { x: t.clientX, y: t.clientY, active: false, action, pts: [[t.clientX, performance.now()]], under: null, hint: null };
+  }, { passive: true, capture: true });
 
   document.addEventListener('touchmove', (ev) => {
-    if (!start) return;
+    if (!g) return;
     const t = ev.touches[0];
-    const dx = t.clientX - start.x;
-    const dy = t.clientY - start.y;
-    if (!start.active) {
-      if (Math.abs(dy) > 12 && Math.abs(dy) > dx) { start = null; return; } // senkrecht → normal scrollen
-      if (dx < 8) return;
-      start.active = true;
-      hint = Object.assign(document.createElement('div'), { className: 'edge-back', textContent: '‹' });
-      hint.setAttribute('aria-hidden', 'true');
-      document.body.append(hint);
+    const dx = t.clientX - g.x;
+    const dy = t.clientY - g.y;
+    if (!g.active) {
+      if (Math.abs(dy) > 10 && Math.abs(dy) > dx * 1.2) { g = null; return; } // senkrecht → normal scrollen
+      if (dx < 6) return;
+      g.active = true;
+      document.body.classList.add('edge-swiping');
+      // vorige Seite darunter legen (falls ein Abbild da ist)
+      const snap = g.action.snapshot;
+      const under = document.createElement('div');
+      under.className = 'edge-under';
+      under.setAttribute('aria-hidden', 'true');
+      if (snap?.node) {
+        const inner = document.createElement('div');
+        inner.className = 'edge-under-main';
+        inner.style.transform = `translateY(${snap.top - snap.scroll}px)`;
+        inner.append(snap.node.cloneNode(true));
+        under.append(inner);
+      }
+      document.body.append(under);
+      g.under = under;
     }
     if (ev.cancelable) ev.preventDefault();
     const now = performance.now();
-    if (now > start.lastT) start.v = 0.7 * ((t.clientX - start.lastX) / (now - start.lastT)) + 0.3 * start.v; // geglättet
-    start.lastX = t.clientX; start.lastT = now;
-    const p = Math.min(1, Math.max(0, dx) / TRIGGER);
-    hint.style.transform = `translate(${-44 + p * 56}px, -50%)`;
-    hint.classList.toggle('ready', p >= 1);
-    setMain(Math.max(0, dx) * FOLLOW);
-  }, { passive: false });
+    g.pts.push([t.clientX, now]);
+    while (g.pts.length > 2 && now - g.pts[0][1] > 90) g.pts.shift(); // Schwung aus den letzten ~90 ms
+    paint(Math.max(0, dx));
+  }, { passive: false, capture: true });
 
   const end = (ev) => {
-    if (!start) return;
-    const s = start;
-    start = null;
-    if (!s.active) return;
-    const dx = (ev.changedTouches[0]?.clientX ?? s.lastX) - s.x;
-    const ok = ev.type === 'touchend' && (dx >= TRIGGER || (dx >= 40 && s.v >= FLICK));
-    clearHint();
+    if (!g) return;
+    if (!g.active) { g = null; return; }
+    const x = Math.max(0, (ev.changedTouches[0]?.clientX ?? g.x) - g.x);
+    const [x0, t0] = g.pts[0];
+    const [x1, t1] = g.pts[g.pts.length - 1];
+    const idle = performance.now() - t1 > 80; // Finger stand vor dem Loslassen still → kein Schwung (Prüfrunde 13.11.2026)
+    const v = !idle && t1 > t0 ? (x1 - x0) / (t1 - t0) : 0;
+    const commit = ev.type === 'touchend' && (v > FLICK || (v > -FLICK && x > W() * HALF));
     busy = true;
-    if (!ok) { // weich zurückfedern
-      setMain(0, 'transform .28s cubic-bezier(.2, .8, .2, 1), opacity .28s');
-      setTimeout(() => { main.style.transition = ''; busy = false; }, 300);
+    if (!commit) { // weich zurück auf die aktuelle Seite
+      paint(0, 'transform .3s cubic-bezier(.2, .9, .3, 1)');
+      setTimeout(cleanup, 320);
       return;
     }
     haptic();
-    setMain(window.innerWidth * 0.6, 'transform .16s ease-in, opacity .16s ease-in'); // hinausgleiten
+    // Restweg in einer Zeit passend zum Schwung (schnell geworfen = kurz), wie am iPhone
+    const rest = W() - x;
+    const ms = Math.round(Math.max(140, Math.min(320, rest / Math.max(v, 1.2))));
+    paint(W(), `transform ${ms}ms cubic-bezier(.2, .8, .3, 1)`);
     setTimeout(() => {
-      const done = () => { setMain(0); busy = false; }; // ohne Übergang zurücksetzen; neue Seite gleitet selbst herein
+      swiping = true;
+      const finish = () => requestAnimationFrame(() => { swiping = false; cleanup(); });
       const viaHistory = !!history.state?.bibBack;
       if (viaHistory) {
-        window.addEventListener('popstate', () => requestAnimationFrame(done), { once: true });
-        setTimeout(() => { if (busy) done(); }, 500); // falls popstate ausbleibt
+        window.addEventListener('popstate', finish, { once: true });
+        setTimeout(() => { if (swiping) finish(); }, 600); // falls popstate ausbleibt
       }
       goBack();
-      if (!viaHistory) done();
-    }, 160);
+      if (!viaHistory) finish();
+    }, ms);
   };
-  document.addEventListener('touchend', end);
-  document.addEventListener('touchcancel', end);
+  document.addEventListener('touchend', end, { capture: true });
+  document.addEventListener('touchcancel', end, { capture: true });
   return true;
 }

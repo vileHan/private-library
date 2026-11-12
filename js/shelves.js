@@ -4,14 +4,27 @@ import { library, allTags, addShelf, renameShelf, deleteShelf } from './library.
 import { bookCard, coverThumb } from './card.js';
 import { el, plural, emptyState, animateIn } from './util.js';
 import { compareTitle } from './works.js';
-import { registerBack, enterLevel, goBack } from './nav.js';
+import { registerBack, enterLevel, goBack, captureView, swipingBack } from './nav.js';
 
-const state = { open: '' }; // geöffnetes Regal ('' = Übersicht)
+const state = { open: '', snap: null, scroll: 0 }; // geöffnetes Regal ('' = Übersicht); snap = Abbild der Übersicht
 let lastContainer = null;
 // Geöffnetes Regal: „zurück“ (‹ Alle Regale, Wischen vom Rand, Android-Zurück) → Regal-Übersicht
-registerBack(() => (state.open && lastContainer?.isConnected && !lastContainer.closest('[hidden]')
-  ? () => { state.open = ''; renderShelves(lastContainer); animateIn(lastContainer, 'back'); } : null));
-const openShelf = (name, rerender) => { state.open = name; enterLevel(); rerender(); animateIn(lastContainer, 'fwd'); };
+registerBack(() => {
+  if (!state.open || !lastContainer?.isConnected || lastContainer.closest('[hidden]')) return null;
+  const fn = () => {
+    state.open = '';
+    renderShelves(lastContainer);
+    if (!swipingBack()) animateIn(lastContainer, 'back');
+    window.scrollTo(0, state.scroll);
+  };
+  fn.snapshot = state.snap;
+  return fn;
+});
+const openShelf = (name, rerender) => {
+  Object.assign(state, { snap: captureView(), scroll: window.scrollY, open: name });
+  enterLevel(); rerender(); animateIn(lastContainer, 'fwd');
+  window.scrollTo(0, 0);
+};
 
 const booksIn = (name) => [...library.byKey.values()].filter((e) => (e.tags || []).includes(name)).sort(compareTitle);
 

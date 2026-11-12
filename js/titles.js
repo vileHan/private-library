@@ -74,9 +74,11 @@ const IMPRINTS = /^(carlsen|reclams?|action|insel|dtv|heyne|goldmann|ullstein|fi
 // Typische Namen von Verlags- und Sammelreihen (Stichprobe 11/2026: „Unionsverlag Taschenbuch 238“, „Maxi Pixi 289“,
 // „Die ZEIT – Bücherschatz 11“, „Salto 272“, „Must read 22“, „Reihe Lyrik“, „Theatertexte“, „Gesammelte Werke“ …).
 // Nicht „Bibliothek“ allgemein – „Die Bibliothek der flüsternden Schatten“ ist eine echte Reihe.
-const PUBLISHER_SERIES = /(taschenbuch|taschenbuecher|bibliothek)$|(buecherschatz|pixi|lesemaus|leserabe|leseprofi|lesepiraten|erstleser|lesestufe|theatertexte|einfacher sprache)\b|^(reihe|edition|schriftenreihe|veroeffentlichungen|sammlung|lyrik|poesie|prosa|theater|literatur|werke|gesammelte werke|saemtliche werke|ausgewaehlte werke|must read|salto|kiwi|bvt|kbv)\b|\bklassiker\b|^bild am sonntag\b/;
+const PUBLISHER_SERIES = /(taschenbuch|taschenbuecher|bibliothek)$|(buecherschatz|pixi|lesemaus|leserabe|leseprofi|lesepiraten|erstleser|lesestufe|theatertexte|einfacher sprache)\b|^(reihe|edition|schriftenreihe|veroeffentlichungen|sammlung|lyrik|poesie|prosa|theater|literatur|werke|gesammelte werke|saemtliche werke|ausgewaehlte werke|must read|salto|kiwi|bvt|kbv)\b|\bklassiker\b|^(bild|welt) am sonntag\b|^schoenen sonntag\b|^sonntagsblatt\b|\bsonntagsblick\b|^allgemeine$/;
 // „Bild am Sonntag – Mega Thriller!“ (auch „Bild-am-Sonntag-Mega-Thriller“): Zeitungs-Sonderedition mit Büchern
-// verschiedener Autoren, keine Buchreihe (Noah, Der Erlöser … – Nutzerentscheidung 13.11.2026)
+// verschiedener Autoren, keine Buchreihe (Noah, Der Erlöser … – Nutzerentscheidung 13.11.2026). Ebenso „Welt am
+// Sonntag“, „Schönen Sonntag“, „Sonntagsblatt“, „Blick-SonntagsBlick-Bestseller-Edition“ (Weltbild) und die
+// Bastei-Lübbe-Verlagsreihe „Allgemeine“ (nur genau dieser Name; McFadyen „Ausgelöscht“ = „Allgemeine, Band 4“).
 
 /**
  * Reihennamen aufräumen: „Band ... der "Children of blood and bone"-Trilogie“ → „Children of blood and bone“,

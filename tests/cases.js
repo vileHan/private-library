@@ -275,6 +275,8 @@ export async function runAll() {
     [String(isPublisherSeries('Selcouth', 'Köln : Lübbe')), 'false'],
     [String(isPublisherSeries('Bild am Sonntag - Mega Thriller!', 'Hamburg : Axel Springer')), 'true'],
     [String(isPublisherSeries('Bild-am-Sonntag-Mega-Thriller', 'München : Droemer')), 'true'],
+    [String(['Welt am Sonntag', 'Schönen Sonntag', 'Sonntagsblatt', 'Blick-SonntagsBlick-Bestseller-Edition', 'Allgemeine'].every((s) => isPublisherSeries(s, 'Köln : Bastei Lübbe'))), 'true'],
+    [String(['Dr. Sonntag', 'Miss Isabel und der Club der Sonntagsphilosophen', 'Allgemeine Verunsicherung'].some((s) => isPublisherSeries(s, 'Berlin : Aufbau'))), 'false'],
     [cleanSeriesName('Band ... der "Children of blood and bone"-Trilogie'), 'Children of blood and bone'],
     [cleanSeriesName('Selcouth-Reihe'), 'Selcouth'],
     [cleanSeriesName('Die Känguru-Werke'), 'Die Känguru'],
