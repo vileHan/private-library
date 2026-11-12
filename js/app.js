@@ -14,6 +14,7 @@ import { settings } from './settings.js';
 import { GENRES } from './genres.js';
 import { applyTheme, renderLook } from './theme.js';
 import { initGift, showGreeting, giftData, clearGift } from './gift.js';
+import { registerBack, enterLevel, goBack, attachEdgeSwipe } from './nav.js';
 
 onLibraryChange(() => {
   const owned = [...library.byKey.values()].filter((e) => e.owned).length;
@@ -338,7 +339,10 @@ function startBrowse(mode, value) {
   cancelLive();
   search.controller?.abort();
   // Vorherigen Zustand merken (nur beim ersten Schritt – Autor → Genre → Autor führt trotzdem zur Suche zurück)
-  if (!browse.mode) browse.saved = { input: $('#searchInput').value, query: search.query, scroll: window.scrollY };
+  if (!browse.mode) {
+    browse.saved = { input: $('#searchInput').value, query: search.query, scroll: window.scrollY };
+    enterLevel(); // Eintrag im Verlauf: Wischen vom Rand / Android-Zurück führt zur Suche zurück
+  }
   Object.assign(browse, { mode, value, works: [], next: null });
   showView('search');
   $('#results').replaceChildren();
@@ -370,7 +374,9 @@ function endBrowse(restore = true) {
 }
 
 const DEFAULT_STATUS = $('#searchStatus').textContent;
-$('#browseBack').addEventListener('click', () => endBrowse());
+$('#browseBack').addEventListener('click', () => goBack());
+// Stöbern-Seite: „zurück“ (‹, Wischen vom Rand, Android-Zurück) → vorherige Suche
+registerBack(() => (browse.mode && !$('#view-search').hidden ? () => endBrowse() : null));
 document.addEventListener('browse', (ev) => startBrowse(ev.detail.mode, ev.detail.value));
 // Suchfeld geleert (auch per ✕ im Feld) → zurück zur Startansicht mit den Genres
 $('#searchInput').addEventListener('input', () => {
@@ -551,6 +557,7 @@ refreshAllFromDb((keys) => catalog.worksByKeys(keys)).then((n) => {
 // Darstellung und Geschenk (10.11.2026)
 applyTheme();
 initGift();
+attachEdgeSwipe(); // Wischen vom linken Rand = zurück (nur installierte iPhone-App; sonst hat das System eine Geste)
 function renderSettings() {
   renderLook($('#lookControls'), () => (giftData()
     ? [el('p', { class: 'gift-actions' },

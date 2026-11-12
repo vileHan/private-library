@@ -670,3 +670,26 @@ body.grid-view #results > .skel-card .cover { width: 100%; height: auto; aspect-
 body.grid-view #results > .skel-card .info { display: none; }
 body.grid-view #results > .skel-card .actions { justify-content: center; gap: 10px; }
 body.grid-view #results > .skel-card .sk.pill { width: 42px; height: 42px; border-radius: 12px; }
+
+/* ---------- Paket 3, Punkte 1–2 (12.11.2026): Knopf rastet ein, „… · Rückgängig“ auch in der Liste ---------- */
+@keyframes snap { 0% { transform: scale(1); } 35% { transform: scale(.9); } 70% { transform: scale(1.05); } 100% { transform: scale(1); } }
+@keyframes snap-ico { 0% { transform: scale(.4); } 60% { transform: scale(1.35); } 100% { transform: scale(1); } }
+.toggle.snap { animation: snap .32s cubic-bezier(.3, .7, .4, 1); }
+.toggle.snap::before { display: inline-block; animation: snap-ico .32s cubic-bezier(.3, .7, .4, 1); }
+.toggle { transition: background-color .2s, border-color .2s; }
+@media (prefers-reduced-motion: reduce) { .toggle.snap, .toggle.snap::before { animation: none; } }
+/* Kurzmeldung mit Text: dunkle Leiste, Text links, „Rückgängig“ rechts */
+.toast.with-text { padding: 4px 4px 4px 16px; gap: 10px; border-radius: 14px; animation: toast-in .2s ease-out; }
+.toast-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+@keyframes toast-in { from { opacity: 0; transform: translate(-50%, 8px); } to { opacity: 1; transform: translate(-50%, 0); } }
+
+/* ---------- Zurück per Wischen vom linken Rand (js/nav.js) ---------- */
+.edge-back {
+  position: fixed; left: 0; top: 50%; z-index: 35; width: 40px; height: 40px; border-radius: 50%; pointer-events: none;
+  display: grid; place-items: center; font-size: 1.6rem; line-height: 1; padding-bottom: 3px;
+  background: var(--surface); color: var(--muted); box-shadow: 0 2px 10px rgba(0,0,0,.25); transform: translate(-44px, -50%);
+}
+.edge-back.ready { background: var(--accent); color: var(--accent-text); }
+/* Kurzmeldung im Dunkelmodus etwas heller als der Hintergrund (Prüfrunde 12.11.2026) */
+@media (prefers-color-scheme: dark) { html:not([data-scheme="light"]) .toast { background: #46413a; } }
+html[data-scheme="dark"] .toast { background: #46413a; }

@@ -6,6 +6,7 @@ import { ownedIsbnsOf } from './store.js';
 import { formatIsbn } from './isbn.js';
 import { $, el, escapeHtml, today, haptic, pop, switchToggle, wireToggle, onTap } from './util.js';
 import { genreGroup } from './genres.js';
+import { registerOverlay } from './nav.js';
 
 // Untertitel wie „Roman“ oder „Thriller“ sind nur Gattungsangaben – die stehen schon beim Genre.
 const GENERIC_SUBTITLE = /^(ein(e|en)?\s+)?([\wäöüß-]+\s+)?[\wäöüß-]*(roman|thriller|krimi|kriminalroman|erzählung|erzählungen|novelle|geschichten|gedichte)(\s.*)?$/i;
@@ -206,7 +207,17 @@ export function bookCard(work, opts = {}) {
   };
 
   // „toggle“ kommt nur bei einem echten Tipp, nie beim Wischen (switchToggle in util.js); der Schalter darin sorgt am iPhone für Haptik
-  const onToggle = (cls, fn) => wireToggle(card.querySelector(`.toggle.${cls}`)).addEventListener('toggle', () => { haptic(); ctx.change(fn()); });
+  // Paket 3 (12.11.2026): Knopf rastet sichtbar ein; danach kurz „… · Rückgängig“ unten (wie im Raster)
+  const onToggle = (cls, fn) => {
+    const btn = wireToggle(card.querySelector(`.toggle.${cls}`));
+    btn.addEventListener('toggle', async () => {
+      haptic();
+      snap(btn);
+      const before = snapshot(entry);
+      const e = await ctx.change(fn());
+      toast(() => ctx.change((x) => Object.assign(x, before)), toggleMessage(cls, e));
+    });
+  };
   onToggle('own', () => actions.own(work));
   onToggle('read', () => actions.read());
   onToggle('wish', () => actions.wish());
@@ -341,16 +352,37 @@ function snapshot(e) {
 }
 
 let toastTimer;
-/** Kleiner „Rückgängig“-Knopf unten nach einer Geste – verschwindet nach 2,5 Sekunden. */
-export function toast(undo) {
+/**
+ * „Rückgängig“ unten. Ohne Text (Raster-Gesten): nur der Knopf, 2,5 s. Mit Text (Knöpfe in der Liste, 12.11.2026):
+ * „Als gelesen markiert · Rückgängig“, 4 s – wie in üblichen Apps.
+ */
+export function toast(undo, text = '') {
   const box = $('#toast');
   clearTimeout(toastTimer);
-  box.replaceChildren(el('button', {
-    type: 'button', text: '↶ Rückgängig',
-    onclick: () => { box.hidden = true; undo(); },
-  }));
+  box.classList.toggle('with-text', !!text);
+  box.replaceChildren(
+    text ? el('span', { class: 'toast-text', text }) : '',
+    el('button', {
+      type: 'button', text: text ? 'Rückgängig' : '↶ Rückgängig',
+      onclick: () => { box.hidden = true; undo(); },
+    }));
   box.hidden = false;
-  toastTimer = setTimeout(() => { box.hidden = true; }, 2500);
+  toastTimer = setTimeout(() => { box.hidden = true; }, text ? 4000 : 2500);
+}
+
+/** Text zur Kurzmeldung nach einem Knopf: was ist jetzt der Stand? */
+export function toggleMessage(cls, e) {
+  if (cls === 'own') return e?.owned ? 'In deiner Bibliothek' : 'Nicht mehr im Besitz';
+  if (cls === 'read') return e?.read ? 'Als gelesen markiert' : 'Nicht mehr gelesen';
+  return e?.wish ? 'Auf der Merkliste' : 'Nicht mehr gemerkt';
+}
+
+/** Knopf „rastet ein“: kurz eindrücken, Symbol springt (nur Optik; bei „Bewegung reduzieren“ aus). */
+export function snap(btn) {
+  btn.classList.remove('snap');
+  void btn.offsetWidth; // Animation neu starten, auch bei schnellem Doppeltipp
+  btn.classList.add('snap');
+  btn.addEventListener('animationend', () => btn.classList.remove('snap'), { once: true });
 }
 
 // ---------- Detailblatt („⋯“ bzw. Doppeltippen im Raster) ----------
@@ -407,7 +439,7 @@ function openSheet(ctx) {
   // Dieselben drei Knöpfe, ausgeschrieben
   const toggle = (cls, label, fn) => {
     const b = switchToggle(cls, label); // echter iOS-Schalter im Knopf → Haptik am iPhone
-    b.addEventListener('toggle', () => { haptic(); ctx.change(fn); }); // nur bei echtem Tipp, siehe switchToggle
+    b.addEventListener('toggle', () => { haptic(); snap(b); ctx.change(fn); }); // nur bei echtem Tipp, siehe switchToggle
     return b;
   };
   const bar = el('div', { class: 'actions sheet-actions' },
@@ -515,6 +547,8 @@ function openSheet(ctx) {
 // Ziehen am Griff/Kopf schiebt das Blatt immer; im Inhalt nur, wenn er ganz oben steht und der Finger nach unten geht.
 // Loslassen: weiter als 30 % der Höhe oder schnell nach unten „geschnippt“ → schließen, sonst zurückfedern.
 let sheetClose = null;
+// Android-Zurück bei offenem Detailblatt schließt nur das Blatt (js/nav.js)
+registerOverlay(() => (sheetClose ? () => sheetClose() : null));
 let sheetDragReady = false;
 
 function resetSheetStyles(sheet) {

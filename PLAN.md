@@ -40,6 +40,7 @@ Alle kostenlos und lokal machbar (IndexedDB, vorhandener Katalog). Aufwand grob:
 ## Mit dem Import am 01.12.2026 (automatisch, schon im Code)
 - Pappbilderbücher (~5.900) und Spielleiter-Schirme fallen weg.
 - Känguru-Reihe mit vollen Titeln und Band 1–5; Box-Bände ohne Autor werden eingegliedert.
+- Fehlender Band 1 in Reihen (~219 Reihen), z. B. Dungeon Crawler Carl: heute in der Datenbank noch „Entertainment ist Pflicht - Überleben nicht : Roman“ ohne Band – der Code liefert schon „Entertainment ist Pflicht - Überleben nicht“, Band 1 (geprüft 12.11.2026). Eigene Einträge ziehen danach innerhalb von 12 h nach.
 
 ## Entscheidungen des Nutzers
 - **„Mein Kinderbuchhaus“** (Oetinger-Sammelreihe, 8 Autoren) als Verlagsreihe herausnehmen? Sonst zeigt „Pippi Langstrumpf“ nach dem Import „Band 5“. Kleine Regel in `isPublisherSeries`.
@@ -53,6 +54,7 @@ Alle kostenlos und lokal machbar (IndexedDB, vorhandener Katalog). Aufwand grob:
 - Optional: weitere Sachgruppen freischalten, z. B. Geschichte (`900`) – Konfiguration ergänzen, Import laufen lassen.
 
 ## Oberfläche
+- **„Meine Bücher“ weiter aufräumen** (Wunsch des Nutzers 12.11.2026): Seite wirkt noch voll – Suchfeld, Sortierung, Filter-Chips und Unteransichten übersichtlicher anordnen (z. B. Filter/Sortierung hinter einem Knopf, Suchfeld einklappbar). Vorher Varianten zeigen.
 - Screenreader: Zustand der Knöpfe am Schalter mitführen (`input.checked`), heute liest er immer „nicht aktiviert“.
 - Farben der Knöpfe und Rahmen feinschleifen (Grundregeln stehen in CLAUDE.md „Gestaltungsregeln“).
 - Testseite: Konsolenmeldungen 401/404 aufräumen (stören nicht, verwirren beim Prüfen).

@@ -4,12 +4,19 @@ import { library, allTags, addShelf, renameShelf, deleteShelf } from './library.
 import { bookCard, coverThumb } from './card.js';
 import { el, plural, emptyState } from './util.js';
 import { compareTitle } from './works.js';
+import { registerBack, enterLevel, goBack } from './nav.js';
 
 const state = { open: '' }; // geöffnetes Regal ('' = Übersicht)
+let lastContainer = null;
+// Geöffnetes Regal: „zurück“ (‹ Alle Regale, Wischen vom Rand, Android-Zurück) → Regal-Übersicht
+registerBack(() => (state.open && lastContainer?.isConnected && !lastContainer.closest('[hidden]')
+  ? () => { state.open = ''; renderShelves(lastContainer); } : null));
+const openShelf = (name, rerender) => { state.open = name; enterLevel(); rerender(); };
 
 const booksIn = (name) => [...library.byKey.values()].filter((e) => (e.tags || []).includes(name)).sort(compareTitle);
 
 export function renderShelves(container) {
+  lastContainer = container;
   const tags = allTags();
   if (state.open && !tags.includes(state.open)) state.open = '';
   const rerender = () => renderShelves(container);
@@ -19,7 +26,7 @@ export function renderShelves(container) {
     type: 'button', class: 'chip shelf-add', text: '+ Neues Regal',
     onclick: () => {
       const name = addShelf(window.prompt('Name des neuen Regals (z. B. „Urlaub“, „Lieblinge“):') || '');
-      if (name) { state.open = name; rerender(); }
+      if (name) openShelf(name, rerender);
     },
   });
   const intro = el('p', { class: 'status', text: tags.length
@@ -27,7 +34,7 @@ export function renderShelves(container) {
     : 'Regale sind eigene Sammlungen, z. B. „Urlaub“, „Lieblinge“ oder „Von Oma“. Bücher kommen über „⋯“ → Regale hinein.' });
   const cards = tags.map((t) => {
     const books = booksIn(t);
-    return el('button', { type: 'button', class: 'shelf-card', onclick: () => { state.open = t; rerender(); } },
+    return el('button', { type: 'button', class: 'shelf-card', onclick: () => openShelf(t, rerender) },
       el('div', { class: 'shelf-info' },
         el('strong', { class: 'shelf-name', text: t }),
         el('span', { class: 'shelf-count', text: books.length ? plural(books.length, 'Buch', 'Bücher') : 'noch leer' })),
@@ -39,7 +46,7 @@ export function renderShelves(container) {
 
 function renderShelf(container, name, rerender) {
   const books = booksIn(name);
-  const back = el('button', { type: 'button', class: 'link-btn', text: '‹ Alle Regale', onclick: () => { state.open = ''; rerender(); } });
+  const back = el('button', { type: 'button', class: 'link-btn', text: '‹ Alle Regale', onclick: () => goBack() });
   const rename = el('button', {
     type: 'button', class: 'link-btn', text: 'Umbenennen',
     onclick: async () => {

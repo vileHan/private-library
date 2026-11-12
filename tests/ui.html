@@ -305,6 +305,51 @@
         await until(() => !$('#results').classList.contains('stale'));
         const clean = !$('#results .skel-card');
         add('Reiter unten; Lade-Platzhalter bzw. abgeblendete alte Treffer (F3)', barOk && skel && stale && clean, JSON.stringify({ barOk, skel, stale, clean }));
+        // F4: Knopf rastet ein + „… · Rückgängig“ in der Liste (Zustand danach wie vorher); Zurück per Verlauf und Randwischen
+        const tcard = $$('#results .book')[0];
+        const wishBtn = tcard.querySelector('.toggle.wish');
+        const wasWish = wishBtn.getAttribute('aria-pressed');
+        wishBtn.dispatchEvent(new W.CustomEvent('toggle'));
+        await until(() => !$('#toast').hidden && /Merkliste/.test($('#toast').textContent), 1500);
+        const toastOk = /Merkliste/.test($('#toast').textContent) && !!$('#toast button');
+        $('#toast button').click();
+        await until(() => wishBtn.getAttribute('aria-pressed') === wasWish, 1500);
+        const undoOk = wishBtn.getAttribute('aria-pressed') === wasWish;
+        tcard.querySelector('.more-btn').click();
+        await until(() => !$('#sheet').hidden);
+        $('#sheet .author .link-btn').click();
+        await until(() => !$('#browseBar').hidden && $$('#results .book').length > 0 && $('#sheet').hidden, 4000);
+        const nav = await imp('nav.js');
+        nav.attachEdgeSwipe({ force: true });
+        const T = (type, x, y) => {
+          const t = new W.Touch({ identifier: 9, target: doc().body, clientX: x, clientY: y });
+          doc().dispatchEvent(new W.TouchEvent(type, { touches: type === 'touchend' ? [] : [t], changedTouches: [t], bubbles: true, cancelable: true }));
+        };
+        T('touchstart', 5, 400);
+        for (let x = 20; x <= 140; x += 20) { T('touchmove', x, 404); await sleep(16); }
+        T('touchend', 140, 404);
+        const edgeOk = (await until(() => $('#browseBar').hidden && $('#searchInput').value === 'liebe', 1500)) >= 0;
+        // Zweimal schnell „‹“ bleibt in der App; Zurück bei offenem Detailblatt schließt nur das Blatt
+        const openAuthor = async () => {
+          $$('#results .book')[0].querySelector('.more-btn').click();
+          await until(() => !$('#sheet').hidden);
+          $('#sheet .author .link-btn').click();
+          await until(() => !$('#browseBar').hidden && $$('#results .book').length > 0 && $('#sheet').hidden, 4000);
+        };
+        await openAuthor();
+        const href = W.location.href;
+        $('#browseBack').click(); $('#browseBack').click();
+        await sleep(700);
+        const doubleOk = W.location.href === href && $('#browseBar').hidden && !!$('#searchInput');
+        await openAuthor();
+        $$('#results .book')[0].querySelector('.more-btn').click();
+        await until(() => !$('#sheet').hidden);
+        W.history.back();
+        await until(() => $('#sheet').hidden, 1500);
+        const sheetBackOk = $('#sheet').hidden && !$('#browseBar').hidden && W.history.state?.bibBack === true;
+        $('#browseBack').click();
+        await until(() => $('#browseBar').hidden, 1500);
+        add('Knopf: Rückgängig in der Liste; Zurück per Wischen vom Rand, doppeltes ‹, Zurück bei offenem Blatt (F4)', toastOk && undoOk && edgeOk && doubleOk && sheetBackOk, JSON.stringify({ toastOk, undoOk, edgeOk, doubleOk, sheetBackOk }));
         // Kurzlink: Code aus der Adresse; Abruf mit gestubbtem fetch (Daten, unbekannt, Fehler, hängt)
         const cu = (hash) => gift.codeFromUrl({ hash, search: '' });
         const codesOk = cu('#fuer-Abc') === 'abc' && cu('#fuer-x') === '' && cu('#g=abc') === '' && cu('#fuer-anna-7k') === 'anna-7k';

@@ -66,7 +66,7 @@ Commits laufen mit der GitHub-noreply-Adresse (in der lokalen Git-Konfiguration 
   🔍 Prüfung: Stufe N, X Runden, Ergebnis
   ```
   Leere Zeilen weglassen.
-- **Tests**: `tests/index.html` (Katalog, 46) und `tests/ui.html` (Oberfläche in 360 px, 47; eigene Daten bleiben unberührt, ein Testeintrag wird wieder gelöscht).
+- **Tests**: `tests/index.html` (Katalog, 46) und `tests/ui.html` (Oberfläche in 360 px, 48; eigene Daten bleiben unberührt, ein Testeintrag wird wieder gelöscht).
 - **Prüf-Stempel** `tools/pruefstempel.ps1` (Hash über js, css, index.html, sw.js, supabase, scripts, tests, Workflows; Doku zählt nicht) → `.claude/pruefung.json` (nicht im Repository).
 - **Stop-Hook** (`.claude/settings.json` → `.claude/hooks/stop-pruefung.ps1`): Ist der Stand ungeprüft, hält er Claude vor dem Beenden einer Antwort **einmal** an und fordert die Prüfung. Beim zweiten Mal lässt er durch (keine Endlosschleife). Ausnahme: Arbeit läuft noch (z. B. Import) oder reine Frage – kurz begründen.
 
@@ -242,3 +242,10 @@ Ziel: Die Daten werden **einmal aufbereitet** und nicht bei jeder Suche neu.
 - **Leere Seiten**: `emptyState()` in util.js (Symbol, Überschrift, Satz, Knopf) – überall: Suche, Stöbern, Meine Bücher, Reihen, Regal, Statistik. Im Raster sind die Lade-Platzhalter cover-förmig.
 - **Detailblatt**: `.sheet-hero` = geladenes Cover, stark verschwommen, oben im Blatt, läuft nach unten aus (Deckkraft hell .5, dunkel .55).
 - Bewusst zurückgestellt (Nutzer will erst vergleichen): Knopf-Einrasten mit Animation, „Rückgängig“ auch in der Liste (Paket 3, Punkte 1–2).
+
+## Paket 3, Punkte 1–2, und Zurück-Geste (12.11.2026, ANFORDERUNGEN F4)
+
+- **Einrasten**: `snap(btn)` in card.js (Klasse `snap`, Animation; Liste und Detailblatt).
+- **„Rückgängig“ in Listen**: Kartenknöpfe zeigen `toast(undo, toggleMessage(...))` – Text + „Rückgängig“, 4 s. Raster-Gesten bleiben beim kompakten „↶ Rückgängig“ ohne Text (frühere Nutzerentscheidung). Detailblatt ohne Toast (Zustand ist dort sichtbar).
+- **Zurück** (`js/nav.js`): Bereiche melden per `registerBack(() => fn|null)`, wie „zurück“ bei ihnen geht (Stöbern → `endBrowse`, geöffnetes Regal → Übersicht). Beim Betreten `enterLevel()` = `history.pushState({bibBack:true}, '')` (URL bleibt, `#fuer-…` bleibt), „‹“-Knöpfe rufen `goBack()` → `history.back()` → `popstate` führt die Aktion aus. So wirken Safaris Randgeste und Android-Zurück. Die installierte iPhone-App hat keine eigene Geste → `attachEdgeSwipe()` (nur bei `navigator.standalone`; Start in den linken 18 px, ab 80 px nach rechts, Seite folgt dem Finger, „‹“-Kreis). Nicht bei offenem Detailblatt/Vollbild/Gruß/Scanner. Das Detailblatt bekommt bewusst keinen eigenen Verlaufseintrag; ist es offen, schließt Zurück (popstate) aber zuerst das Blatt und trägt die Ebene neu ein (`registerOverlay`). Sperre gegen doppeltes „‹“ (600 ms bis popstate). Filter „Besitze“: abgewähltes Buch bleibt bis zum Neuzeichnen stehen (wie bisher, Entscheidung offen).
+- Tests: tests/ui.html 48.
