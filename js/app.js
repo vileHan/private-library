@@ -410,7 +410,7 @@ function reopenSheet(fromSheet, viewEl) {
   if (!fromSheet) return;
   const card = [...viewEl.querySelectorAll('.book[data-key]')].find((c) => c.dataset.key === fromSheet.key && c.offsetParent);
   const btn = card?.querySelector('.more-btn');
-  restoreNextSheet({ scrollTop: fromSheet.scrollTop }); // sofort da, alte Scrollstelle im Blatt
+  restoreNextSheet(fromSheet); // sofort da: alte Scrollstelle, Cover, Hintergrund, Klappentext-Zustand
   if (btn) btn.click(); else fromSheet.reopen?.();
   // Oberste Ebene (Suche, Meine Bücher, Zufall): Verlaufseintrag für das Blatt, damit Android-Zurück nur das Blatt
   // schließt statt die App zu verlassen (Prüfrunde 13.11.2026; der popstate-Zweig für Blätter schließt es nur)

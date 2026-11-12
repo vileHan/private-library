@@ -126,11 +126,19 @@ export function attachEdgeSwipe({ force = false } = {}) {
       g.under.style.setProperty('--dim', String((1 - p).toFixed(3)));
     }
   };
+  // Detailblatt (13.11.2026): Wischen vom linken Rand schiebt das Blatt nach rechts weg – „zurück“ aus den Details
+  const paintSheet = (x, transition = '') => {
+    g.panel.style.transition = transition;
+    g.panel.style.transform = x ? `translate3d(${x}px, 0, 0)` : '';
+    g.backdrop.style.transition = transition ? transition.replace('transform', 'opacity') : '';
+    g.backdrop.style.opacity = String(1 - Math.min(1, x / W()));
+  };
   const cleanup = () => {
     document.body.classList.remove('edge-swiping');
     g?.under?.remove();
     g?.hint?.remove();
     main.style.transition = main.style.transform = '';
+    if (g?.panel) { g.panel.style.transition = g.panel.style.transform = g.backdrop.style.transition = g.backdrop.style.opacity = ''; }
     g = null;
     busy = false;
   };
@@ -139,8 +147,13 @@ export function attachEdgeSwipe({ force = false } = {}) {
     if (busy) return;
     g = null;
     const t = ev.touches[0];
-    if (ev.touches.length !== 1 || t.clientX > EDGE || document.body.classList.contains('sheet-open')
+    if (ev.touches.length !== 1 || t.clientX > EDGE
       || document.querySelector('.cover-zoom, .gift-greeting') || !document.getElementById('scanner')?.hidden) return;
+    if (document.body.classList.contains('sheet-open')) {
+      const close = overlayClose();
+      if (close) g = { sheet: true, close, x: t.clientX, y: t.clientY, active: false, pts: [[t.clientX, performance.now()]] };
+      return;
+    }
     const action = backAction();
     if (!action) return;
     g = { x: t.clientX, y: t.clientY, active: false, action, pts: [[t.clientX, performance.now()]], under: null, hint: null };
@@ -155,6 +168,20 @@ export function attachEdgeSwipe({ force = false } = {}) {
       if (Math.abs(dy) > 10 && Math.abs(dy) > dx * 1.2) { g = null; return; } // senkrecht → normal scrollen
       if (dx < 6) return;
       g.active = true;
+    }
+    if (g.sheet) { // Detailblatt nach rechts wegschieben
+      if (!g.panel) {
+        g.panel = document.querySelector('#sheet .sheet-panel');
+        g.backdrop = document.querySelector('#sheet .sheet-backdrop');
+      }
+      if (ev.cancelable) ev.preventDefault();
+      const now = performance.now();
+      g.pts.push([t.clientX, now]);
+      while (g.pts.length > 2 && now - g.pts[0][1] > 90) g.pts.shift();
+      paintSheet(Math.max(0, dx));
+      return;
+    }
+    if (!g.under) {
       document.body.classList.add('edge-swiping');
       // vorige Seite darunter legen (falls ein Abbild da ist)
       const snap = g.action.snapshot;
@@ -198,6 +225,15 @@ export function attachEdgeSwipe({ force = false } = {}) {
     const v = !idle && t1 > t0 ? (x1 - x0) / (t1 - t0) : 0;
     const commit = ev.type === 'touchend' && (v > FLICK || (v > -FLICK && x > W() * HALF));
     busy = true;
+    if (g.sheet) {
+      if (!commit) { paintSheet(0, 'transform .3s cubic-bezier(.2, .9, .3, 1)'); setTimeout(cleanup, 320); return; }
+      haptic();
+      const ms = Math.round(Math.max(140, Math.min(300, (W() - x) / Math.max(v, 1.2))));
+      paintSheet(W(), `transform ${ms}ms cubic-bezier(.2, .8, .3, 1)`);
+      const close = g.close;
+      setTimeout(() => { close('instant'); cleanup(); }, ms);
+      return;
+    }
     if (!commit) { // weich zurück auf die aktuelle Seite
       paint(0, 'transform .3s cubic-bezier(.2, .9, .3, 1)');
       setTimeout(cleanup, 320);

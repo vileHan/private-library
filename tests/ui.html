@@ -394,6 +394,15 @@
           iosOk = iosOk && !$('#sheet').hidden && $('#browseBar').hidden;
         }
         const iosNoHistory = W.history.length === hl0;
+        // Detailblatt per Wischen vom linken Rand nach rechts schließen (13.11.2026)
+        if ($('#sheet').hidden) { $$('#results .book')[0].querySelector('.more-btn').click(); await until(() => !$('#sheet').hidden); }
+        await sleep(300);
+        T('touchstart', 5, 500);
+        for (let x = 20; x <= 200; x += 30) { T('touchmove', x, 504); await sleep(16); }
+        T('touchend', 200, 504);
+        await until(() => $('#sheet').hidden, 1500);
+        const sheetSwipeOk = $('#sheet').hidden && !doc().body.classList.contains('sheet-open') && !$('#sheet .sheet-panel').style.transform;
+        iosOk = iosOk && sheetSwipeOk;
         nav.setUseHistory(true);
         if (!$('#sheet').hidden) { $('#sheet .sheet-close').click(); await until(() => $('#sheet').hidden, 1000); }
         add('Knopf rastet ein; Übergang; Zurück per Rand-Wischen, doppeltes ‹, offenes Blatt, Zurück zur Herkunft, iPhone-App ohne Verlauf (F4)', toastOk && undoOk && slideOk && edgeOk && doubleOk && sheetBackOk && toAuthor && toLibrary && searchKept && sheetReopened && iosOk && iosNoHistory, JSON.stringify({ toastOk, undoOk, slideOk, edgeOk, doubleOk, sheetBackOk, toAuthor, toLibrary, searchKept, sheetReopened, iosOk, iosNoHistory }));

@@ -99,6 +99,11 @@ export const catalog = {
   /** Ausgaben-Details zu ISBNs (live von der DNB). */
   editionDetails: (isbns) => editionsByIsbns(isbns),
 
+  /** Klappentext sofort aus dem Zwischenspeicher (undefined = noch nicht geladen) – fürs Wiederöffnen ohne Springen. */
+  blurbCached(isbns) {
+    return blurbCache.get([...new Set(isbns)].filter(Boolean).slice(0, 12).join(','));
+  },
+
   /** Klappentext von der DNB über die Supabase-Funktion „blurb“ (die DNB erlaubt keinen Direktabruf). '' = keiner. */
   async blurb(isbns) {
     const list = [...new Set(isbns)].filter(Boolean).slice(0, 12);

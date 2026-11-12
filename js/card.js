@@ -373,6 +373,9 @@ function openSheet(ctx) {
   const sheet = $('#sheet');
   const body = sheet.querySelector('.sheet-body');
   let entry = ctx.getEntry();
+  // Wiederöffnen nach „zurück“ (restoreNextSheet): alles sofort im alten Zustand, nichts blendet neu ein
+  const again = nextSheetRestore;
+  nextSheetRestore = null;
 
   // Kopf: Cover, voller Titel, Autor, alle Angaben
   // Autor und Genre führen zum Stöbern (Autorenseite bzw. beliebteste Bücher des Genres), siehe js/app.js
@@ -382,9 +385,15 @@ function openSheet(ctx) {
   const browseTo = (mode, value) => {
     const scrollTop = body.scrollTop;
     const snap = sheet.cloneNode(true);
+    // Zustand fürs Wiederöffnen ohne Neuladen: geladenes Cover, Hintergrund, aufgeklappter Klappentext
+    const state = {
+      coverSrc: headImg.classList.contains('loaded') ? headImg.src : '',
+      heroBg: hero.classList.contains('on') ? hero.style.backgroundImage : '',
+      blurbOpen: blurbBox.classList.contains('open'),
+    };
     sheetClose?.();
     document.dispatchEvent(new CustomEvent('browse', { detail: { mode, value,
-      fromSheet: { key: work.key, scrollTop, snap, reopen: () => openSheet(ctx) } } }));
+      fromSheet: { key: work.key, scrollTop, snap, ...state, reopen: () => openSheet(ctx) } } }));
   };
   const link = (text, mode, value) => el('button', { type: 'button', class: 'link-btn', text, onclick: () => browseTo(mode, value) });
   const group = catalog.canBrowse ? genreGroup(work.genre) : '';
@@ -417,6 +426,9 @@ function openSheet(ctx) {
     hero.style.backgroundImage = `url("${headImg.src.replace(/"/g, '%22')}")`;
     hero.classList.add('on');
   });
+  // Wiederöffnen: gleiches Cover gleich direkt (nicht erst die Quellen-Kette durchprobieren), Hintergrund sofort da
+  if (again?.coverSrc) { headImg.src = again.coverSrc; }
+  if (again?.heroBg) { hero.style.backgroundImage = again.heroBg; hero.classList.add('on'); }
   // Cover antippen → Vollbild (nur wenn ein echtes Cover geladen ist)
   const headCover = head.querySelector('.cover');
   onTap(headCover, () => {
@@ -493,14 +505,18 @@ function openSheet(ctx) {
   };
   blurbMore.addEventListener('click', toggleBlurb);
   blurbText.addEventListener('click', toggleBlurb);
-  catalog.blurb([...ownedIsbnsOf(entry), ...(work.isbns || [])])
-    .catch(() => '')
-    .then((text) => {
-      if (!text) { blurbBox.remove(); return; }
-      blurbBox.classList.remove('loading');
-      blurbText.textContent = text;
-      requestAnimationFrame(() => { blurbMore.hidden = blurbText.scrollHeight <= blurbText.clientHeight + 2; });
-    });
+  const showBlurb = (text) => {
+    if (!text) { blurbBox.remove(); return; }
+    blurbBox.classList.remove('loading');
+    blurbText.textContent = text;
+    requestAnimationFrame(() => { blurbMore.hidden = blurbText.scrollHeight <= blurbText.clientHeight + 2; });
+  };
+  const blurbIsbns = [...ownedIsbnsOf(entry), ...(work.isbns || [])];
+  const cachedBlurb = catalog.blurbCached(blurbIsbns);
+  // Schon geladen (z. B. Wiederöffnen nach „zurück“): sofort zeigen, keine Platzhalterzeilen → nichts springt
+  if (cachedBlurb !== undefined) showBlurb(cachedBlurb);
+  else catalog.blurb(blurbIsbns).catch(() => '').then(showBlurb);
+  if (again?.blurbOpen && cachedBlurb) { blurbBox.classList.add('open'); blurbMore.hidden = false; blurbMore.textContent = 'Weniger'; }
 
   body.replaceChildren(...[hero, head, bar, blurbBox, detBox, isbnCount ? edSection : null].filter(Boolean));
   const refresh = (e) => {
@@ -527,17 +543,20 @@ function openSheet(ctx) {
   attachSheetDrag(sheet);
   resetSheetStyles(sheet);
   document.body.classList.add('sheet-open');
-  // Wiederöffnen nach „zurück“: ohne Hochfahren, an der alten Scrollstelle – als wäre es nie weg gewesen
-  const again = nextSheetRestore;
-  nextSheetRestore = null;
+  // Wiederöffnen nach „zurück“: ohne Hochfahren und ohne Einblenden, an der alten Scrollstelle – als wäre es nie weg
   sheet.classList.toggle('instant', !!again);
+  // Hochfahr-Animation beim Wiederöffnen dauerhaft aus (nicht nur solange .instant gilt – sonst lief sie beim
+  // Entfernen der Klasse nach ~0,7 s noch einmal ab: Blatt sprang 40 px, Prüfrunde 13.11.2026); normales Öffnen: an
+  sheet.querySelector('.sheet-panel').style.animation = again ? 'none' : '';
   sheet.hidden = false;
   body.scrollTop = again?.scrollTop || 0;
   if (again) {
-    setTimeout(() => sheet.classList.remove('instant'), 60);
-    // Klappentext lädt nach → Blatt wird länger; alte Scrollstelle dann noch einmal setzen (falls nicht selbst gescrollt)
-    const first = body.scrollTop;
-    setTimeout(() => { if (sheetClose === close && body.scrollTop === first) body.scrollTop = again.scrollTop || 0; }, 450);
+    setTimeout(() => sheet.classList.remove('instant'), 700);
+    // Nur falls der Klappentext doch erst nachlädt (nicht im Zwischenspeicher): Scrollstelle danach noch einmal setzen
+    if (body.scrollTop < (again.scrollTop || 0)) {
+      const first = body.scrollTop;
+      setTimeout(() => { if (sheetClose === close && body.scrollTop === first) body.scrollTop = again.scrollTop || 0; }, 450);
+    }
   }
 }
 
@@ -550,7 +569,7 @@ export function restoreNextSheet(info) { nextSheetRestore = info; }
 // Loslassen: weiter als 30 % der Höhe oder schnell nach unten „geschnippt“ → schließen, sonst zurückfedern.
 let sheetClose = null;
 // Android-Zurück bei offenem Detailblatt schließt nur das Blatt (js/nav.js)
-registerOverlay(() => (sheetClose ? () => sheetClose() : null));
+registerOverlay(() => (sheetClose ? (mode) => sheetClose(mode) : null));
 let sheetDragReady = false;
 
 function resetSheetStyles(sheet) {
@@ -568,7 +587,8 @@ function slideOut(sheet, fromDrag) {
     resetSheetStyles(sheet);
     document.body.classList.remove('sheet-open');
   };
-  if (matchMedia('(prefers-reduced-motion: reduce)').matches) { done(); return; }
+  // 'instant': Blatt wurde schon per Randwischen nach rechts hinausgeschoben (js/nav.js) – nur noch ausblenden
+  if (fromDrag === 'instant' || matchMedia('(prefers-reduced-motion: reduce)').matches) { done(); return; }
   panel.style.transition = `transform ${fromDrag ? 180 : 230}ms ${fromDrag ? 'ease-out' : 'cubic-bezier(.4,0,1,1)'}`;
   backdrop.style.transition = 'opacity 200ms linear';
   requestAnimationFrame(() => {
@@ -622,7 +642,9 @@ function attachSheetDrag(sheet) {
     if (state !== 'drag') { state = 'idle'; return; }
     state = 'idle';
     const [[ya, ta], [yb, tb]] = [samples[0], samples[samples.length - 1]];
-    const velocity = tb > ta ? (yb - ya) / (tb - ta) : 0; // Pixel pro Millisekunde, positiv = nach unten
+    // Finger vor dem Loslassen > 80 ms still → kein Schwung (wie beim Randwischen, Prüfrunde 13.11.2026)
+    const idle = performance.now() - tb > 80;
+    const velocity = !idle && tb > ta ? (yb - ya) / (tb - ta) : 0; // Pixel pro Millisekunde, positiv = nach unten
     const far = dy > panel.offsetHeight * 0.3;
     if ((far && velocity > -0.3) || velocity > 0.5) { sheetClose?.(true); return; }
     panel.style.transition = 'transform 260ms cubic-bezier(.2,.9,.3,1.15)';

@@ -714,3 +714,6 @@ body.edge-swiping main { box-shadow: -1px 0 0 color-mix(in srgb, var(--text) 14%
 .sheet.instant .sheet-panel { animation: none; }
 .edge-under .sheet { position: absolute; inset: 0; z-index: 2; }
 .edge-under::after { z-index: 3; }
+/* Wiederöffnen: Cover und Hintergrund nicht neu einblenden (sah aus wie „neu geladen“, 13.11.2026) */
+.sheet.instant .cover img, .sheet.instant .sheet-hero { transition: none; }
+.sheet.instant .cover img[src] { opacity: 1; }
