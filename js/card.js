@@ -378,9 +378,13 @@ function openSheet(ctx) {
   // Autor und Genre führen zum Stöbern (Autorenseite bzw. beliebteste Bücher des Genres), siehe js/app.js
   // Zurück von Autor/Genre/Reihe öffnet dieses Detailblatt wieder (13.11.2026): Schlüssel des Buchs mitgeben;
   // app.js sucht nach dem Zurück die Karte dazu und öffnet ihr Blatt (sonst dieses ctx als Ersatz).
+  // Abbild des offenen Blatts (für die Wischgeste: vorige Seite samt Blatt) und Scrollstelle im Blatt
   const browseTo = (mode, value) => {
+    const scrollTop = body.scrollTop;
+    const snap = sheet.cloneNode(true);
     sheetClose?.();
-    document.dispatchEvent(new CustomEvent('browse', { detail: { mode, value, fromSheet: { key: work.key, reopen: () => openSheet(ctx) } } }));
+    document.dispatchEvent(new CustomEvent('browse', { detail: { mode, value,
+      fromSheet: { key: work.key, scrollTop, snap, reopen: () => openSheet(ctx) } } }));
   };
   const link = (text, mode, value) => el('button', { type: 'button', class: 'link-btn', text, onclick: () => browseTo(mode, value) });
   const group = catalog.canBrowse ? genreGroup(work.genre) : '';
@@ -523,9 +527,23 @@ function openSheet(ctx) {
   attachSheetDrag(sheet);
   resetSheetStyles(sheet);
   document.body.classList.add('sheet-open');
+  // Wiederöffnen nach „zurück“: ohne Hochfahren, an der alten Scrollstelle – als wäre es nie weg gewesen
+  const again = nextSheetRestore;
+  nextSheetRestore = null;
+  sheet.classList.toggle('instant', !!again);
   sheet.hidden = false;
-  body.scrollTop = 0;
+  body.scrollTop = again?.scrollTop || 0;
+  if (again) {
+    setTimeout(() => sheet.classList.remove('instant'), 60);
+    // Klappentext lädt nach → Blatt wird länger; alte Scrollstelle dann noch einmal setzen (falls nicht selbst gescrollt)
+    const first = body.scrollTop;
+    setTimeout(() => { if (sheetClose === close && body.scrollTop === first) body.scrollTop = again.scrollTop || 0; }, 450);
+  }
 }
+
+let nextSheetRestore = null;
+/** Das nächste openSheet ist ein Wiederöffnen (sofort da, Scrollstelle { scrollTop }). */
+export function restoreNextSheet(info) { nextSheetRestore = info; }
 
 // ---------- Detailblatt herunterziehen (wie in üblichen Apps) ----------
 // Ziehen am Griff/Kopf schiebt das Blatt immer; im Inhalt nur, wenn er ganz oben steht und der Finger nach unten geht.

@@ -1,8 +1,7 @@
 // Zurück-Navigation (12.11.2026): Wischen vom linken Rand nach rechts führt eine Ebene zurück – nur dort, wo es
 // eine „Seite davor“ gibt: Stöbern-Seiten (Autor, Genre, Reihe → zurück zur Suche) und ein geöffnetes Regal
-// (→ Regal-Übersicht). Läuft über den Browser-Verlauf: So wirken auch Safaris eigene Rand-Geste und die
-// Zurück-Taste/-Geste von Android. Die installierte iPhone-App (ohne Safari-Leiste) kennt keine eigene Geste –
-// dort übernimmt edge swipe unten.
+// (→ Regal-Übersicht). In Safari und Android über den Browser-Verlauf (Safaris Randgeste, Android-Zurück); in der
+// installierten iPhone-App ohne Verlauf mit eigener Geste (attachEdgeSwipe unten) – siehe useHistory.
 import { haptic } from './util.js';
 
 const providers = []; // je Bereich: () => Funktion „eine Ebene zurück“ oder null
@@ -14,8 +13,18 @@ function backAction() {
   return null;
 }
 
+// Verlauf nur außerhalb der installierten iPhone-App (13.11.2026): Neuere iPhones haben dort eine eigene Zurück-
+// Wischgeste, sobald im Verlauf eine Seite davor steht. Lief sie zusammen mit der eigenen Geste, ging es zwei
+// Schritte zurück (Detailblatt schloss sich nach ~1 s wieder) und man sah drei Bilder – immer abwechselnd, je nach
+// Verlaufstiefe. Ohne Einträge hat die iPhone-Geste nichts zum Zurückgehen; die eigene Geste geht direkt zurück.
+// Safari und Android behalten den Verlauf (Safaris Randgeste bzw. Android-Zurück).
+let useHistory = window.navigator.standalone !== true;
+/** Nur für Tests: Verlauf an/aus (simuliert die installierte iPhone-App). */
+export function setUseHistory(on) { useHistory = !!on; }
+
 /** Eine neue Ebene betreten (Stöbern-Seite, Regal): Eintrag im Verlauf, damit „Zurück“ hierher führt. */
 export function enterLevel() {
+  if (!useHistory) return;
   try { history.pushState({ bibBack: true, depth: currentDepth() + 1 }, ''); } catch { /* z. B. in Tests ohne Verlauf */ }
 }
 /** Wie viele eigene Ebenen gerade im Verlauf übereinander liegen (0 = keine). */
@@ -26,7 +35,7 @@ export const currentDepth = () => (history.state?.bibBack ? history.state.depth 
 let ignorePop = 0;
 export function rewindTo(depth) {
   const n = currentDepth() - depth;
-  if (n > 0) { ignorePop++; history.go(-n); }
+  if (useHistory && n > 0) { ignorePop++; history.go(-n); }
 }
 
 // Offene Ebenen darüber (Detailblatt): Zurück schließt zuerst sie, nicht die Seite darunter (Prüfrunde 12.11.2026)
@@ -42,7 +51,7 @@ let pending = 0;
 export function goBack() {
   if (Date.now() < pending) return;
   pending = Date.now() + 600; // auch ohne Verlaufseintrag: doppeltes „‹“ geht nur eine Stufe zurück
-  if (history.state?.bibBack) history.back(); // → popstate führt die Aktion aus
+  if (useHistory && history.state?.bibBack) history.back(); // → popstate führt die Aktion aus
   else { backAction()?.(); pending = Date.now() + 400; }
 }
 // Scrollstand verwaltet die App selbst (Stöbern-Stapel, Regal) – sonst springt die Seite beim Zurück nach oben
@@ -158,8 +167,18 @@ export function attachEdgeSwipe({ force = false } = {}) {
         inner.style.transform = `translateY(${snap.top - snap.scroll}px)`;
         inner.append(snap.node.cloneNode(true));
         under.append(inner);
+        if (snap.sheet) { // kam man aus einem Detailblatt: das Blatt gehört mit ins Bild
+          const sh = snap.sheet.cloneNode(true);
+          sh.removeAttribute('id');
+          sh.hidden = false;
+          sh.classList.add('instant');
+          under.append(sh);
+          // scrollTop wirkt erst im Dokument – unten nach dem Einhängen setzen
+        }
       }
       document.body.append(under);
+      const sb = under.querySelector(".sheet-body");
+      if (sb) sb.scrollTop = snap?.sheetScroll || 0;
       g.under = under;
     }
     if (ev.cancelable) ev.preventDefault();
@@ -192,7 +211,7 @@ export function attachEdgeSwipe({ force = false } = {}) {
     setTimeout(() => {
       swiping = true;
       const finish = () => requestAnimationFrame(() => { swiping = false; cleanup(); });
-      const viaHistory = !!history.state?.bibBack;
+      const viaHistory = useHistory && !!history.state?.bibBack;
       if (viaHistory) {
         window.addEventListener('popstate', finish, { once: true });
         setTimeout(() => { if (swiping) finish(); }, 600); // falls popstate ausbleibt

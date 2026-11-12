@@ -710,3 +710,7 @@ html[data-scheme="dark"] .edge-under { --dim-max: .55; }
 html:has(body.edge-swiping), body.edge-swiping { overflow-x: clip; }
 /* Aktuelle Seite klar „obenauf“: feine helle Kante + kräftiger Schatten (im Dunkeln sonst kaum zu trennen, 13.11.2026) */
 body.edge-swiping main { box-shadow: -1px 0 0 color-mix(in srgb, var(--text) 14%, transparent), -14px 0 32px rgba(0, 0, 0, .35); }
+/* Detailblatt beim Wiederöffnen nach „zurück“ bzw. im Bild der vorigen Seite: ohne Hochfahren */
+.sheet.instant .sheet-panel { animation: none; }
+.edge-under .sheet { position: absolute; inset: 0; z-index: 2; }
+.edge-under::after { z-index: 3; }

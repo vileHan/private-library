@@ -378,7 +378,25 @@
         const sheetReopened = !$('#sheet').hidden && firstTitle.startsWith($('#sheet .sheet-title').textContent.slice(0, 12));
         $('#sheet .sheet-close').click();
         await until(() => $('#sheet').hidden, 1000);
-        add('Knopf rastet ein; Übergang; Zurück per Rand-Wischen, doppeltes ‹, offenes Blatt, Zurück zur Herkunft (Meine Bücher, Autor ← Reihe) (F4)', toastOk && undoOk && slideOk && edgeOk && doubleOk && sheetBackOk && toAuthor && toLibrary && searchKept && sheetReopened, JSON.stringify({ toastOk, undoOk, slideOk, edgeOk, doubleOk, sheetBackOk, toAuthor, toLibrary, searchKept, sheetReopened }));
+        // Installierte iPhone-App: kein Verlauf (sonst lief die iPhone-eigene Geste mit → doppelt zurück, Blatt schloss
+        // sich nach ~1 s). Zweimal hintereinander per Randwischen, jeweils warten: Blatt bleibt offen, Verlauf wächst nicht.
+        nav.setUseHistory(false);
+        const hl0 = W.history.length;
+        let iosOk = true;
+        for (let round = 0; round < 2; round++) {
+          if ($('#sheet').hidden) { $$('#results .book')[0].querySelector('.more-btn').click(); await until(() => !$('#sheet').hidden); }
+          $('#sheet .author .link-btn').click();
+          await until(() => !$('#browseBar').hidden && $$('#results .book').length > 0 && $('#sheet').hidden, 4000);
+          T('touchstart', 5, 400);
+          for (let x = 20; x <= 200; x += 30) { T('touchmove', x, 404); await sleep(16); }
+          T('touchend', 200, 404);
+          await sleep(1300);
+          iosOk = iosOk && !$('#sheet').hidden && $('#browseBar').hidden;
+        }
+        const iosNoHistory = W.history.length === hl0;
+        nav.setUseHistory(true);
+        if (!$('#sheet').hidden) { $('#sheet .sheet-close').click(); await until(() => $('#sheet').hidden, 1000); }
+        add('Knopf rastet ein; Übergang; Zurück per Rand-Wischen, doppeltes ‹, offenes Blatt, Zurück zur Herkunft, iPhone-App ohne Verlauf (F4)', toastOk && undoOk && slideOk && edgeOk && doubleOk && sheetBackOk && toAuthor && toLibrary && searchKept && sheetReopened && iosOk && iosNoHistory, JSON.stringify({ toastOk, undoOk, slideOk, edgeOk, doubleOk, sheetBackOk, toAuthor, toLibrary, searchKept, sheetReopened, iosOk, iosNoHistory }));
         // Kurzlink: Code aus der Adresse; Abruf mit gestubbtem fetch (Daten, unbekannt, Fehler, hängt)
         const cu = (hash) => gift.codeFromUrl({ hash, search: '' });
         const codesOk = cu('#fuer-Abc') === 'abc' && cu('#fuer-x') === '' && cu('#g=abc') === '' && cu('#fuer-anna-7k') === 'anna-7k';

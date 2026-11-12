@@ -3,7 +3,7 @@ import { groupEditions, compareTitle, compareAuthor, normalizeText, searchableSu
 import { exportJson, importJson } from './store.js';
 import { normalizeIsbn } from './isbn.js';
 import { library, loadLibrary, entryFor, onLibraryChange, refreshEntry, refreshAllFromDb } from './library.js';
-import { bookCard } from './card.js';
+import { bookCard, restoreNextSheet } from './card.js';
 import { renderSeries } from './series.js';
 import { renderStats } from './stats.js';
 import { renderShelves } from './shelves.js';
@@ -349,7 +349,9 @@ function startBrowse(mode, value, fromSheet = null) {
   if (!browse.mode) browseBaseDepth = currentDepth();
   // snap: Abbild der Seite davor – beim Wischen vom Rand erscheint es unter der aktuellen Seite (wie am iPhone);
   // fromSheet: kam man aus einem Detailblatt, öffnet „zurück“ es wieder
-  const common = { scroll: window.scrollY, snap: captureView(), fromSheet };
+  const snap = captureView();
+  if (snap && fromSheet?.snap) Object.assign(snap, { sheet: fromSheet.snap, sheetScroll: fromSheet.scrollTop }); // Blatt gehört zum Bild der vorigen Seite
+  const common = { scroll: window.scrollY, snap, fromSheet };
   browseStack.push(browse.mode
     ? { kind: 'browse', mode: browse.mode, value: browse.value, works: browse.works, next: browse.next, ...common }
     : { kind: 'origin', view: document.body.dataset.view || 'search', input: $('#searchInput').value, ...common });
@@ -408,6 +410,7 @@ function reopenSheet(fromSheet, viewEl) {
   if (!fromSheet) return;
   const card = [...viewEl.querySelectorAll('.book[data-key]')].find((c) => c.dataset.key === fromSheet.key && c.offsetParent);
   const btn = card?.querySelector('.more-btn');
+  restoreNextSheet({ scrollTop: fromSheet.scrollTop }); // sofort da, alte Scrollstelle im Blatt
   if (btn) btn.click(); else fromSheet.reopen?.();
   // Oberste Ebene (Suche, Meine Bücher, Zufall): Verlaufseintrag für das Blatt, damit Android-Zurück nur das Blatt
   // schließt statt die App zu verlassen (Prüfrunde 13.11.2026; der popstate-Zweig für Blätter schließt es nur)
