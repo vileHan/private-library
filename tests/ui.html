@@ -350,7 +350,22 @@
         const sheetBackOk = $('#sheet').hidden && !$('#browseBar').hidden && W.history.state?.bibBack === true;
         $('#browseBack').click();
         await until(() => $('#browseBar').hidden, 1500);
-        add('Knopf rastet ein (ohne Kurzmeldung); Übergang; Zurück per Wischen vom Rand, doppeltes ‹, offenes Blatt (F4)', toastOk && undoOk && slideOk && edgeOk && doubleOk && sheetBackOk, JSON.stringify({ toastOk, undoOk, slideOk, edgeOk, doubleOk, sheetBackOk }));
+        // Zurück führt dorthin, woher man kam: Meine Bücher → Autor → Reihe → zurück = Autor → zurück = Meine Bücher
+        $('#tab-library').click();
+        const browseTo = (mode, value) => doc().dispatchEvent(new W.CustomEvent('browse', { detail: { mode, value } }));
+        browseTo('author', 'Christopher Paolini');
+        await until(() => !$('#browseBar').hidden && $$('#results .book').length > 0, 4000);
+        browseTo('series', { series: 'Eragon', authorSort: '' });
+        await until(() => $('#browseKind').textContent === 'Reihe' && $$('#results .book').length > 0, 4000);
+        $('#browseBack').click();
+        await until(() => $('#browseKind').textContent === 'Autor', 1500);
+        const toAuthor = $('#browseKind').textContent === 'Autor' && $('#browseTitle').textContent === 'Christopher Paolini' && $$('#results .book').length > 0;
+        $('#browseBack').click();
+        await until(() => !$('#view-library').hidden, 1500);
+        const toLibrary = !$('#view-library').hidden && $('#view-search').hidden && $('#browseBar').hidden;
+        $('#tab-search').click();
+        const searchKept = $('#searchInput').value === 'liebe';
+        add('Knopf rastet ein; Übergang; Zurück per Rand-Wischen, doppeltes ‹, offenes Blatt, Zurück zur Herkunft (Meine Bücher, Autor ← Reihe) (F4)', toastOk && undoOk && slideOk && edgeOk && doubleOk && sheetBackOk && toAuthor && toLibrary && searchKept, JSON.stringify({ toastOk, undoOk, slideOk, edgeOk, doubleOk, sheetBackOk, toAuthor, toLibrary, searchKept }));
         // Kurzlink: Code aus der Adresse; Abruf mit gestubbtem fetch (Daten, unbekannt, Fehler, hängt)
         const cu = (hash) => gift.codeFromUrl({ hash, search: '' });
         const codesOk = cu('#fuer-Abc') === 'abc' && cu('#fuer-x') === '' && cu('#g=abc') === '' && cu('#fuer-anna-7k') === 'anna-7k';

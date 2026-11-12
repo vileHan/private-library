@@ -14,7 +14,7 @@ import { settings } from './settings.js';
 import { GENRES } from './genres.js';
 import { applyTheme, renderLook } from './theme.js';
 import { initGift, showGreeting, giftData, clearGift } from './gift.js';
-import { registerBack, enterLevel, goBack, attachEdgeSwipe } from './nav.js';
+import { registerBack, enterLevel, goBack, attachEdgeSwipe, currentDepth, rewindTo } from './nav.js';
 
 onLibraryChange(() => {
   const owned = [...library.byKey.values()].filter((e) => e.owned).length;
@@ -335,14 +335,22 @@ async function loadBrowse(append = false) {
   }
 }
 
+// Zurück führt genau dorthin, woher man kam (13.11.2026): Jede Stöbern-Seite legt den Zustand davor auf einen
+// Stapel – die vorige Stöbern-Seite (Autor → Reihe → zurück = Autor) oder die Ausgangsansicht (Suche, Meine Bücher,
+// Zufall) mit Scrollstand.
+const browseStack = [];
+let browseBaseDepth = 0; // Verlaufstiefe vor der ersten Stöbern-Seite (zum Zurückspulen bei neuer Suche)
+
 function startBrowse(mode, value) {
   cancelLive();
   search.controller?.abort();
-  // Vorherigen Zustand merken (nur beim ersten Schritt – Autor → Genre → Autor führt trotzdem zur Suche zurück)
-  if (!browse.mode) {
-    browse.saved = { input: $('#searchInput').value, query: search.query, scroll: window.scrollY };
-    enterLevel(); // Eintrag im Verlauf: Wischen vom Rand / Android-Zurück führt zur Suche zurück
-  }
+  // Aus einem anderen Reiter gestartet, während im Such-Reiter noch gestöbert wurde: neuer Stapel, Herkunft = dieser Reiter
+  if (browse.mode && $('#view-search').hidden) { browse.mode = null; browseStack.length = 0; }
+  if (!browse.mode) browseBaseDepth = currentDepth();
+  browseStack.push(browse.mode
+    ? { kind: 'browse', mode: browse.mode, value: browse.value, works: browse.works, next: browse.next, scroll: window.scrollY }
+    : { kind: 'origin', view: document.body.dataset.view || 'search', input: $('#searchInput').value, scroll: window.scrollY });
+  enterLevel(); // Eintrag im Verlauf: Wischen vom Rand / Android-Zurück führt eine Stufe zurück
   Object.assign(browse, { mode, value, works: [], next: null });
   showView('search');
   $('#results').replaceChildren();
@@ -355,24 +363,38 @@ function startBrowse(mode, value) {
   animateIn($('#view-search'), 'fwd'); // neue Seite schiebt sich von rechts herein
 }
 
+/** Eine Stufe zurück (restore) bzw. Stöbern ganz verlassen (restore = false, z. B. neue Suche). */
 function endBrowse(restore = true) {
   if (!browse.mode) return;
   browse.controller?.abort();
-  const saved = browse.saved;
-  Object.assign(browse, { mode: null, value: '', works: [], next: null, saved: null });
+  const prev = restore ? browseStack.pop() : null;
+  if (!restore) { browseStack.length = 0; rewindTo(browseBaseDepth); } // eigene Verlaufseinträge zurückspulen
+  // Vorige Stöbern-Seite: ohne neues Laden wiederherstellen
+  if (prev?.kind === 'browse') {
+    Object.assign(browse, { mode: prev.mode, value: prev.value, works: prev.works, next: prev.next });
+    renderBrowse();
+    animateIn($('#view-search'), 'back');
+    window.scrollTo(0, prev.scroll || 0);
+    return;
+  }
+  Object.assign(browse, { mode: null, value: '', works: [], next: null });
+  browseStack.length = 0;
   $('#browseBar').hidden = true;
   if (!restore) return;
-  animateIn($('#view-search'), 'back'); // zurück: von links
-  $('#searchInput').value = saved?.input || ''; syncClear();
+  // Such-Reiter wieder auf die Suche davor setzen (auch wenn man in eine andere Ansicht zurückkehrt)
+  $('#searchInput').value = prev?.input || ''; syncClear();
   if (search.query) {
     renderResults();
-    window.scrollTo(0, saved?.scroll || 0);
   } else {
     $('#results').replaceChildren();
     $('#moreBtn').hidden = true;
     $('#searchStatus').textContent = DEFAULT_STATUS;
   }
   renderGenreChips();
+  const view = prev?.view || 'search';
+  if (view !== 'search') showView(view); // z. B. zurück zu Meine Bücher oder Zufall
+  animateIn($(`#view-${view}`), 'back'); // zurück: von links
+  window.scrollTo(0, prev?.scroll || 0);
 }
 
 const DEFAULT_STATUS = $('#searchStatus').textContent;
