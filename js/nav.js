@@ -114,7 +114,7 @@ export function attachEdgeSwipe({ force = false } = {}) {
       const p = Math.min(1, x / W());
       g.under.style.transition = transition;
       g.under.style.transform = `translate3d(${-(1 - p) * PARALLAX * W()}px, 0, 0)`;
-      g.under.style.setProperty('--dim', String(0.18 * (1 - p)));
+      g.under.style.setProperty('--dim', String((1 - p).toFixed(3)));
     }
   };
   const cleanup = () => {

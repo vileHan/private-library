@@ -701,8 +701,12 @@ html[data-scheme="dark"] .toast { background: #46413a; }
 body.edge-swiping main { position: relative; z-index: 2; background: var(--bg); min-height: 100vh;
   box-shadow: -10px 0 28px rgba(0, 0, 0, .22); will-change: transform; }
 .edge-under { position: fixed; inset: 0; z-index: 1; overflow: hidden; pointer-events: none; background: var(--bg); will-change: transform; }
-.edge-under::after { content: ""; position: absolute; inset: 0; background: #000; opacity: var(--dim, .18); }
+.edge-under::after { content: ""; position: absolute; inset: 0; background: #000; opacity: calc(var(--dim, 1) * var(--dim-max, .28)); }
+@media (prefers-color-scheme: dark) { html:not([data-scheme="light"]) .edge-under { --dim-max: .55; } }
+html[data-scheme="dark"] .edge-under { --dim-max: .55; }
 .edge-under-main { max-width: 760px; margin: 0 auto; padding: 14px 16px 0; }
 .edge-under-main > section { animation: none !important; }
 /* Während der Wischgeste ragt main über den Rand – kein waagrechtes Scrollen entstehen lassen */
 html:has(body.edge-swiping), body.edge-swiping { overflow-x: clip; }
+/* Aktuelle Seite klar „obenauf“: feine helle Kante + kräftiger Schatten (im Dunkeln sonst kaum zu trennen, 13.11.2026) */
+body.edge-swiping main { box-shadow: -1px 0 0 color-mix(in srgb, var(--text) 14%, transparent), -14px 0 32px rgba(0, 0, 0, .35); }
