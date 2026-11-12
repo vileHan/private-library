@@ -75,6 +75,7 @@ Alle kostenlos und lokal machbar (IndexedDB, vorhandener Katalog). Aufwand grob:
 - Fehlender Band 1 in Reihen (~219 Reihen), z. B. Dungeon Crawler Carl: heute in der Datenbank noch „Entertainment ist Pflicht - Überleben nicht : Roman“ ohne Band – der Code liefert schon „Entertainment ist Pflicht - Überleben nicht“, Band 1 (geprüft 12.11.2026). Eigene Einträge ziehen danach innerhalb von 12 h nach.
 
 ## Entscheidungen des Nutzers
+- **„Fitzek-Box“ als Reihe ausschließen?** Auch mit aktuellem Code bekommen 10 Fitzek-Thriller „Fitzek-Box, Band 1–10“ (Sammelbox des Verlags). Kleine Regel in `isPublisherSeries` (Reihenname endet auf „-Box“). Gefunden 13.11.2026.
 - **„Mein Kinderbuchhaus“** (Oetinger-Sammelreihe, 8 Autoren) als Verlagsreihe herausnehmen? Sonst zeigt „Pippi Langstrumpf“ nach dem Import „Band 5“. Kleine Regel in `isPublisherSeries`.
 
 ## Katalog

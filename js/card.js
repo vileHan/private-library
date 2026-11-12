@@ -100,8 +100,13 @@ function setCover(root, urls, title) {
   const arm = () => { clearTimeout(timer); timer = setTimeout(next, CONFIG.covers.timeoutMs); };
   function next() {
     clearTimeout(timer);
+    while (n < urls.length && badCovers.has(urls[n])) n++; // bekannte Fehl-Quellen gar nicht erst versuchen
     if (n >= urls.length) { img.classList.remove('loaded'); img.removeAttribute('src'); ph.hidden = false; return; }
-    img.src = urls[n++];
+    const url = urls[n++];
+    img.src = url;
+    // Schon einmal geladen (z. B. Liste nach „zurück“ neu aufgebaut): sofort zeigen, nicht neu einblenden –
+    // sonst flackerten alle Cover hinter dem wieder geöffneten Detailblatt (13.11.2026)
+    if (goodCovers.has(url)) { img.classList.add('loaded', 'instant'); ph.hidden = true; }
     // Lazy-Bilder außerhalb des Bildschirms laden noch gar nicht – die Zeit läuft erst, wenn sie sichtbar werden.
     if (visible) arm();
   }
@@ -110,12 +115,16 @@ function setCover(root, urls, title) {
   }, { rootMargin: '200px' }).observe(root);
   img.onload = () => {
     clearTimeout(timer);
-    if (CONFIG.covers.isPlaceholder(img)) next();
-    else { img.classList.add('loaded'); ph.hidden = true; }
+    if (CONFIG.covers.isPlaceholder(img)) { badCovers.add(img.src); img.classList.remove('loaded', 'instant'); next(); }
+    else { goodCovers.add(img.src); img.classList.add('loaded'); ph.hidden = true; }
   };
-  img.onerror = () => next();
+  // Fehler nur merken, wenn das Netz da ist (kurzes Funkloch sperrt die Quelle nicht bis zum Neustart)
+  img.onerror = () => { if (navigator.onLine !== false) badCovers.add(img.src); img.classList.remove('loaded', 'instant'); next(); };
   next();
 }
+// Cover-Quellen dieser Sitzung: geladen bzw. ohne Bild (Platzhalter/Fehler)
+const goodCovers = new Set();
+const badCovers = new Set();
 
 /** „Erzählende Literatur: Gegenwartsliteratur ab 1945“ → „Gegenwartsliteratur ab 1945“ */
 export function shortGenre(g = '') {
@@ -427,7 +436,7 @@ function openSheet(ctx) {
     hero.classList.add('on');
   });
   // Wiederöffnen: gleiches Cover gleich direkt (nicht erst die Quellen-Kette durchprobieren), Hintergrund sofort da
-  if (again?.coverSrc) { headImg.src = again.coverSrc; }
+  // (Cover: setCover nimmt dank goodCovers/badCovers dieselbe Quelle sofort, ohne Einblenden)
   if (again?.heroBg) { hero.style.backgroundImage = again.heroBg; hero.classList.add('on'); }
   // Cover antippen → Vollbild (nur wenn ein echtes Cover geladen ist)
   const headCover = head.querySelector('.cover');
