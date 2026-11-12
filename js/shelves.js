@@ -2,7 +2,7 @@
 // Cover-Streifen, „+ Neues Regal“, Antippen öffnet die Bücher darin; Umbenennen und Löschen (Bücher bleiben erhalten).
 import { library, allTags, addShelf, renameShelf, deleteShelf } from './library.js';
 import { bookCard, coverThumb } from './card.js';
-import { el, plural, emptyState } from './util.js';
+import { el, plural, emptyState, animateIn } from './util.js';
 import { compareTitle } from './works.js';
 import { registerBack, enterLevel, goBack } from './nav.js';
 
@@ -10,8 +10,8 @@ const state = { open: '' }; // geöffnetes Regal ('' = Übersicht)
 let lastContainer = null;
 // Geöffnetes Regal: „zurück“ (‹ Alle Regale, Wischen vom Rand, Android-Zurück) → Regal-Übersicht
 registerBack(() => (state.open && lastContainer?.isConnected && !lastContainer.closest('[hidden]')
-  ? () => { state.open = ''; renderShelves(lastContainer); } : null));
-const openShelf = (name, rerender) => { state.open = name; enterLevel(); rerender(); };
+  ? () => { state.open = ''; renderShelves(lastContainer); animateIn(lastContainer, 'back'); } : null));
+const openShelf = (name, rerender) => { state.open = name; enterLevel(); rerender(); animateIn(lastContainer, 'fwd'); };
 
 const booksIn = (name) => [...library.byKey.values()].filter((e) => (e.tags || []).includes(name)).sort(compareTitle);
 

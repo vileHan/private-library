@@ -305,19 +305,20 @@
         await until(() => !$('#results').classList.contains('stale'));
         const clean = !$('#results .skel-card');
         add('Reiter unten; Lade-Platzhalter bzw. abgeblendete alte Treffer (F3)', barOk && skel && stale && clean, JSON.stringify({ barOk, skel, stale, clean }));
-        // F4: Knopf rastet ein + „… · Rückgängig“ in der Liste (Zustand danach wie vorher); Zurück per Verlauf und Randwischen
+        // F4: Knopf rastet ein (kein „Rückgängig“ in der Liste – auf Wunsch wieder raus); weicher Übergang; Zurück per Verlauf und Randwischen
         const tcard = $$('#results .book')[0];
         const wishBtn = tcard.querySelector('.toggle.wish');
         const wasWish = wishBtn.getAttribute('aria-pressed');
         wishBtn.dispatchEvent(new W.CustomEvent('toggle'));
-        await until(() => !$('#toast').hidden && /Merkliste/.test($('#toast').textContent), 1500);
-        const toastOk = /Merkliste/.test($('#toast').textContent) && !!$('#toast button');
-        $('#toast button').click();
+        await sleep(60);
+        const toastOk = wishBtn.classList.contains('snap') && $('#toast').hidden; // eingerastet, keine Kurzmeldung
+        wishBtn.dispatchEvent(new W.CustomEvent('toggle'));
         await until(() => wishBtn.getAttribute('aria-pressed') === wasWish, 1500);
-        const undoOk = wishBtn.getAttribute('aria-pressed') === wasWish;
+        const undoOk = wishBtn.getAttribute('aria-pressed') === wasWish; // zweiter Tipp nimmt es zurück, Daten wie vorher
         tcard.querySelector('.more-btn').click();
         await until(() => !$('#sheet').hidden);
         $('#sheet .author .link-btn').click();
+        const slideOk = $('#view-search').classList.contains('enter-fwd') || W.matchMedia('(prefers-reduced-motion: reduce)').matches;
         await until(() => !$('#browseBar').hidden && $$('#results .book').length > 0 && $('#sheet').hidden, 4000);
         const nav = await imp('nav.js');
         nav.attachEdgeSwipe({ force: true });
@@ -349,7 +350,7 @@
         const sheetBackOk = $('#sheet').hidden && !$('#browseBar').hidden && W.history.state?.bibBack === true;
         $('#browseBack').click();
         await until(() => $('#browseBar').hidden, 1500);
-        add('Knopf: Rückgängig in der Liste; Zurück per Wischen vom Rand, doppeltes ‹, Zurück bei offenem Blatt (F4)', toastOk && undoOk && edgeOk && doubleOk && sheetBackOk, JSON.stringify({ toastOk, undoOk, edgeOk, doubleOk, sheetBackOk }));
+        add('Knopf rastet ein (ohne Kurzmeldung); Übergang; Zurück per Wischen vom Rand, doppeltes ‹, offenes Blatt (F4)', toastOk && undoOk && slideOk && edgeOk && doubleOk && sheetBackOk, JSON.stringify({ toastOk, undoOk, slideOk, edgeOk, doubleOk, sheetBackOk }));
         // Kurzlink: Code aus der Adresse; Abruf mit gestubbtem fetch (Daten, unbekannt, Fehler, hängt)
         const cu = (hash) => gift.codeFromUrl({ hash, search: '' });
         const codesOk = cu('#fuer-Abc') === 'abc' && cu('#fuer-x') === '' && cu('#g=abc') === '' && cu('#fuer-anna-7k') === 'anna-7k';

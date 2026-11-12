@@ -207,16 +207,10 @@ export function bookCard(work, opts = {}) {
   };
 
   // „toggle“ kommt nur bei einem echten Tipp, nie beim Wischen (switchToggle in util.js); der Schalter darin sorgt am iPhone für Haptik
-  // Paket 3 (12.11.2026): Knopf rastet sichtbar ein; danach kurz „… · Rückgängig“ unten (wie im Raster)
+  // Paket 3 (12.11.2026): Knopf rastet sichtbar ein. („Rückgängig“ in der Liste war kurz drin, auf Wunsch wieder raus.)
   const onToggle = (cls, fn) => {
     const btn = wireToggle(card.querySelector(`.toggle.${cls}`));
-    btn.addEventListener('toggle', async () => {
-      haptic();
-      snap(btn);
-      const before = snapshot(entry);
-      const e = await ctx.change(fn());
-      toast(() => ctx.change((x) => Object.assign(x, before)), toggleMessage(cls, e));
-    });
+    btn.addEventListener('toggle', () => { haptic(); snap(btn); ctx.change(fn()); });
   };
   onToggle('own', () => actions.own(work));
   onToggle('read', () => actions.read());
@@ -352,29 +346,16 @@ function snapshot(e) {
 }
 
 let toastTimer;
-/**
- * „Rückgängig“ unten. Ohne Text (Raster-Gesten): nur der Knopf, 2,5 s. Mit Text (Knöpfe in der Liste, 12.11.2026):
- * „Als gelesen markiert · Rückgängig“, 4 s – wie in üblichen Apps.
- */
-export function toast(undo, text = '') {
+/** Kleiner „Rückgängig“-Knopf unten nach einer Raster-Geste – verschwindet nach 2,5 Sekunden. */
+export function toast(undo) {
   const box = $('#toast');
   clearTimeout(toastTimer);
-  box.classList.toggle('with-text', !!text);
-  box.replaceChildren(
-    text ? el('span', { class: 'toast-text', text }) : '',
-    el('button', {
-      type: 'button', text: text ? 'Rückgängig' : '↶ Rückgängig',
-      onclick: () => { box.hidden = true; undo(); },
-    }));
+  box.replaceChildren(el('button', {
+    type: 'button', text: '↶ Rückgängig',
+    onclick: () => { box.hidden = true; undo(); },
+  }));
   box.hidden = false;
-  toastTimer = setTimeout(() => { box.hidden = true; }, text ? 4000 : 2500);
-}
-
-/** Text zur Kurzmeldung nach einem Knopf: was ist jetzt der Stand? */
-export function toggleMessage(cls, e) {
-  if (cls === 'own') return e?.owned ? 'In deiner Bibliothek' : 'Nicht mehr im Besitz';
-  if (cls === 'read') return e?.read ? 'Als gelesen markiert' : 'Nicht mehr gelesen';
-  return e?.wish ? 'Auf der Merkliste' : 'Nicht mehr gemerkt';
+  toastTimer = setTimeout(() => { box.hidden = true; }, 2500);
 }
 
 /** Knopf „rastet ein“: kurz eindrücken, Symbol springt (nur Optik; bei „Bewegung reduzieren“ aus). */

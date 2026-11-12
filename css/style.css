@@ -654,7 +654,7 @@ html[data-style="paper"] .empty-title { font-family: var(--serif); font-size: 1.
 .sheet-body { position: relative; overflow-x: hidden; }
 .sheet-hero {
   position: absolute; left: 0; right: 0; top: -20px; height: 300px; z-index: 0; pointer-events: none;
-  background: center 30% / cover no-repeat; filter: blur(30px) saturate(1.5); transform: scale(1.25);
+  background: center 30% / cover no-repeat; filter: blur(14px) saturate(1.4); transform: scale(1.12);
   opacity: 0; transition: opacity .45s ease-out;
   -webkit-mask-image: linear-gradient(#000 35%, transparent); mask-image: linear-gradient(#000 35%, transparent);
 }
@@ -678,10 +678,7 @@ body.grid-view #results > .skel-card .sk.pill { width: 42px; height: 42px; borde
 .toggle.snap::before { display: inline-block; animation: snap-ico .32s cubic-bezier(.3, .7, .4, 1); }
 .toggle { transition: background-color .2s, border-color .2s; }
 @media (prefers-reduced-motion: reduce) { .toggle.snap, .toggle.snap::before { animation: none; } }
-/* Kurzmeldung mit Text: dunkle Leiste, Text links, „Rückgängig“ rechts */
-.toast.with-text { padding: 4px 4px 4px 16px; gap: 10px; border-radius: 14px; animation: toast-in .2s ease-out; }
-.toast-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-@keyframes toast-in { from { opacity: 0; transform: translate(-50%, 8px); } to { opacity: 1; transform: translate(-50%, 0); } }
+
 
 /* ---------- Zurück per Wischen vom linken Rand (js/nav.js) ---------- */
 .edge-back {
@@ -693,3 +690,14 @@ body.grid-view #results > .skel-card .sk.pill { width: 42px; height: 42px; borde
 /* Kurzmeldung im Dunkelmodus etwas heller als der Hintergrund (Prüfrunde 12.11.2026) */
 @media (prefers-color-scheme: dark) { html:not([data-scheme="light"]) .toast { background: #46413a; } }
 html[data-scheme="dark"] .toast { background: #46413a; }
+
+/* ---------- Weiche Übergänge (Paket 3, 12.11.2026; animateIn in util.js) ---------- */
+@keyframes enter-fwd { from { opacity: 0; transform: translateX(28px); } to { opacity: 1; transform: none; } }
+@keyframes enter-back { from { opacity: 0; transform: translateX(-28px); } to { opacity: 1; transform: none; } }
+@keyframes enter-fade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.enter-fwd { animation: enter-fwd .24s cubic-bezier(.2, .7, .3, 1); }
+.enter-back { animation: enter-back .24s cubic-bezier(.2, .7, .3, 1); }
+.enter-fade { animation: enter-fade .2s ease-out; }
+@media (prefers-reduced-motion: reduce) { .enter-fwd, .enter-back, .enter-fade { animation: none; } }
+/* Auf dem schärferen Cover-Hintergrund (blur 14 px) bleiben die Angaben im Kopf kräftiger lesbar */
+.sheet-head .sheet-facts { color: color-mix(in srgb, var(--text) 80%, var(--surface)); }

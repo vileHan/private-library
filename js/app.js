@@ -8,7 +8,7 @@ import { renderSeries } from './series.js';
 import { renderStats } from './stats.js';
 import { renderShelves } from './shelves.js';
 import { renderRandom, updateRandomCount } from './random.js';
-import { $, el, fmt, plural, ignoreScrollBriefly, emptyState } from './util.js';
+import { $, el, fmt, plural, ignoreScrollBriefly, emptyState, animateIn } from './util.js';
 import { scanIsbn } from './scan.js';
 import { settings } from './settings.js';
 import { GENRES } from './genres.js';
@@ -352,6 +352,7 @@ function startBrowse(mode, value) {
   $('#browseKind').textContent = BROWSE_KINDS[mode];
   $('#browseTitle').textContent = browseTitle();
   loadBrowse();
+  animateIn($('#view-search'), 'fwd'); // neue Seite schiebt sich von rechts herein
 }
 
 function endBrowse(restore = true) {
@@ -361,6 +362,7 @@ function endBrowse(restore = true) {
   Object.assign(browse, { mode: null, value: '', works: [], next: null, saved: null });
   $('#browseBar').hidden = true;
   if (!restore) return;
+  animateIn($('#view-search'), 'back'); // zurück: von links
   $('#searchInput').value = saved?.input || ''; syncClear();
   if (search.query) {
     renderResults();
@@ -494,6 +496,7 @@ function renderSub() {
 document.querySelectorAll('.segmented button').forEach((b) => b.addEventListener('click', () => {
   libView.sub = b.dataset.sub;
   renderSub();
+  animateIn($(`#sub-${libView.sub}`), 'fade');
 }));
 $('#libFilter').addEventListener('input', renderLibrary);
 $('#libSort').addEventListener('change', renderLibrary);
@@ -533,7 +536,9 @@ function showView(name) {
     btn.setAttribute('aria-selected', String(active));
     $(`#view-${btn.dataset.view}`).hidden = !active;
   }
+  const changed = document.body.dataset.view !== name;
   document.body.dataset.view = name; // z. B. Raster-Schalter nur bei Listen zeigen
+  if (changed) animateIn($(`#view-${name}`), 'fade'); // Reiterwechsel: kurz einblenden
   if (name === 'library') renderSub();
   else if (name === 'random') renderRandom($('#randomBox'));
   else if (name === 'settings') renderSettings();

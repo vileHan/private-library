@@ -148,3 +148,16 @@ export function emptyState({ icon, title, text, action }) {
     text ? el('p', { class: 'empty-text', text }) : null,
     action ? el('button', { type: 'button', class: 'empty-action', text: action.text, onclick: action.onclick }) : null);
 }
+
+/**
+ * Weicher Übergang (Paket 3, 12.11.2026): Inhalt schiebt sich beim Vorwärtsgehen (Autor, Reihe, Regal öffnen) von
+ * rechts herein, beim Zurückgehen von links; Reiter- und Unteransichtswechsel blenden kurz ein. Nur Optik (CSS-
+ * Animation, 0,22 s); bei „Bewegung reduzieren“ ohne Animation.
+ */
+export function animateIn(node, kind = 'fade') {
+  if (!node) return;
+  node.classList.remove('enter-fwd', 'enter-back', 'enter-fade');
+  void node.offsetWidth; // Animation neu starten
+  node.classList.add(`enter-${kind}`);
+  node.addEventListener('animationend', () => node.classList.remove(`enter-${kind}`), { once: true });
+}

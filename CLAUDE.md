@@ -246,6 +246,8 @@ Ziel: Die Daten werden **einmal aufbereitet** und nicht bei jeder Suche neu.
 ## Paket 3, Punkte 1–2, und Zurück-Geste (12.11.2026, ANFORDERUNGEN F4)
 
 - **Einrasten**: `snap(btn)` in card.js (Klasse `snap`, Animation; Liste und Detailblatt).
-- **„Rückgängig“ in Listen**: Kartenknöpfe zeigen `toast(undo, toggleMessage(...))` – Text + „Rückgängig“, 4 s. Raster-Gesten bleiben beim kompakten „↶ Rückgängig“ ohne Text (frühere Nutzerentscheidung). Detailblatt ohne Toast (Zustand ist dort sichtbar).
+- **Kein „Rückgängig“ in Listen** (war kurz drin, Nutzer hat es wieder herausgenommen); Raster-Gesten behalten „↶ Rückgängig“.
+- **Weiche Übergänge**: `animateIn(node, fwd|back|fade)` in util.js (CSS-Animation .2–.24 s): Stöbern/Regal vorwärts von rechts, zurück von links, Reiter/Unteransicht einblenden.
+- **Detailblatt-Hintergrund** weniger verschwommen (blur 14 px statt 30, scale 1.12); Angaben im Kopf dafür kräftiger (`.sheet-facts` 80 % Textfarbe).
 - **Zurück** (`js/nav.js`): Bereiche melden per `registerBack(() => fn|null)`, wie „zurück“ bei ihnen geht (Stöbern → `endBrowse`, geöffnetes Regal → Übersicht). Beim Betreten `enterLevel()` = `history.pushState({bibBack:true}, '')` (URL bleibt, `#fuer-…` bleibt), „‹“-Knöpfe rufen `goBack()` → `history.back()` → `popstate` führt die Aktion aus. So wirken Safaris Randgeste und Android-Zurück. Die installierte iPhone-App hat keine eigene Geste → `attachEdgeSwipe()` (nur bei `navigator.standalone`; Start in den linken 18 px, ab 80 px nach rechts, Seite folgt dem Finger, „‹“-Kreis). Nicht bei offenem Detailblatt/Vollbild/Gruß/Scanner. Das Detailblatt bekommt bewusst keinen eigenen Verlaufseintrag; ist es offen, schließt Zurück (popstate) aber zuerst das Blatt und trägt die Ebene neu ein (`registerOverlay`). Sperre gegen doppeltes „‹“ (600 ms bis popstate). Filter „Besitze“: abgewähltes Buch bleibt bis zum Neuzeichnen stehen (wie bisher, Entscheidung offen).
 - Tests: tests/ui.html 48.
