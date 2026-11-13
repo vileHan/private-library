@@ -75,7 +75,8 @@ Alle kostenlos und lokal machbar (IndexedDB, vorhandener Katalog). Aufwand grob:
 - Fehlender Band 1 in Reihen (~219 Reihen), z. B. Dungeon Crawler Carl: heute in der Datenbank noch „Entertainment ist Pflicht - Überleben nicht : Roman“ ohne Band – der Code liefert schon „Entertainment ist Pflicht - Überleben nicht“, Band 1 (geprüft 12.11.2026). Eigene Einträge ziehen danach innerhalb von 12 h nach.
 
 ## Entscheidungen des Nutzers
-- **„Mein Kinderbuchhaus“** (Oetinger-Sammelreihe, 8 Autoren) als Verlagsreihe herausnehmen? Sonst zeigt „Pippi Langstrumpf“ nach dem Import „Band 5“. Kleine Regel in `isPublisherSeries`.
+- ~~„Mein Kinderbuchhaus“ herausnehmen?~~ → „so lassen“ (Nutzer, 09.11.2026). Pippi Langstrumpf zeigt nach dem Import „Band 5“ – bewusst hingenommen.
+- **Filter „Besitze“**: abgewähltes Buch sofort aus der Liste nehmen oder bis zum nächsten Öffnen stehen lassen (heute)?
 
 ## Katalog
 - **Reihen mit Unterreihen** („Die drei ??? Kids“: 186 Bände, „Band 1“ viermal – Blanck, Pfeiffer, „Mission …“): Reihenseite nach Autor/Unterreihe gruppieren? (Entscheidung des Nutzers)
