@@ -1,10 +1,16 @@
 name: Supabase wach halten
 
 # Supabase pausiert Gratis-Projekte nach 7 Tagen ohne Aktivität. Eine kleine Abfrage alle 3 Tage verhindert das.
+# Außerdem (13.11.2026): GitHub schaltet zeitgesteuerte Abläufe in öffentlichen Repositories nach 60 Tagen ohne
+# Commit ab. Liegt der letzte Commit länger als 45 Tage zurück, legt dieser Ablauf einen leeren Commit an –
+# damit beginnen die 60 Tage neu, und Import + Wachhalten laufen weiter.
 on:
   schedule:
     - cron: '17 6 */3 * *'
   workflow_dispatch:
+
+permissions:
+  contents: write # nur für den leeren Commit gegen die 60-Tage-Abschaltung
 
 jobs:
   ping:
@@ -19,3 +25,15 @@ jobs:
       - run: node scripts/ping.mjs
         env:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      - name: GitHub wach halten (leerer Commit nach 45 Tagen)
+        run: |
+          last=$(git log -1 --format=%ct)
+          days=$(( ( $(date +%s) - last ) / 86400 ))
+          echo "Letzter Commit vor $days Tagen."
+          if [ "$days" -ge 45 ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git commit --allow-empty -m "Wach halten: leerer Commit gegen die 60-Tage-Abschaltung von GitHub"
+            git push
+            echo "Leerer Commit angelegt."
+          fi

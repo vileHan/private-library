@@ -25,5 +25,5 @@ prüfbare Anforderungen in [ANFORDERUNGEN.md](ANFORDERUNGEN.md). Aufgeräumt am 
 
 ### Laufender Betrieb
 - Monatlicher Katalog-Import am 1. (nächster: 01.12.2026, ~3,5 h ab 03:00 Uhr), „Supabase wach halten“ alle 3 Tage.
-- GitHub schaltet zeitgesteuerte Workflows nach 60 Tagen ohne Commit ab → nach der Warnmail im Actions-Tab wieder aktivieren.
+- GitHub schaltet zeitgesteuerte Workflows nach 60 Tagen ohne Commit ab – seit 13.11.2026 automatisch verhindert: „Supabase wach halten“ legt nach 45 Tagen ohne Commit einen leeren Commit an. Falls doch eine Warnmail kommt: im Actions-Tab wieder aktivieren.
 - Datenbank: 311 MB von 500 MB (09.11.2026).
