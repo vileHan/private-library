@@ -60,7 +60,6 @@ Vorher die App einmal schließen und neu öffnen, damit die neue Version ankommt
 
 ## Als Nächstes (Nutzer, 13.11.2026)
 1. **Genre für alte Bücher**: 2000–2011 fehlt bei ~80 % der Gattungsbegriff. Lösung: (a) Open-Library-Schlagworte (englisch) über eine Zuordnungstabelle ins Deutsche (passt zum Workflow „Cover-IDs“), (b) grobe Ersatzgruppe aus der Sachgruppe (B = Belletristik, K = Kinder-/Jugendbuch) fürs Stöbern. Zuordnungstabelle danach gemeinsam durchgehen.
-2. **„Meine Bücher“ aufräumen**: Suchfeld, Sortierung, Filter-Chips und Unteransichten übersichtlicher (z. B. Filter/Sortierung hinter einem Knopf, Suchfeld einklappbar). Vorher Varianten zeigen.
 
 ## Später
 - **Konten** (siehe unten).

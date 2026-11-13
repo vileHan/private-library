@@ -722,3 +722,41 @@ body.edge-swiping main { box-shadow: -1px 0 0 color-mix(in srgb, var(--text) 14%
 /* Haptik-Fläche (13.11.2026): in Listen etwas größer (mittlere ~64 % statt 40 % – Rand bleibt fürs Weiterwischen frei);
    im Detailblatt der ganze Knopf (dort wird kaum über die Knöpfe gewischt) */
 .sheet-actions .haptic-switch { inset: 0; }
+
+/* ---------- Meine Bücher: schlanker Kopf (13.11.2026) ---------- */
+/* Klebt unter der Kopfleiste, gleitet beim Runterscrollen weg (.away) und kommt beim Hochscrollen zurück */
+.lib-head { position: sticky; top: var(--top-h, 61px); z-index: 4; background: var(--bg); margin: -14px -16px 6px; padding: 4px 16px 8px;
+  transition: transform .22s ease; }
+.lib-head.away { transform: translateY(calc(-100% - 6px)); }
+@media (prefers-reduced-motion: reduce) { .lib-head { transition: none; } }
+/* Schmale Reiter mit Unterstrich statt Kästen */
+#libHead .segmented { background: none; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; padding: 0; margin: 0 0 8px; }
+#libHead .segmented button { padding: 7px 2px 8px; border-radius: 0; background: none; color: var(--muted); font-size: .92rem;
+  border-bottom: 2px solid transparent; margin-bottom: -1px; }
+#libHead .segmented button[aria-pressed="true"] { color: var(--accent); background: none; border-bottom-color: var(--accent); }
+/* Ein Suchfeld über fast die ganze Breite + Filter-Knopf */
+#libTools { display: flex; gap: 8px; align-items: center; }
+#libTools .search-wrap input[type="search"] { padding: 9px 12px; padding-right: 12px; }
+.filter-btn { flex: none; height: 42px; padding: 0 13px; border: 1px solid var(--line); border-radius: 99px; background: var(--surface);
+  color: var(--text); font-weight: 600; font-size: .9rem; white-space: nowrap; cursor: pointer; touch-action: manipulation; }
+.filter-btn.narrowed { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
+.visually-hidden { position: absolute !important; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* Filter-Blatt von unten: große Knöpfe mit Anzahl, Sortierung als Liste */
+.mini-sheet { position: fixed; inset: 0; z-index: 42; }
+.mini-backdrop { position: absolute; inset: 0; background: rgba(0, 0, 0, .42); animation: zoom-in .2s ease-out; }
+.mini-panel { position: absolute; left: 0; right: 0; bottom: 0; max-width: 760px; margin: 0 auto; background: var(--surface);
+  border-radius: 18px 18px 0 0; padding: 0 16px calc(16px + env(safe-area-inset-bottom)); box-shadow: 0 -8px 30px rgba(0,0,0,.25);
+  animation: sheet-in .2s ease-out; max-height: 85vh; overflow-y: auto; }
+.mini-panel h3 { font-size: .8rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin: 16px 0 8px; }
+.filter-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.filter-grid .chip { display: flex; justify-content: space-between; align-items: center; padding: 12px 14px; border-radius: 12px;
+  font-size: .98rem; color: var(--text); touch-action: manipulation; }
+.filter-grid .chip .n { color: var(--muted); font-variant-numeric: tabular-nums; }
+.filter-grid .chip[aria-pressed="true"] .n { color: inherit; opacity: .85; }
+.sort-list { display: flex; flex-direction: column; margin-bottom: 14px; }
+.sort-opt { display: flex; justify-content: space-between; border: 0; border-bottom: 1px solid var(--line); background: none; color: var(--text);
+  padding: 12px 2px; font: inherit; text-align: left; cursor: pointer; touch-action: manipulation; }
+.sort-opt[aria-pressed="true"] { color: var(--accent); font-weight: 600; }
+.sort-opt[aria-pressed="true"]::after { content: "✓"; }
+body.mini-open { overflow: hidden; }

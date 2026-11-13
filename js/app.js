@@ -532,14 +532,22 @@ $('#viewToggle').addEventListener('click', () => {
 // das Zufallsbuch einen eigenen Reiter „🎲“ (js/random.js) – die Liste selbst hat nur Filtern, Sortieren und Filter-Chips.
 const libView = { sub: 'list', filter: 'owned' };
 
+const FILTER_LABELS = { owned: 'Besitze', read: 'Gelesen', unread: 'Ungelesen', wish: 'Merkliste', abandoned: 'Abgebrochen', all: 'Alle' };
+const SORT_LABELS = { title: 'Titel A–Z', author: 'Autor A–Z', year: 'Neueste zuerst', added: 'Zuletzt hinzugefügt', readAt: 'Zuletzt gelesen', rating: 'Beste Bewertung' };
+function inFilter(e, f) {
+  if (f === 'owned') return e.owned;
+  if (f === 'read') return e.read;
+  if (f === 'unread') return e.owned && !e.read && !e.abandoned;
+  if (f === 'wish') return e.wish;
+  if (f === 'abandoned') return e.abandoned;
+  return true;
+}
+const filterCount = (f) => [...library.byKey.values()].filter((e) => inFilter(e, f)).length;
+
 function renderLibrary() {
   const tokens = normalizeText($('#libFilter').value).split(' ').filter(Boolean);
   const items = [...library.byKey.values()].filter((e) => {
-    if (libView.filter === 'owned' && !e.owned) return false;
-    if (libView.filter === 'read' && !e.read) return false;
-    if (libView.filter === 'unread' && (!e.owned || e.read || e.abandoned)) return false;
-    if (libView.filter === 'wish' && !e.wish) return false;
-    if (libView.filter === 'abandoned' && !e.abandoned) return false;
+    if (!inFilter(e, libView.filter)) return false;
     return tokens.length ? matchesTokens(e, tokens, `${e.genre || ''} ${(e.tags || []).join(' ')} ${e.notes || ''}`) : true;
   });
   const cmp = {
@@ -556,6 +564,12 @@ function renderLibrary() {
   box.replaceChildren(...items.map((e) => bookCard(e)));
   const total = library.byKey.size;
   $('#libStatus').textContent = total ? `${fmt.format(items.length)} von ${plural(total, 'Eintrag', 'Einträgen')}` : '';
+  // Anzahl im Suchfeld und im Filter-Knopf statt in einer eigenen Zeile (13.11.2026)
+  const label = FILTER_LABELS[libView.filter];
+  const shown = filterCount(libView.filter);
+  $('#libFilter').placeholder = shown ? `${plural(shown, 'Buch', 'Bücher')} durchsuchen` : 'Bücher durchsuchen';
+  $('#libFilterBtn').textContent = `${label} ▾`;
+  $('#libFilterBtn').classList.toggle('narrowed', libView.filter !== 'all');
   if (!items.length) {
     box.append(total
       ? emptyState({ icon: '🔍', title: 'Nichts gefunden', text: 'Kein Buch passt zu diesem Filter.' })
@@ -565,21 +579,54 @@ function renderLibrary() {
         action: { text: 'Bücher suchen ›', onclick: () => { showView('search'); $('#searchInput').focus(); } },
       }));
   }
-  // Aktiven Filter in der wischbaren Zeile sichtbar halten
-  const row = document.querySelector('.chips-scroll');
-  const active = row?.querySelector('.chip[aria-pressed="true"]');
-  if (row && active && (active.offsetLeft < row.scrollLeft || active.offsetLeft + active.offsetWidth > row.scrollLeft + row.clientWidth)) {
-    row.scrollLeft = active.offsetLeft - 16;
+  if (!$('#filterSheet').hidden) renderFilterSheet();
+}
+
+// Filter-Blatt: große Knöpfe mit Anzahl, Sortierung als Liste; Änderungen wirken sofort
+function renderFilterSheet() {
+  for (const chip of document.querySelectorAll('#filterSheet .chip[data-filter]')) {
+    const f = chip.dataset.filter;
+    chip.replaceChildren(el('span', { text: FILTER_LABELS[f] }), el('span', { class: 'n', text: fmt.format(filterCount(f)) }));
+    chip.setAttribute('aria-pressed', String(libView.filter === f));
   }
-  markChipsEnd();
+  const cur = $('#libSort').value;
+  $('#sortList').replaceChildren(...Object.entries(SORT_LABELS).map(([k, label]) => el('button', {
+    type: 'button', class: 'sort-opt', 'aria-pressed': String(cur === k), text: label,
+    onclick: () => { $('#libSort').value = k; renderLibrary(); renderFilterSheet(); },
+  })));
 }
-// Ausblend-Verlauf rechts nur, solange die Filterzeile noch weitergeht
-function markChipsEnd() {
-  const row = document.querySelector('.chips-scroll');
-  if (row) row.classList.toggle('at-end', row.scrollLeft + row.clientWidth >= row.scrollWidth - 2);
+function openFilterSheet() {
+  renderFilterSheet();
+  $('#filterSheet').hidden = false;
+  document.body.classList.add('mini-open');
 }
-document.querySelector('.chips-scroll')?.addEventListener('scroll', markChipsEnd, { passive: true });
-window.addEventListener('resize', markChipsEnd);
+function closeFilterSheet() {
+  $('#filterSheet').hidden = true;
+  document.body.classList.remove('mini-open');
+}
+$('#libFilterBtn').addEventListener('click', openFilterSheet);
+$('#filterDone').addEventListener('click', closeFilterSheet);
+$('#filterSheet .mini-backdrop').addEventListener('click', closeFilterSheet);
+document.addEventListener('keydown', (ev) => { if (ev.key === 'Escape' && !$('#filterSheet').hidden) closeFilterSheet(); });
+
+// Kopf von „Meine Bücher“ beim Scrollen (13.11.2026): beim Runterscrollen weg, beim kleinsten Hochscrollen sofort
+// wieder da (wie Safari und viele Apps) – mehr Platz für die Bücher. Ganz oben immer sichtbar.
+{
+  let lastY = window.scrollY;
+  const head = $('#libHead');
+  const topBar = document.querySelector('.top');
+  const setTop = () => document.documentElement.style.setProperty('--top-h', `${topBar.offsetHeight}px`);
+  setTop();
+  window.addEventListener('resize', setTop);
+  window.addEventListener('scroll', () => {
+    const y = window.scrollY;
+    const d = y - lastY;
+    lastY = y;
+    if ($('#view-library').hidden) return;
+    if (y < 40 || d < -1) head.classList.remove('away');
+    else if (d > 3 && y > head.offsetHeight + 40 && !head.contains(document.activeElement)) head.classList.add('away');
+  }, { passive: true });
+}
 
 function renderSub() {
   for (const b of document.querySelectorAll('.segmented button')) {
@@ -587,6 +634,8 @@ function renderSub() {
     b.setAttribute('aria-pressed', String(active));
     $(`#sub-${b.dataset.sub}`).hidden = !active;
   }
+  $('#libTools').hidden = libView.sub !== 'list'; // Suchfeld + Filter nur in der Liste
+  $('#libHead').classList.remove('away');
   if (libView.sub === 'list') renderLibrary();
   else if (libView.sub === 'series') renderSeries($('#seriesList'));
   else if (libView.sub === 'shelves') renderShelves($('#shelvesBox'));
@@ -604,6 +653,7 @@ document.querySelectorAll('.chip[data-filter]').forEach((chip) => chip.addEventL
   libView.filter = chip.dataset.filter;
   document.querySelectorAll('.chip[data-filter]').forEach((c) => c.setAttribute('aria-pressed', String(c === chip)));
   renderLibrary();
+  window.scrollTo(0, 0);
 }));
 
 // ---------- Sicherung ----------

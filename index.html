@@ -75,11 +75,21 @@
     </section>
 
     <section id="view-library" role="tabpanel" aria-labelledby="tab-library" hidden>
-      <div class="segmented" role="group" aria-label="Ansicht">
-        <button data-sub="list" aria-pressed="true">Liste</button>
-        <button data-sub="series" aria-pressed="false">Reihen</button>
-        <button data-sub="shelves" aria-pressed="false">Regale</button>
-        <button data-sub="stats" aria-pressed="false">Statistik</button>
+      <!-- Kopf von „Meine Bücher“ (13.11.2026): schmale Reiter + Suchfeld mit Filter-Knopf; gleitet beim Runterscrollen
+           weg und kommt beim kleinsten Hochscrollen zurück (app.js, „Kopf beim Scrollen“) -->
+      <div class="lib-head" id="libHead">
+        <div class="segmented" role="group" aria-label="Ansicht">
+          <button data-sub="list" aria-pressed="true">Liste</button>
+          <button data-sub="series" aria-pressed="false">Reihen</button>
+          <button data-sub="shelves" aria-pressed="false">Regale</button>
+          <button data-sub="stats" aria-pressed="false">Statistik</button>
+        </div>
+        <div class="lib-tools" id="libTools">
+          <div class="search-wrap">
+            <input id="libFilter" type="search" placeholder="Bücher durchsuchen" autocomplete="off" aria-label="Meine Bücher durchsuchen">
+          </div>
+          <button id="libFilterBtn" class="filter-btn" type="button" aria-haspopup="dialog" aria-controls="filterSheet">Besitze ▾</button>
+        </div>
       </div>
 
       <div id="sub-shelves" hidden>
@@ -96,28 +106,36 @@
       </div>
 
       <div id="sub-list">
-      <div class="lib-tools">
-        <input id="libFilter" type="search" placeholder="Filtern …" autocomplete="off" aria-label="Meine Bücher filtern">
-        <select id="libSort" aria-label="Sortierung">
-          <option value="title">Titel A–Z</option>
-          <option value="author">Autor A–Z</option>
-          <option value="year">Neueste zuerst</option>
-          <option value="added">Zuletzt hinzugefügt</option>
-          <option value="readAt">Zuletzt gelesen</option>
-          <option value="rating">Beste Bewertung</option>
-        </select>
-      </div>
-      <!-- Eine Zeile, waagrecht wischbar statt umbrechen (Platz, 09.11.2026) -->
-      <div class="chips chips-scroll" role="group" aria-label="Filter">
-        <button class="chip" data-filter="owned" aria-pressed="true">Besitze</button>
-        <button class="chip" data-filter="all" aria-pressed="false">Alle</button>
-        <button class="chip" data-filter="read" aria-pressed="false">Gelesen</button>
-        <button class="chip" data-filter="unread" aria-pressed="false">Ungelesen</button>
-        <button class="chip" data-filter="wish" aria-pressed="false">Merkliste</button>
-        <button class="chip" data-filter="abandoned" aria-pressed="false">Abgebrochen</button>
-      </div>
-      <p class="status" id="libStatus" aria-live="polite"></p>
+      <p class="status visually-hidden" id="libStatus" aria-live="polite"></p>
       <div id="libList" class="list"></div>
+      </div>
+
+      <!-- Filter und Sortierung (13.11.2026): Blatt von unten, große Knöpfe mit Anzahl -->
+      <div id="filterSheet" class="mini-sheet" hidden>
+        <div class="mini-backdrop"></div>
+        <div class="mini-panel" role="dialog" aria-modal="true" aria-label="Filter und Sortierung">
+          <div class="sheet-grip" aria-hidden="true"></div>
+          <h3>Anzeigen</h3>
+          <div class="filter-grid" role="group" aria-label="Filter">
+            <button class="chip" data-filter="owned" aria-pressed="true">Besitze</button>
+            <button class="chip" data-filter="read" aria-pressed="false">Gelesen</button>
+            <button class="chip" data-filter="unread" aria-pressed="false">Ungelesen</button>
+            <button class="chip" data-filter="wish" aria-pressed="false">Merkliste</button>
+            <button class="chip" data-filter="abandoned" aria-pressed="false">Abgebrochen</button>
+            <button class="chip" data-filter="all" aria-pressed="false">Alle</button>
+          </div>
+          <h3>Sortieren</h3>
+          <select id="libSort" aria-label="Sortierung" hidden>
+            <option value="title">Titel A–Z</option>
+            <option value="author">Autor A–Z</option>
+            <option value="year">Neueste zuerst</option>
+            <option value="added">Zuletzt hinzugefügt</option>
+            <option value="readAt">Zuletzt gelesen</option>
+            <option value="rating">Beste Bewertung</option>
+          </select>
+          <div class="sort-list" id="sortList" role="group" aria-label="Sortierung"></div>
+          <button type="button" class="dice-btn" id="filterDone">Fertig</button>
+        </div>
       </div>
     </section>
 
