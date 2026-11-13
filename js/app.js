@@ -274,8 +274,25 @@ function seriesGroups(list) {
     if (!groups.has(a)) groups.set(a, []);
     groups.get(a).push(w);
   }
-  return [...groups.entries()].map(([k, works]) => ({ name: display.get(k) || 'Ohne Autor', works }))
-    .sort((a, b) => b.works.length - a.works.length);
+  // Hauptreihe (Wunsch des Nutzers 13.11.2026): Der größte Autor bildet die Hauptzählung. Andere Autoren gehören dazu,
+  // wenn ihre Nummern die Hauptzählung ergänzen (Pfeiffer füllt Bände 25, 27 …). Fängt ein Autor bei Band 1 neu an
+  // und überschneiden sich mindestens die Hälfte seiner Nummern mit der Hauptzählung, ist er eine eigene Unterreihe
+  // (Schiefelbein „Mission …“, Körner).
+  const sorted = [...groups.entries()].sort((a, b) => b[1].length - a[1].length);
+  const mainWorks = sorted[0][1];
+  const mainNums = new Set(mainWorks.map((w) => w.volume).filter(Boolean));
+  const main = [...mainWorks];
+  const subs = [];
+  for (const [k, works] of sorted.slice(1)) {
+    const nums = works.map((w) => Number(w.volume)).filter((n) => n > 0);
+    const overlap = nums.filter((n) => mainNums.has(String(n))).length;
+    if (nums.length && Math.min(...nums) === 1 && overlap >= nums.length / 2) subs.push({ name: display.get(k) || 'Ohne Autor', works });
+    else main.push(...works);
+  }
+  if (!subs.length) return [{ name: '', works: list }];
+  const vol = (w) => (w.volume ? Number(w.volume) : Infinity);
+  main.sort((a, b) => vol(a) - vol(b) || (a.year || 9999) - (b.year || 9999));
+  return [{ name: 'Hauptreihe', works: main }, ...subs.map((s) => ({ name: `Unterreihe von ${s.name}`, works: s.works }))];
 }
 
 function renderBrowse() {
@@ -320,7 +337,7 @@ function renderBrowse() {
         box.append(el('h2', { class: 'section-title', text: `${g.name} · ${plural(g.works.length, 'Band', 'Bände')}` }));
         for (const w of g.works) box.append(bookCard(w));
       }
-      status.textContent = `${plural(list.length, 'Band', 'Bände')} in ${groups.length} Unterreihen, jeweils in Bandfolge.`;
+      status.textContent = `${plural(list.length, 'Band', 'Bände')}: Hauptreihe und ${plural(groups.length - 1, 'Unterreihe', 'Unterreihen')}, jeweils in Bandfolge.`;
     } else {
       for (const w of list) box.append(bookCard(w));
       status.textContent = `${plural(list.length, 'Band', 'Bände')} in Bandfolge.`;
