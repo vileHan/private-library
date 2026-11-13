@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Geschenkkarte</title>
-  <!-- Druckbare Geschenkkarte (10.11.2026): karte.html#g=<Geschenk-Code> – derselbe Code wie im App-Link (js/gift.js).
+  <!-- Druckbare Geschenkkarte (10.11.2026; seit 13.11.2026 vier Seiten als Faltheft: Gruß, QR, zwei Seiten Funktionen): karte.html#fuer-<code> bzw. #g=<Geschenk-Code> (js/gift.js).
        Persönliche Daten stehen nur im Link, nicht in dieser Datei. QR-Code: qrcode-generator (jsDelivr, MIT). -->
   <style>
     :root { --paper: #fffaf0; --ink: #2b4a6f; --text: #2a2520; --muted: #7b7165; --line: #e6dbc8;
@@ -24,17 +24,36 @@
     .back #qr svg, .back #qr img { width: 100%; height: 100%; }
     .back ol { text-align: left; padding-left: 5mm; margin: 0; font-size: 10.5pt; }
     .back li { margin-bottom: 2.5mm; }
+    /* Seiten 3 und 4: was die App kann (13.11.2026) – kompakt, in der Stimme des Schenkenden */
+    .card { height: 148mm; overflow: hidden; flex: none; }
+    .front h1 { font-size: 22pt; margin-top: 8mm; }
+    .front p { font-size: 11pt; line-height: 1.45; }
+    .info { align-items: stretch; text-align: left; padding: 10mm 9mm; }
+    .info h2 { font-family: var(--serif); color: var(--ink); font-size: 15pt; margin: 0 0 1.5mm; text-align: center; }
+    .info .lead { font-family: var(--serif); font-style: italic; color: var(--muted); text-align: center; font-size: 10pt; margin: 0 0 4mm; }
+    .info ul { list-style: none; margin: 0; padding: 0; font-size: 9.6pt; line-height: 1.4; }
+    .info li { margin-bottom: 2.6mm; padding-left: 7mm; text-indent: -7mm; }
+    .info li .i { display: inline-block; width: 7mm; text-indent: 0; text-align: center; }
+    .info b { color: var(--ink); }
+    .info .end { margin-top: auto; text-align: center; font-family: var(--serif); font-style: italic; color: var(--muted); font-size: 10pt; }
     .err { color: #b33; text-align: center; padding: 40px 16px; }
+    /* Bildschirm: Seiten 1–4 der Reihe nach. Druck: zwei Seiten A4 quer, beidseitig („an kurzer Kante wenden“),
+       in der Mitte falten: außen [4 | 1], innen [2 | 3]. */
+    .spread { display: contents; }
+    .p1 { order: 1; } .p2 { order: 2; } .p3 { order: 3; } .p4 { order: 4; }
+    @page { size: A4 landscape; margin: 0; }
     @media print {
       body { background: #fff; }
       .hint { display: none; }
-      .sheet { padding: 0; gap: 0; flex-direction: row-reverse; } /* A4 quer, außen bedruckt gefaltet: rechte Hälfte = Titelseite */
+      .sheet { display: block; padding: 0; }
+      .spread { display: flex; justify-content: center; align-items: center; height: 210mm; break-after: page; }
+      .spread:last-child { break-after: auto; }
       .card { box-shadow: none; border: 1px dashed #ccc; border-radius: 0; break-inside: avoid; }
     }
   </style>
 </head>
 <body>
-  <p class="hint">Vorderseite und Rückseite zum Ausdrucken (z. B. „Drucken“ → auf A4 quer, dann in der Mitte falten). Der QR-Code öffnet die App mit dem persönlichen Gruß.</p>
+  <p class="hint">Vier Seiten als kleines Heft: „Drucken“ → A4 quer, <b>beidseitig, an der kurzen Kante wenden</b>, Ränder „Keine“ bzw. Skalierung 100 %. Dann in der Mitte falten – vorne ist der Gruß. (Ohne Duplexdrucker: Blatt 1 drucken, das Papier umgedreht wieder einlegen, Blatt 2 drucken.) Der QR-Code öffnet die App mit dem persönlichen Gruß.</p>
   <div class="sheet" id="sheet"></div>
   <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
   <script type="module">
@@ -49,22 +68,51 @@
     } else {
       const appUrl = new URL(short ? `./#fuer-${short}` : `./#g=${code}`, location.href).href;
       const esc = (s) => String(s || '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+      const li = (icon, title, text) => `<li><span class="i">${icon}</span><b>${title}</b> ${text}</li>`;
       sheet.innerHTML = `
-        <section class="card front">
-          <div class="emoji">🎂📚</div>
-          <h1>Alles Gute zum Geburtstag, ${esc(gift.n)}!</h1>
-          ${gift.m ? `<p>${esc(gift.m)}</p>` : ''}
-          ${gift.v ? `<p class="from">– ${esc(gift.v)}</p>` : ''}
-        </section>
-        <section class="card back">
-          <h2>Deine eigene Bibliothek</h2>
-          <div id="qr"></div>
-          <ol>
-            <li>QR-Code mit der Kamera scannen und den Link in Safari öffnen.</li>
-            <li>Unten auf <b>Teilen</b> tippen → <b>„Zum Home-Bildschirm“</b>.</li>
-            <li>Die App auf dem Home-Bildschirm öffnen – und loslegen: Bücher suchen, „Besitze“, „Gelesen“ oder „Merken“ antippen.</li>
-          </ol>
-        </section>`;
+        <div class="spread outside">
+          <section class="card info p4">
+            <h2>Und außerdem</h2>
+            <p class="lead">für später, wenn die Regale voller werden</p>
+            <ul>
+              ${li('📂', 'Meine Bücher:', 'filtern und sortieren, Reihen mit fehlenden Bänden, eigene Regale, Statistik mit Jahresziel.')}
+              ${li('🎲', 'Zufall:', 'Du weißt nicht, was du als Nächstes liest? Würfel es aus.')}
+              ${li('▦', 'Raster</b> (Kacheln oben)<b>:', 'nur Cover. Doppeltippen = besitze, nach rechts wischen = merken, nach links = gelesen, halten = Details.')}
+              ${li('‹', 'Zurück:', 'vom linken Rand nach rechts wischen.')}
+              ${li('⚙', 'Einstellungen:', 'hell oder dunkel, Stil und Farbe.')}
+              ${li('💾', 'Wichtig:', 'Deine Bücher liegen nur auf deinem Handy. Ab und zu unter Einstellungen → „Daten sichern“ exportieren.')}
+            </ul>
+            <p class="end">Den Rest zeig ich dir gern. 🙂</p>
+          </section>
+          <section class="card front p1">
+            <div class="emoji">🎂📚</div>
+            <h1>Alles Gute zum Geburtstag, ${esc(gift.n)}!</h1>
+            ${gift.m ? `<p>${esc(gift.m)}</p>` : ''}
+            ${gift.v ? `<p class="from">– ${esc(gift.v)}</p>` : ''}
+          </section>
+        </div>
+        <div class="spread inside">
+          <section class="card back p2">
+            <h2>Deine eigene Bibliothek</h2>
+            <div id="qr"></div>
+            <ol>
+              <li>QR-Code mit der Kamera scannen und den Link in Safari öffnen.</li>
+              <li>Unten auf <b>Teilen</b> tippen → <b>„Zum Home-Bildschirm“</b>.</li>
+              <li>Die App auf dem Home-Bildschirm öffnen – und loslegen.</li>
+            </ol>
+          </section>
+          <section class="card info p3">
+            <h2>Was die App kann</h2>
+            <p class="lead">Ich hab dir das Wichtigste aufgeschrieben:</p>
+            <ul>
+              ${li('🔍', 'Suchen:', 'Titel, Autor oder ISBN – deine eigenen Bücher stehen immer oben.')}
+              ${li('▮▯', 'Scannen:', 'Strichcode-Symbol oben, Buchrückseite vor die Kamera halten.')}
+              ${li('📚', 'Stöbern:', 'ohne Suchwort nach Genre, die beliebtesten zuerst.')}
+              ${li('○', 'Besitze · Gelesen · Merken:', 'an jedem Buch antippen.')}
+              ${li('⋯', 'Details:', 'Klappentext, Sterne, Lesedatum, Notiz und Regale. Autor, Reihe oder Genre antippen zeigt mehr davon.')}
+            </ul>
+          </section>
+        </div>`;
       const qr = window.qrcode(0, 'M');
       qr.addData(appUrl);
       qr.make();
