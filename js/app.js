@@ -252,6 +252,32 @@ function renderGenreChips() {
 const BROWSE_KINDS = { author: 'Autor', genre: 'Genre', series: 'Reihe' };
 const browseTitle = () => (browse.mode === 'series' ? browse.value.series : browse.value);
 
+/**
+ * Unterreihen einer Reihe (13.11.2026): Kommen Bandnummern mehrfach vor („Die drei ??? Kids“ hat „Band 1“ viermal),
+ * zählt jeder Autor seine eigene Unterreihe. Ein Band mit mehreren Autoren gehört zu dem, der die meisten Bände hat.
+ * Gruppen: größte zuerst, Bände ohne Nummer am Ende jeder Gruppe. Ohne doppelte Nummern: eine Gruppe (wie bisher).
+ */
+function seriesGroups(list) {
+  const vols = list.map((w) => w.volume).filter(Boolean);
+  if (new Set(vols).size === vols.length) return [{ name: '', works: list }];
+  // Schreibweisen zusammenführen („Anja Körner“ = „Anja Koerner“)
+  const key = (a) => normalizeText(a);
+  const count = new Map();
+  const display = new Map();
+  for (const w of list) for (const a of w.authors || []) {
+    count.set(key(a), (count.get(key(a)) || 0) + 1);
+    if (!display.has(key(a))) display.set(key(a), a);
+  }
+  const groups = new Map();
+  for (const w of list) {
+    const a = [...(w.authors || [])].map(key).sort((x, y) => count.get(y) - count.get(x))[0] || '';
+    if (!groups.has(a)) groups.set(a, []);
+    groups.get(a).push(w);
+  }
+  return [...groups.entries()].map(([k, works]) => ({ name: display.get(k) || 'Ohne Autor', works }))
+    .sort((a, b) => b.works.length - a.works.length);
+}
+
 function renderBrowse() {
   const box = $('#results');
   box.replaceChildren();
@@ -287,8 +313,18 @@ function renderBrowse() {
     list = [...owned, ...others];
     status.textContent = `${plural(list.length, 'Buch', 'Bücher')}, A–Z${list.length >= 500 ? ' (die ersten 500)' : ''}.`;
   } else if (browse.mode === 'series') {
-    for (const w of list) box.append(bookCard(w));
-    status.textContent = `${plural(list.length, 'Band', 'Bände')} in Bandfolge.`;
+    const groups = seriesGroups(list);
+    if (groups.length > 1) {
+      // Mehrere Unterreihen mit eigener Zählung („Die drei ??? Kids“: Blanck, Pfeiffer, Mission-Bände …) – je Autor
+      for (const g of groups) {
+        box.append(el('h2', { class: 'section-title', text: `${g.name} · ${plural(g.works.length, 'Band', 'Bände')}` }));
+        for (const w of g.works) box.append(bookCard(w));
+      }
+      status.textContent = `${plural(list.length, 'Band', 'Bände')} in ${groups.length} Unterreihen, jeweils in Bandfolge.`;
+    } else {
+      for (const w of list) box.append(bookCard(w));
+      status.textContent = `${plural(list.length, 'Band', 'Bände')} in Bandfolge.`;
+    }
   } else {
     for (const w of list) box.append(bookCard(w));
     status.textContent = 'Die beliebtesten zuerst.';

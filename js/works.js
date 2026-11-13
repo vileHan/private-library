@@ -2,6 +2,16 @@
 
 const ARTICLES = /^(der|die|das|des|dem|den|ein|eine|einer|eines|the|a|an|le|la|les)\s+/;
 
+/**
+ * Sammelausgabe mehrerer Bücher („Die Zwerge : Die komplette Saga 1“, 1840 Seiten; „Band 1–3“, „Doppelband“,
+ * „drei Romane in einem Band“). Sie wird ein eigenes Werk statt als Ausgabe von Band 1 zu zählen (13.11.2026).
+ * Einbändige Ausgaben EINES Werks („Der Herr der Ringe“ in einem Band) treffen die Muster nicht.
+ */
+const OMNIBUS = /\bkomplette (saga|reihe|trilogie|serie)\b|\bsammel(band|bd|ausgabe)\b|\bdoppelband\b|\b(b(a|ä)nde?|teile?|bücher|romane|folgen)\s*\d+\s*(-|–|bis|und|&)\s*\d+(?!\d)|\b(zwei|drei|vier|fünf|sechs|sieben|\d+)\s+(romane|bände|bücher|fälle|abenteuer)\s+in\s+einem\s+band\b|\btrilogie in einem band\b/i;
+export function isOmnibus(title = '', subtitle = '') {
+  return OMNIBUS.test(`${title} ${subtitle}`);
+}
+
 /** Vereinheitlicht Text für Vergleiche: Kleinschreibung, Umlaute ausgeschrieben, nur Buchstaben/Ziffern. */
 export function normalizeText(s = '') {
   return s
@@ -38,7 +48,14 @@ function authorKey(edition) {
  * wie Eragon auch verschiedene Bände und Box-Sets miteinander.
  */
 export function workKeyOf(edition) {
-  return `${authorKey(edition)}|${titleKey(edition.title)}${edition.isComic ? '|comic' : ''}`;
+  // Sammelausgaben mehrerer Bücher bleiben ein eigenes Werk (nicht „Ausgabe von Band 1“, 13.11.2026)
+  // Steht das Merkmal schon im Titel („Sammelband I“), reicht „|sammel“; steht es im Untertitel („Die komplette Saga 1“),
+  // zählt nur dessen Kern – ohne Werbe-/Gattungszusätze („ | mit Farbschnitt“, „ : Thriller“), sonst zerfällt
+  // dieselbe Sammelausgabe in zwei Werke (Prüfrunde 13.11.2026)
+  let omnibus = '';
+  if (isOmnibus(edition.title, '')) omnibus = '|sammel';
+  else if (isOmnibus('', edition.subtitle)) omnibus = `|sammel ${titleKey((edition.subtitle || '').split(/\s+[|:;]\s+/)[0])}`;
+  return `${authorKey(edition)}|${titleKey(edition.title)}${edition.isComic ? '|comic' : ''}${omnibus}`;
 }
 
 /** „das Vermächtnis der Drachenreiter ; Roman zum Film“ → „Das Vermächtnis der Drachenreiter“ */
@@ -80,7 +97,13 @@ export function fixSeriesTitles(editions) {
         const esc = s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+');
         // Trenner nur mit Leerraum („ - “, „ – “, „:“) – ein Bindestrich im zusammengesetzten Wort trennt nichts:
         // „Die Känguru-Chroniken“ (Reihe „Die Känguru“) blieb sonst als „Chroniken“ übrig (Analyse 09.11.2026)
-        const m = e.title.match(new RegExp(`^${esc}\\s*(?:\\d{1,3}\\s*)?(?:in)?(?:\\s*:|\\s+[-–]|\\s*–)\\s*(.{3,})$`, 'iu'));
+        // Auch „, “ vor einem Großbuchstaben: „Die drei ??? Kids, Mission Geister-Code“ (13.11.2026)
+        // (Großbuchstabe im Code geprüft – mit dem Flag „i“ passt \p{Lu} auch auf Kleinbuchstaben: „Törtel, die Schildkröte …“)
+        const m = e.title.match(new RegExp(`^${esc}\\s*(?:\\d{1,3}\\s*)?(?:in)?(\\s*:|\\s+[-–]|\\s*–|,\\s+)\\s*(.{3,})$`, 'iu'));
+        if (m && m[1].trim() === ',' && m[2][0] === m[2][0].toLowerCase()) continue;
+        if (m) m.splice(1, 1); // [ganz, Titel] wie bisher
+        // Bliebe nur eine Bandangabe übrig („Der ewige Treck, Teil 3“ → „Teil 3“), nicht abschneiden (Prüfrunde 13.11.2026)
+        if (m && /^(teil|band|bd\.?|buch|folge|staffel|vol\.?)\s*[\dIVXLC]+\.?$/i.test(m[1].trim())) continue;
         if (m) {
           const title = m[1].charAt(0).toUpperCase() + m[1].slice(1);
           e = { ...e, title, sortTitle: title.replace(/^\s*(der|die|das|ein|eine)\s+/i, ''), series: e.series || s };

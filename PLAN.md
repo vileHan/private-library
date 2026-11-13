@@ -47,47 +47,31 @@ Vorher die App einmal schließen und neu öffnen, damit die neue Version ankommt
 9. **Darstellung:** Meine Bücher → „Darstellung“: Papier & Tinte ↔ Klassisch, Farben durchprobieren (hell und dunkel); welche Farbe passt zur Beschenkten?
 10. **Geschenk-Link** (aus dem Chat, nicht im Repository): in Safari öffnen → Gruß; dann „Zum Home-Bildschirm“ → App öffnen: Name und Gruß auch dort (einmal)? Karte drucken, falten, QR-Code scannen.
 
-## Als Nächstes (Reihenfolge vom Nutzer, 09.11.2026 – sobald wieder Tokens da sind)
-1. ~~Wischen ab den Knöpfen verbessern~~ → 09.11.2026: Schalter beim Scrollen abgeschaltet, Fläche nur noch mittleres Drittel. Am iPhone nachprüfen.
-2. ~~Feature-Analyse~~ → erledigt; gewählt B, C, F, H (+ Regal-Zeile), umgesetzt 09.11.2026. Übrige Ideen siehe unten.
-3. Wenn dort nichts mehr gefällt: **diese Liste abarbeiten.**
-
-## Feature-Ideen zur Auswahl (Analyse 09.11.2026, Vergleich Goodreads/StoryGraph/Hardcover/Bookly/Libib/Apple Books)
-Alle kostenlos und lokal machbar (IndexedDB, vorhandener Katalog). Aufwand grob: S < 1 h, M 1–3 h, L > 3 h.
-- **A Lesestatus „Lese ich gerade“ + Fortschritt** (Seite/Prozent, Startdatum) – alle großen Apps haben das; heute gibt es nur „gelesen“. M
-- ~~B Abgebrochen~~ ✓ 09.11.2026
-- ~~C Jahresziel~~ ✓ 09.11.2026
-- **D Mehrfach gelesen** (Re-Reads mit mehreren Lesedaten). S–M
-- **E „Neu in deinen Reihen / von deinen Autoren“**: Nach jedem Monatsimport zeigen, welche neuen Bände zu Reihen erschienen sind, von denen du Bände besitzt (Hardcover/StoryGraph haben Serien-Hinweise). M
-- ~~F Zufallsbuch~~ ✓ 09.11.2026 (Ungelesen, Merkliste, Regal)
-- **G Zitate/Lieblingsstellen** pro Buch speichern (Bookly, Goodreads). S
-- ~~H Mehr Statistik~~ ✓ 09.11.2026
-- **I „Mehr wie dieses“** im Detailblatt: beliebte Bücher aus gleichem Genre/Autor-Umfeld (aus der eigenen Datenbank). M
-- **J Wunschliste teilen** (z. B. für Geschenke): Merkliste als Link, der die ISBNs im Link trägt – ohne Server, ohne Konto. M
-- **K Import aus Goodreads/StoryGraph** (CSV-Export → eigene Bibliothek, Abgleich über ISBN). M
-- ~~L zuletzt hinzugefügt~~ – gab es schon
-- **M Leihe in Bibliotheken** (Onleihe-Suche als Link aus dem Detailblatt). S – nur Link, kein Abruf
+## Feature-Ideen (Rest, Entscheidung des Nutzers 13.11.2026: alles andere gestrichen)
+- **„Mehr wie dieses“**: offen – ohne Schlagworte in der Datenbank wäre es nur „beliebt im gleichen Genre“ (≈ „Mehr Fantasy ›“). Erklärung im Bericht 13.11.2026.
+- **Import aus Goodreads/StoryGraph**: offen – Erklärung im Bericht 13.11.2026.
 
 ## Mit dem Import am 01.12.2026 (automatisch, schon im Code)
 - Pappbilderbücher (~5.900) und Spielleiter-Schirme fallen weg.
 - Känguru-Reihe mit vollen Titeln und Band 1–5; Box-Bände ohne Autor werden eingegliedert.
 - Zeitungs-/Verlagseditionen sind keine Reihe mehr: „Bild am Sonntag – Mega Thriller!“, „Welt am Sonntag“, „Schönen Sonntag“, „Sonntagsblatt“, „SonntagsBlick“, „Allgemeine“ (Noah, Der Erlöser, Ausgelöscht …); ebenso „Fitzek-Box“ (Amokspiel, Das Kind …).
+- „Die drei ??? Kids“: zerlegte Fragezeichen repariert, Reihenname vorne im Titel auch mit Komma abgeschnitten („Mission Graffiti-Code“); Sammelausgaben („Die Zwerge – Die komplette Saga 1“) eigene Werke statt Ausgabe von Band 1.
 - Fehlender Band 1 in Reihen (~219 Reihen), z. B. Dungeon Crawler Carl: heute in der Datenbank noch „Entertainment ist Pflicht - Überleben nicht : Roman“ ohne Band – der Code liefert schon „Entertainment ist Pflicht - Überleben nicht“, Band 1 (geprüft 12.11.2026). Eigene Einträge ziehen danach innerhalb von 12 h nach.
 
-## Entscheidungen des Nutzers
-- ~~„Mein Kinderbuchhaus“ herausnehmen?~~ → „so lassen“ (Nutzer, 09.11.2026). Pippi Langstrumpf zeigt nach dem Import „Band 5“ – bewusst hingenommen.
-- **Filter „Besitze“**: abgewähltes Buch sofort aus der Liste nehmen oder bis zum nächsten Öffnen stehen lassen (heute)?
+## Als Nächstes (Nutzer, 13.11.2026)
+1. **Genre für alte Bücher**: 2000–2011 fehlt bei ~80 % der Gattungsbegriff. Lösung: (a) Open-Library-Schlagworte (englisch) über eine Zuordnungstabelle ins Deutsche (passt zum Workflow „Cover-IDs“), (b) grobe Ersatzgruppe aus der Sachgruppe (B = Belletristik, K = Kinder-/Jugendbuch) fürs Stöbern. Zuordnungstabelle danach gemeinsam durchgehen.
+2. **„Meine Bücher“ aufräumen**: Suchfeld, Sortierung, Filter-Chips und Unteransichten übersichtlicher (z. B. Filter/Sortierung hinter einem Knopf, Suchfeld einklappbar). Vorher Varianten zeigen.
 
-## Katalog
-- **Reihen mit Unterreihen** („Die drei ??? Kids“: 186 Bände, „Band 1“ viermal – Blanck, Pfeiffer, „Mission …“): Reihenseite nach Autor/Unterreihe gruppieren? (Entscheidung des Nutzers)
-- **Harry Potter**: Sammelband „I-VII“ und „Potter guides“ stehen in der Reihe – Regeln prüfen (nach dem Import am 01.12. nachsehen).
-- Titel „Die drei? ?? Kids, Mission …“ (Fragezeichen zerlegt) aufräumen.
-- **Genre für alte Bücher**: 2000–2011 fehlt bei ~80 % der Gattungsbegriff. Lösung: (a) Open-Library-Schlagworte (englisch) über eine Zuordnungstabelle ins Deutsche (passt zum Workflow „Cover-IDs“), (b) grobe Ersatzgruppe aus der Sachgruppe (B = Belletristik, K = Kinder-/Jugendbuch) fürs Stöbern. Zuordnungstabelle danach gemeinsam durchgehen.
-- **Sammelbände/Gesamtausgaben** (z. B. „4192 Seiten“) aus den Ausgaben eines Einzelbandes heraushalten.
+## Später
+- **Konten** (siehe unten).
+- **Harry Potter**: Sammelband „I-VII“ und „Potter guides“ stehen in der Reihe – nach dem Import am 01.12. nachsehen.
 - Optional: weitere Sachgruppen freischalten, z. B. Geschichte (`900`) – Konfiguration ergänzen, Import laufen lassen.
 
-## Oberfläche
-- **„Meine Bücher“ weiter aufräumen** (Wunsch des Nutzers 12.11.2026): Seite wirkt noch voll – Suchfeld, Sortierung, Filter-Chips und Unteransichten übersichtlicher anordnen (z. B. Filter/Sortierung hinter einem Knopf, Suchfeld einklappbar). Vorher Varianten zeigen.
+## Entschieden (13.11.2026)
+- Filter „Besitze“: abgewähltes Buch bleibt bis zum nächsten Öffnen stehen (so lassen).
+- „Mein Kinderbuchhaus“: so lassen (09.11.2026), Pippi zeigt „Band 5“.
+
+## Oberfläche (Kleinigkeiten)
 - Screenreader: Zustand der Knöpfe am Schalter mitführen (`input.checked`), heute liest er immer „nicht aktiviert“.
 - Farben der Knöpfe und Rahmen feinschleifen (Grundregeln stehen in CLAUDE.md „Gestaltungsregeln“).
 - Testseite: Konsolenmeldungen 401/404 aufräumen (stören nicht, verwirren beim Prüfen).
@@ -101,7 +85,7 @@ Alle kostenlos und lokal machbar (IndexedDB, vorhandener Katalog). Aufwand grob:
 - Aufwand ca. 4–6 Stunden (Stufe 3). Offen: Anmeldung per Passwort oder Link?
 
 ## Arbeitsweise
-- **Auswertung der Prüfrunden ist fällig** (vereinbart nach ~5 Aufträgen): bisher etwa 6 Prüfaufträge seit 08.11.2026 – die Lernbuch-Regeln brauchten 3 Runden, alle späteren (Titelwörter, Amazon-Cover, größere Cover) bestanden in 1 Runde.
+- Auswertung der Prüfrunden: vom Nutzer abgenommen (13.11.2026, „alles sehr gut“) – bis zu 3 Runden bleibt.
 
 ## Laufender Betrieb (nichts zu tun, nur zur Erinnerung)
 - Monatlicher Katalog-Import am 1. (nächster: 01.12.2026), „Supabase wach halten“ alle 3 Tage.

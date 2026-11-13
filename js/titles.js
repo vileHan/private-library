@@ -14,6 +14,8 @@ const EDITION_PAREN = new RegExp(`\\s*\\((?=[^()]*(?:\\bband\\b|\\bbd\\.|${EDITI
 /** Entfernt Werbetexte in eckigen Klammern, „[u.a.]“-Zusätze und Ausgabe-Hinweise. */
 export function cleanTitle(s = '') {
   let t = s;
+  t = t.replace(/\b(drei)\s*\?\s*\?\s*\?/gi, '$1 ???'); // „Die drei? ?? Kids“ (DNB zerlegt die Fragezeichen, 13.11.2026)
+  t = t.replace(/\b(drei)\s*!\s*!\s*!/gi, '$1 !!!');     // ebenso „Die drei! !!“
   t = t.replace(/\s*\[u\.\s?a\.\]?.*$/i, '');   // „Von Idioten umzingelt [u.a.] : zwei Comic-Romane“
   t = t.replace(/\s*:?\s*\[.*$/, '');            // „Der König von Narnia : [der Fantasy-Bestseller …“
   t = t.replace(EDITION_PAREN, '');              // „(Disney+ Sonderausgabe …)“, „(Die Chroniken von Narnia, Band 2)“
@@ -47,7 +49,6 @@ export function plausibleYear(y) {
 export function isBundleTitle(s = '') {
   return /\[u\.\s?a\.\]?/i.test(s);
 }
-
 /**
  * Bandangabe vorne im Titel: „Der Herr der Ringe. Bd. 1 - Die Gefährten“, „Percy Jackson 1: Diebe im Olymp“,
  * „Gregs Tagebuch 12 - Und tschüss!“ → { series, volume, title }. Ohne „Bd./Band“ nur bei mehrwortigen Reihennamen
@@ -88,6 +89,7 @@ export function cleanSeriesName(s = '') {
   const name = s
     .replace(/^band\s*(\.\.\.|…|\d*)\s*(der|des|aus der|aus dem|im|in der)\s+/i, '')
     .replace(/["„“”»«]/g, '')
+    .replace(/\b(drei)\s*\?\s*\?\s*\?/gi, '$1 ???').replace(/\b(drei)\s*!\s*!\s*!/gi, '$1 !!!') // „Die drei! !!“
     .trim();
   // Alle Schreibweisen einer Reihe auf denselben Stamm bringen – die DNB wechselt je Ausgabe („Die Känguru-Trilogie“,
   // „-Tetralogie“, „-Pentalogie“, „-Werke“; „Die Wellenläufer-Reihe“/„-Trilogie“). Ein Versuch mit „Die Känguru-Reihe“
