@@ -105,6 +105,20 @@
         const blurredOutside = doc().activeElement !== inp;
         add('Suchleiste: keine Lupe, „×“ bei Text, Tastatur schließt nur bei Berührung außerhalb (B7)',
           noLupe && xShown && padOk && focusKeptInBar && blurredOutside, JSON.stringify({ noLupe, xShown, padOk, focusKeptInBar, blurredOutside }));
+        // Auch „Meine Bücher“ (13.11.2026): „×“ bei Text, leert; Tastatur schließt bei Berührung außerhalb
+        $('#tab-library').click();
+        const lf = $('#libFilter');
+        lf.focus(); lf.value = 'xyz'; lf.dispatchEvent(new frame.contentWindow.Event('input'));
+        const lclr = lf.parentElement.querySelector('.search-clear');
+        const lShown = !!lclr && !lclr.hidden;
+        touchOn(lclr);
+        const lKept = doc().activeElement === lf;
+        lclr.click();
+        const lCleared = lf.value === '' && lclr.hidden;
+        touchOn($('#libFilterBtn'));
+        const lBlur = doc().activeElement !== lf;
+        $('#tab-search').click();
+        add('„Meine Bücher“-Suchfeld: „×“ und Tastatur schließt außerhalb (B7)', lShown && lKept && lCleared && lBlur, JSON.stringify({ lShown, lKept, lCleared, lBlur }));
       }
       const heights = new Set($$('#results .book').slice(0, 8).map((b) => Math.round(b.getBoundingClientRect().height)));
       add('Alle Buch-Slots gleich hoch (C1)', heights.size === 1, [...heights].join(', ') + ' px');

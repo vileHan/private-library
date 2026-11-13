@@ -226,11 +226,29 @@ clearBtn.addEventListener('click', () => {
   inp.dispatchEvent(new Event('input')); // setzt die Suche zurück (siehe unten) und blendet „×“ aus
   inp.focus();
 });
-// Wer den Bildschirm hinter der Tastatur benutzt (scrollen, tippen), braucht sie nicht mehr – außer in der Suchleiste.
+// Wer den Bildschirm hinter der Tastatur benutzt (scrollen, tippen), braucht sie nicht mehr – für ALLE Text- und
+// Suchfelder (13.11.2026: Hauptsuche, „Meine Bücher“, Regal-Feld und Notiz im Detailblatt). Ausnahme: Berührung im
+// Feld selbst bzw. in seinem Rahmen (Suchleiste mit „×“, Regal-Zeile mit ihren Schildchen).
 document.addEventListener('touchstart', (ev) => {
-  const inp = $('#searchInput');
-  if (document.activeElement === inp && !ev.target.closest?.('#searchForm')) { ignoreScrollBriefly(); inp.blur(); }
+  const a = document.activeElement;
+  if (!a || !a.matches?.('input[type="search"], input[type="text"], textarea')) return;
+  const frame = a.closest('.search-wrap, .searchbar, .tags-edit') || a;
+  if (frame.contains(ev.target)) return;
+  ignoreScrollBriefly();
+  a.blur();
 }, { capture: true, passive: true });
+
+// „×“ am Ende jedes Suchfelds: erscheint, sobald etwas drinsteht, und leert das Feld (Hauptsuche hat ihren eigenen oben)
+function attachClear(input) {
+  const btn = el('button', { type: 'button', class: 'search-clear', 'aria-label': 'Eingabe löschen', title: 'Eingabe löschen', text: '×', hidden: true });
+  input.after(btn);
+  const sync = () => { btn.hidden = !input.value; };
+  input.addEventListener('input', sync);
+  btn.addEventListener('pointerdown', (ev) => ev.preventDefault()); // Tastatur bleibt offen
+  btn.addEventListener('click', () => { input.value = ''; input.dispatchEvent(new Event('input')); input.focus(); });
+  return sync;
+}
+attachClear($('#libFilter'));
 
 // ---------- Stöbern: Autorenseite und Genres ----------
 // Läuft im Such-Tab: Leiste „‹ Zurück · Titel“ über der Liste. „Zurück“ stellt die vorherige Suche wieder her.
