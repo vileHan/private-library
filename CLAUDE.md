@@ -239,7 +239,7 @@ Ziel: Die Daten werden **einmal aufbereitet** und nicht bei jeder Suche neu.
 
 ## App-Gefühl, Paket 1 (12.11.2026, ANFORDERUNGEN F3)
 
-- **Reiter unten** (`nav.tabs.tabbar`, fest, über dem Home-Balken): Suche · Meine Bücher (Anzahl als Abzeichen) · Zufall · Einstellungen, Symbole als Inline-SVG (Zahnrad nach Lucide, ISC). Kopfleiste nur noch Titel + Scan/Raster (Raster-Schalter bei Zufall/Einstellungen ausgeblendet, `body[data-view]`).
+- **Reiter unten** (`nav.tabs.tabbar`, fest, über dem Home-Balken): Suche · Meine Bücher (Abzeichen = seit dem letzten Besuch neu als „Besitze“ markierte Bücher, settings `libSeen`, verschwindet beim Öffnen – 13.11.2026) · Zufall · Einstellungen, Symbole als Inline-SVG (Zahnrad nach Lucide, ISC). Kopfleiste nur noch Titel + Scan/Raster (Raster-Schalter bei Zufall/Einstellungen ausgeblendet, `body[data-view]`).
 - **Einstellungen** = eigener Reiter `#view-settings` (Darstellung, Daten sichern; `renderSettings` in app.js) statt zugeklappt unter Meine Bücher.
 - **Laden**: `showSkeleton` zeigt 4 schimmernde `.skel-card` (eigene Klasse, **nicht** `.book`, sonst zählen Tests/Code sie mit); stehen schon Treffer da, werden sie nur abgeblendet (`#results.stale`). Cover blenden in .35 s ein.
 - **Leere Seiten**: `emptyState()` in util.js (Symbol, Überschrift, Satz, Knopf) – überall: Suche, Stöbern, Meine Bücher, Reihen, Regal, Statistik. Im Raster sind die Lade-Platzhalter cover-förmig.

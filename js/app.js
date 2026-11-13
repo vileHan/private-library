@@ -16,9 +16,25 @@ import { applyTheme, renderLook } from './theme.js';
 import { initGift, showGreeting, giftData, clearGift } from './gift.js';
 import { registerBack, enterLevel, goBack, attachEdgeSwipe, currentDepth, rewindTo, captureView, swipingBack } from './nav.js';
 
+// Abzeichen an „Meine Bücher“ (13.11.2026): zählt nur Bücher, die seit dem letzten Besuch von „Meine Bücher“ neu als
+// „Besitze“ markiert wurden – wie ein „Neu“-Hinweis. Beim Öffnen von „Meine Bücher“ verschwindet es. Gemerkt wird die
+// Liste der gesehenen Bücher pro Gerät (settings `libSeen`); beim allerersten Start zählen vorhandene Bücher als gesehen.
+const ownedKeys = () => [...library.byKey.values()].filter((e) => e.owned).map((e) => e.key);
+function updateLibBadge() {
+  let seen = settings.get('libSeen', null);
+  if (!seen) { seen = ownedKeys(); settings.set('libSeen', seen); }
+  const seenSet = new Set(seen);
+  const fresh = ownedKeys().filter((k) => !seenSet.has(k)).length;
+  $('#libCount').textContent = fresh ? fmt.format(fresh) : '';
+  $('#tab-library').setAttribute('aria-label', fresh ? `Meine Bücher, ${fresh} neu` : 'Meine Bücher');
+}
+function markLibrarySeen() {
+  settings.set('libSeen', ownedKeys());
+  updateLibBadge();
+}
 onLibraryChange(() => {
-  const owned = [...library.byKey.values()].filter((e) => e.owned).length;
-  $('#libCount').textContent = owned ? fmt.format(owned) : '';
+  if (!$('#view-library').hidden) markLibrarySeen(); // wer gerade in „Meine Bücher“ ist, sieht das neue Buch ja
+  else updateLibBadge();
   if (!$('#view-random').hidden) updateRandomCount($('#randomBox'));
 });
 
@@ -707,7 +723,7 @@ function showView(name) {
   const changed = document.body.dataset.view !== name;
   document.body.dataset.view = name; // z. B. Raster-Schalter nur bei Listen zeigen
   if (changed) animateIn($(`#view-${name}`), 'fade'); // Reiterwechsel: kurz einblenden
-  if (name === 'library') renderSub();
+  if (name === 'library') { renderSub(); markLibrarySeen(); }
   else if (name === 'random') renderRandom($('#randomBox'));
   else if (name === 'settings') renderSettings();
   else if (browse.mode) renderBrowse();
