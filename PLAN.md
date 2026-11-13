@@ -56,6 +56,7 @@ Vorher die App einmal schließen und neu öffnen, damit die neue Version ankommt
 - Känguru-Reihe mit vollen Titeln und Band 1–5; Box-Bände ohne Autor werden eingegliedert.
 - Zeitungs-/Verlagseditionen sind keine Reihe mehr: „Bild am Sonntag – Mega Thriller!“, „Welt am Sonntag“, „Schönen Sonntag“, „Sonntagsblatt“, „SonntagsBlick“, „Allgemeine“ (Noah, Der Erlöser, Ausgelöscht …); ebenso „Fitzek-Box“ (Amokspiel, Das Kind …).
 - „Die drei ??? Kids“: zerlegte Fragezeichen repariert, Reihenname vorne im Titel auch mit Komma abgeschnitten („Mission Graffiti-Code“); Sammelausgaben („Die Zwerge – Die komplette Saga 1“) eigene Werke statt Ausgabe von Band 1.
+- Ersatz-Genres für Bücher ohne Gattungsbegriff (Reihe, Autor, Schlagworte/Untertitel, Sachgruppe). Stichprobe 13.11.2026: 0 % ohne Genre; grob („Romane, Erzählungen“/„Kinder- und Jugendbücher“ nur aus der Sachgruppe) ≈ 10–12 % des Katalogs, fast alles 2000–2011.
 - Fehlender Band 1 in Reihen (~219 Reihen), z. B. Dungeon Crawler Carl: heute in der Datenbank noch „Entertainment ist Pflicht - Überleben nicht : Roman“ ohne Band – der Code liefert schon „Entertainment ist Pflicht - Überleben nicht“, Band 1 (geprüft 12.11.2026). Eigene Einträge ziehen danach innerhalb von 12 h nach.
 
 ## Als Nächstes (Nutzer, 13.11.2026)
