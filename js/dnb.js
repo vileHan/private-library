@@ -264,6 +264,9 @@ export function parseRecord(rec) {
     subjectGroups,
     genres,
     themes,
+    // GND-Schlagworte (650 Sachschlagwort, 689 Schlagwortkette, 655 Formschlagwort) – Ersatz-Genre für Bücher ohne
+    // Gattungsbegriff (13.11.2026, fillGenres in works.js)
+    subjects: [...new Set([...fields(rec, '650'), ...fields(rec, '689')].map((f) => tidy(sub(f, 'a'))).concat(formTerms).filter(Boolean))].slice(0, 8),
     binding: bindingLabel(productForm, isEbook),
     productForms,
     formTerms,

@@ -59,7 +59,7 @@ Vorher die App einmal schließen und neu öffnen, damit die neue Version ankommt
 - Fehlender Band 1 in Reihen (~219 Reihen), z. B. Dungeon Crawler Carl: heute in der Datenbank noch „Entertainment ist Pflicht - Überleben nicht : Roman“ ohne Band – der Code liefert schon „Entertainment ist Pflicht - Überleben nicht“, Band 1 (geprüft 12.11.2026). Eigene Einträge ziehen danach innerhalb von 12 h nach.
 
 ## Als Nächstes (Nutzer, 13.11.2026)
-1. **Genre für alte Bücher**: 2000–2011 fehlt bei ~80 % der Gattungsbegriff. Lösung: (a) Open-Library-Schlagworte (englisch) über eine Zuordnungstabelle ins Deutsche (passt zum Workflow „Cover-IDs“), (b) grobe Ersatzgruppe aus der Sachgruppe (B = Belletristik, K = Kinder-/Jugendbuch) fürs Stöbern. Zuordnungstabelle danach gemeinsam durchgehen.
+- ~~Genre für alte Bücher~~ → umgesetzt 13.11.2026 (Reihe, Autor, Schlagworte/Untertitel, Sachgruppe), wirkt ab Import 01.12.2026.
 
 ## Später
 - **Konten** (siehe unten).

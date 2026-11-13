@@ -4,7 +4,7 @@
 import { CONFIG } from '../js/config.js';
 import { fetchRecords, searchDnb, displayName } from '../js/dnb.js';
 import { classify } from '../js/classify.js';
-import { groupEditions, normalizeText, isOmnibus } from '../js/works.js';
+import { groupEditions, normalizeText, isOmnibus, fillGenres, genreFromSubjects } from '../js/works.js';
 import { cleanTitle, splitVolumePrefix, isPublisherSeries, cleanSeriesName, splitTitleSubtitle, plausibleYear } from '../js/titles.js';
 import { isbn13to10 } from '../js/isbn.js';
 
@@ -285,6 +285,16 @@ export async function runAll() {
     [cleanSeriesName('Die Wellenläufer-Trilogie'), 'Die Wellenläufer'],
     [cleanTitle('Die drei? ?? Kids, Mission Graffiti-Code'), 'Die drei ??? Kids, Mission Graffiti-Code'],
     [cleanTitle('Die drei! !!, Gefahr im Netz') + ' | ' + cleanSeriesName('Die drei! !!'), 'Die drei !!!, Gefahr im Netz | Die drei !!!'],
+    [[genreFromSubjects(['Kriminalfall', 'Venedig']), genreFromSubjects(['Jugendbuch']), genreFromSubjects(['Gedichte']), genreFromSubjects(['Liebesbeziehung', 'Kind <Motiv>'])].join(' | '), 'Krimis, Thriller, Spionage | Jugendbücher ab 12 Jahre | Lyrik | '],
+    [fillGenres([
+      { title: 'A', authorSort: 'Leon, Donna', genre: 'Krimis, Thriller, Spionage', series: '', subjects: [], subjectGroups: ['B'] },
+      { title: 'B', authorSort: 'Leon, Donna', genre: 'Krimis, Thriller, Spionage', series: '', subjects: [], subjectGroups: ['B'] },
+      { title: 'C', authorSort: 'Leon, Donna', genre: '', series: '', subjects: [], subjectGroups: ['B'] },
+      { title: 'D', authorSort: 'X, Y', genre: 'Fantasy', series: 'Drachenwelt', subjects: [], subjectGroups: ['K'] },
+      { title: 'E', authorSort: 'Z, Q', genre: '', series: 'Drachenwelt', subjects: [], subjectGroups: ['K'] },
+      { title: 'F', authorSort: 'Neu, Anna', genre: '', series: '', subtitle: 'Thriller', subjects: [], subjectGroups: ['B'] },
+      { title: 'G', authorSort: 'Neu, Bert', genre: '', series: '', subjects: [], subjectGroups: ['K'] },
+    ]).map((w) => w.genre).join(' | '), 'Krimis, Thriller, Spionage | Krimis, Thriller, Spionage | Krimis, Thriller, Spionage | Fantasy | Fantasy | Krimis, Thriller, Spionage | Kinder- und Jugendbücher'],
     [groupEditions(['Der ewige Treck, Teil 3', 'Der ewige Treck'].map((title, i) => ({ title, authors: ['Ute Mrozinski'], authorsSort: ['Mrozinski, Ute'], series: 'Der ewige Treck', volume: String(3 - i), subtitle: '', year: 2020, genres: [], themes: [], isbn: '97834400003' + i, isbns: ['97834400003' + i] }))).map((x) => x.title).sort().join(' | ').includes('Der ewige Treck, Teil 3') + '', 'true'],
     [groupEditions([{ title: 'Törtel, die Schildkröte aus dem McGrün', authors: ['Kai Meyer'], authorsSort: ['Meyer, Kai'], series: 'Törtel', volume: '1', subtitle: '', year: 2003, genres: [], themes: [], isbn: '9783440000011', isbns: ['9783440000011'] }, { title: 'Törtel, die Schildkröte aus dem McGrün', authors: ['Kai Meyer'], authorsSort: ['Meyer, Kai'], series: 'Törtel', volume: '1', subtitle: '', year: 2005, genres: [], themes: [], isbn: '9783440000012', isbns: ['9783440000012'] }]).map((x) => x.title).join(' | '), 'Törtel, die Schildkröte aus dem McGrün'],
     [String(groupEditions(['mit Farbschnitt-Garantie', 'Schmuckausgabe'].map((sub, i) => ({ title: 'Indigo und Jade - Sammelband I', authors: ['Anna Strauß'], authorsSort: ['Strauß, Anna'], series: '', volume: '', subtitle: sub, year: 2023, genres: [], themes: [], isbn: '97834400001' + i, isbns: ['97834400001' + i] }))).length + groupEditions(['die komplette Trilogie', 'die komplette Trilogie : Thriller'].map((sub, i) => ({ title: 'Chase', authors: ['Max Dellenbusch'], authorsSort: ['Dellenbusch, Max'], series: '', volume: '', subtitle: sub, year: 2022, genres: [], themes: [], isbn: '97834400002' + i, isbns: ['97834400002' + i] }))).length), '2'],

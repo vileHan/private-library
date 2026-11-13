@@ -63,6 +63,8 @@ function slim(e) {
     isbns: e.isbns, authors: e.authors, authorsSort: e.authorsSort.slice(0, 1), title: e.title, sortTitle: e.sortTitle,
     subtitle: e.subtitle, series: e.series, volume: e.volume, looseSeries: e.looseSeries, publisher: e.publisher, year: e.year,
     genres: e.genres.slice(0, 2), themes: e.themes.slice(0, 1), isComic: e.isComic, isEbook: e.isEbook,
+    // für Ersatz-Genres ohne Gattungsbegriff (fillGenres in js/works.js, 13.11.2026) – nur wenn kein Gattungsbegriff da ist
+    subjects: e.genres.length ? [] : (e.subjects || []).slice(0, 6), subjectGroups: (e.subjectGroups || []).slice(0, 2),
     binding: e.binding, edition: '', pages: '', relatedIsbns: [], isBestseller: !!e.isBestseller,
   }));
 }

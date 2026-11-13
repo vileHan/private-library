@@ -1,5 +1,6 @@
 // Fasst Ausgaben (Hardcover, Taschenbuch, E-Book, Lizenzausgaben …) zu Werken zusammen.
 
+import { genreGroup } from './genres.js';
 const ARTICLES = /^(der|die|das|des|dem|den|ein|eine|einer|eines|the|a|an|le|la|les)\s+/;
 
 /**
@@ -243,7 +244,7 @@ export function groupEditions(editions) {
     if (!groups.has(r)) groups.set(r, []);
     groups.get(r).push(e);
   });
-  return numberSeries([...groups.values()].map(buildWork));
+  return fillGenres(numberSeries([...groups.values()].map(buildWork)));
 }
 
 // Bis zu so vielen Bänden wird eine Reihe ohne Nummern selbst durchgezählt. Größere (z. B. Barbapapa-Bilderbücher,
@@ -299,6 +300,76 @@ function mostCommon(values) {
   return best;
 }
 
+/**
+ * Ersatz-Genre für Werke ohne DNB-Gattungsbegriff (13.11.2026; vor allem 2000–2011, ~89.000 Werke ohne Genre).
+ * Die erste Stufe, die etwas findet, gewinnt:
+ *  1. Reihe: häufigstes Genre der anderen Bände derselben Reihe.
+ *  2. Autor: mindestens 2 Werke mit Genre und mindestens 2/3 davon in derselben Stöber-Gruppe → deren häufigstes Genre.
+ *  3. GND-Schlagworte des Datensatzes (Formschlagworte wie „Kriminalroman“, „Jugendbuch“, wenige eindeutige Themen).
+ *  4. DNB-Sachgruppe: K → Kinder-/Jugendbuch, B → Romane & Erzählungen.
+ * Gezählt werden für 1 und 2 nur echte Gattungsbegriffe (keine Kettenschlüsse). Die Genre-Texte sind so gewählt,
+ * dass genreGroup() (js/genres.js) und genre_group() (SQL) sie der richtigen Stöber-Gruppe zuordnen.
+ */
+const SUBJECT_GENRES = [
+  [/^comic|manga|graphic novel/i, 'Comics, Cartoons'],
+  [/kriminal(roman|erzählung|geschichte|literatur|fall)|detektiv(roman|geschichte)|thriller|spionageroman|^detektiv$|^kommissar|^ermittlung|^spion$|geheimagent|doppelagent|^krimi$/i, 'Krimis, Thriller, Spionage'],
+  [/science.?fiction|^utopie|dystopie|zukunftsroman/i, 'Science Fiction'],
+  [/märchen|^sagen?\b|mythos|legende/i, 'Märchen, Sagen, Legenden'],
+  [/fantasy|fantastische literatur|^zauberer$|^hexe$|^drache$|^magie$/i, 'Fantasy'],
+  [/horror|schauer(roman|literatur|geschichte)|gespenstergeschichte|gruselgeschichte/i, 'Horror'],
+  [/liebes(roman|geschichte)|romance|erotische literatur/i, 'Liebesromane'],
+  [/historischer roman|historische erzählung/i, 'Historische Romane'],
+  [/humoristische|satire|parodie|^humor$/i, 'Humor, Satire'],
+  [/abenteuer(roman|geschichte|erzählung)|western|seeroman/i, 'Abenteuer'],
+  [/^lyrik$|gedicht|^drama$|theaterstück|ballade/i, 'Lyrik'],
+  [/biografischer roman|romanbiografie/i, 'Biografische Romane'],
+  [/^bilderbuch|kinderbuch|kinderliteratur|erstleser|vorlesebuch/i, 'Kinderbücher bis 11 Jahre'],
+  [/jugendbuch|jugendliteratur|young adult/i, 'Jugendbücher ab 12 Jahre'],
+  [/^roman$|erzählung|novelle|kurzgeschichte|anthologie|erzählende literatur/i, 'Romane, Erzählungen'],
+];
+// Untertitel nennt die Gattung oft direkt: „Kriminalroman“, „Thriller“, „ein Fantasy-Roman“, „Gedichte“ → Einzelteile
+// („ein“/„eine“ vorne weg), damit auch die ^-verankerten Muster greifen
+const subtitleTerms = (s = '') => s.split(/\s*[:;|,]\s*/).map((t) => t.replace(/^(ein|eine)\s+/i, '').trim()).filter(Boolean);
+export function genreFromSubjects(subjects = []) {
+  for (const [re, genre] of SUBJECT_GENRES) if (subjects.some((s) => re.test(s))) return genre;
+  return '';
+}
+export function fillGenres(works) {
+  const bySeries = new Map();
+  const byAuthor = new Map();
+  for (const w of works) {
+    if (!w.genre || !genreGroup(w.genre)) continue;
+    if (w.series) {
+      const k = normalizeText(w.series);
+      if (!bySeries.has(k)) bySeries.set(k, []);
+      bySeries.get(k).push(w.genre);
+    }
+    const a = normalizeText(w.authorSort || '');
+    if (a) {
+      if (!byAuthor.has(a)) byAuthor.set(a, []);
+      byAuthor.get(a).push(w.genre);
+    }
+  }
+  const authorGenre = new Map();
+  for (const [a, genres] of byAuthor) {
+    if (genres.length < 2) continue;
+    const groups = new Map();
+    for (const g of genres) { const grp = genreGroup(g); groups.set(grp, (groups.get(grp) || 0) + 1); }
+    const [top, n] = [...groups.entries()].sort((x, y) => y[1] - x[1])[0];
+    if (n * 3 >= genres.length * 2) authorGenre.set(a, mostCommon(genres.filter((g) => genreGroup(g) === top)));
+  }
+  for (const w of works) {
+    if (w.genre && genreGroup(w.genre)) continue;
+    const fromSeries = w.series && bySeries.get(normalizeText(w.series));
+    const g = (fromSeries && mostCommon(fromSeries))
+      || authorGenre.get(normalizeText(w.authorSort || ''))
+      || genreFromSubjects([...(w.subjects || []), ...subtitleTerms(w.subtitle)])
+      || (w.subjectGroups?.includes('K') ? 'Kinder- und Jugendbücher' : w.subjectGroups?.includes('B') ? 'Romane, Erzählungen' : '');
+    if (g) w.genre = g;
+  }
+  return works;
+}
+
 function buildWork(editions) {
   // Neueste gedruckte Ausgaben zuerst – deren Cover sind am ehesten vorhanden.
   const sorted = [...editions].sort((a, b) => (b.year || 0) - (a.year || 0) || Number(a.isEbook) - Number(b.isEbook));
@@ -324,6 +395,9 @@ function buildWork(editions) {
     authorSort: main.authorsSort[0] || main.authors[0] || '',
     year: years.length ? Math.min(...years) : null,
     genre: mostCommon(editions.flatMap((e) => e.genres)) || mostCommon(editions.flatMap((e) => e.themes.slice(0, 1))),
+    // nur für fillGenres (Ersatz-Genre), wird nicht gespeichert
+    subjects: [...new Set(editions.flatMap((e) => e.subjects || []))].slice(0, 12),
+    subjectGroups: [...new Set(editions.flatMap((e) => e.subjectGroups || []))],
     publisher: main.publisher,
     series: mostCommon(editions.map((e) => e.series)),
     volume: mostCommon(editions.map((e) => e.volume)),
