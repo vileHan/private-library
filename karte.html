@@ -59,9 +59,10 @@
       body { background: #fff; }
       .hint { display: none; }
       .sheet { display: block; padding: 0; }
-      .spread { display: flex; justify-content: center; align-items: center; height: 210mm; break-after: page; }
+      .spread { display: flex; justify-content: center; align-items: stretch; height: 210mm; overflow: hidden; break-after: page; }
       .spread:last-child { break-after: auto; }
-      .card { box-shadow: none; border: 1px dashed #ccc; border-radius: 0; break-inside: avoid; }
+      /* Jede Seite füllt eine Hälfte des A4-Blatts (A5 hoch): Karte A6 (105 × 148,5 mm) × √2 = 148,5 × 210 mm (14.11.2026) */
+      .card { zoom: 1.41421; width: 105mm; height: 148.5mm; box-shadow: none; border: 0; border-radius: 0; break-inside: avoid; }
     }
   </style>
 </head>
