@@ -9,7 +9,8 @@ export const ACCOUNT_DOMAIN = 'bibliothek.invalid';
 const MAX_BYTES = 32; // 32 Byte → 64 Hex-Zeichen = längster erlaubter Adressteil vor dem @
 
 /** Anzeigeform: Leerzeichen am Rand weg, mehrere Leerzeichen zu einem, Umlaute einheitlich (NFC). */
-export const cleanAccountName = (name) => String(name ?? '').normalize('NFC').trim().replace(/\s+/g, ' ');
+export const cleanAccountName = (name) => String(name ?? '').normalize('NFC').trim().replace(/\s+/g, ' ')
+  .replace(/[’‘ʼ´`]/g, "'").replace(/[‐‑–]/g, '-'); // iPhone-Tastatur setzt „schlaue“ Apostrophe und Striche
 
 /** Ist der Name erlaubt? Gibt null oder einen Hinweis zurück. */
 export function accountNameProblem(name) {
