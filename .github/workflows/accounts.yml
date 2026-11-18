@@ -1,0 +1,22 @@
+name: Konten anlegen
+
+# Legt die Konten aus dem Secret KONTEN in Supabase Auth an (bzw. setzt geänderte Passwörter, löscht Konten mit null)
+# und macht einen Selbsttest mit einem Wegwerf-Konto. Dauer: ~1 Minute. Ins Log kommen nur Anzahlen.
+# Vorher einmal „Datenbankschema“ laufen lassen, falls schema.sql geändert wurde.
+on:
+  workflow_dispatch:
+
+jobs:
+  accounts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install --no-audit --no-fund
+      - run: node scripts/accounts.mjs
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          KONTEN: ${{ secrets.KONTEN }}

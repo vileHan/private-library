@@ -384,3 +384,141 @@ set search_path = public
 as $$ select g.data from gifts g where g.code = lower(gift_by_code.code) $$;
 revoke all on function gift_by_code(text) from public;
 grant execute on function gift_by_code(text) to anon, authenticated;
+
+-- ============================================================================================================
+-- Konten (18.11.2026): Benutzername + Passwort über Supabase Auth (Gratis-Tarif). Konten legt NUR der Workflow
+-- „Konten anlegen“ an (scripts/accounts.mjs, Secret KONTEN) – sie tragen in app_metadata "konto": true. Eine
+-- Selbstregistrierung über die öffentliche Schnittstelle bekäme dieses Kennzeichen nie (app_metadata kann nur der
+-- Server setzen) und darf deshalb hier nichts lesen oder schreiben.
+-- ============================================================================================================
+create or replace function is_konto() returns boolean
+language sql stable
+as $$ select coalesce((auth.jwt() -> 'app_metadata' ->> 'konto')::boolean, false) $$;
+
+create or replace function is_konto_admin() returns boolean
+language sql stable
+as $$ select coalesce((auth.jwt() -> 'app_metadata' ->> 'admin')::boolean, false) $$;
+
+-- Eigene Bücher je Konto. data = Bibliothekseintrag der App (JSON), null = gelöscht (damit die Löschung auf
+-- anderen Geräten ankommt). changed_at = Zeitpunkt der Änderung auf dem Gerät (neuere Änderung gewinnt),
+-- synced_at = Zeitpunkt auf dem Server (Geräte holen alles ab, was seit ihrem letzten Abgleich dazukam).
+create table if not exists user_books (
+  user_id    uuid not null references auth.users (id) on delete cascade,
+  key        text not null,
+  data       jsonb,
+  changed_at timestamptz not null,
+  synced_at  timestamptz not null default now(),
+  primary key (user_id, key)
+);
+create index if not exists user_books_synced_idx on user_books (user_id, synced_at);
+alter table user_books enable row level security; -- keine Policy: nur über die Funktionen unten
+
+-- Änderungen eines Geräts hochladen: [{key, data, changed_at}, …]. Ältere Stände überschreiben nie neuere.
+create or replace function push_books(items jsonb) returns int
+language plpgsql security definer
+set search_path = public
+as $$
+declare n int;
+begin
+  if auth.uid() is null or not is_konto() then raise exception 'kein Konto'; end if;
+  if jsonb_array_length(items) > 500 then raise exception 'zu viele Einträge auf einmal'; end if;
+  insert into user_books as b (user_id, key, data, changed_at, synced_at)
+  select auth.uid(), i ->> 'key', nullif(i -> 'data', 'null'::jsonb), (i ->> 'changed_at')::timestamptz, now()
+  from jsonb_array_elements(items) i
+  where coalesce(i ->> 'key', '') <> '' and length(i ->> 'key') <= 400
+    and octet_length(coalesce(i ->> 'data', '')) <= 20000
+  on conflict (user_id, key) do update
+    set data = excluded.data, changed_at = excluded.changed_at, synced_at = now()
+    where b.changed_at < excluded.changed_at;
+  get diagnostics n = row_count;
+  return n;
+end;
+$$;
+
+-- Alles abholen, was seit „since“ auf dem Server ankam (null = alles). Gibt auch die Serverzeit zurück.
+create or replace function pull_books(since timestamptz) returns jsonb
+language plpgsql stable security definer
+set search_path = public
+as $$
+begin
+  if auth.uid() is null or not is_konto() then raise exception 'kein Konto'; end if;
+  return jsonb_build_object(
+    'now', now(),
+    'items', coalesce((select jsonb_agg(jsonb_build_object('key', key, 'data', data, 'changed_at', changed_at))
+                       from user_books where user_id = auth.uid() and (since is null or synced_at > since)), '[]'::jsonb));
+end;
+$$;
+
+-- Datennutzung: Jedes Gerät meldet je Tag, wie viele Daten die App von Supabase geladen hat (Summe des Tages,
+-- daher „größerer Wert gewinnt“). Nur der Verwalter (app_metadata "admin": true) sieht die Übersicht.
+create table if not exists usage_daily (
+  user_id  uuid not null references auth.users (id) on delete cascade,
+  device   text not null,
+  day      date not null,
+  bytes    bigint not null default 0,
+  requests int not null default 0,
+  searches int not null default 0,
+  primary key (user_id, device, day)
+);
+alter table usage_daily enable row level security; -- keine Policy
+
+create or replace function report_usage(device text, days jsonb) returns void
+language plpgsql security definer
+set search_path = public
+as $$
+begin
+  if auth.uid() is null or not is_konto() then return; end if;
+  if length(device) > 40 or jsonb_array_length(days) > 60 then return; end if;
+  insert into usage_daily as u (user_id, device, day, bytes, requests, searches)
+  select auth.uid(), report_usage.device, (d ->> 'day')::date,
+         least(greatest((d ->> 'bytes')::bigint, 0), 10000000000), least(greatest((d ->> 'requests')::int, 0), 10000000),
+         least(greatest((d ->> 'searches')::int, 0), 10000000)
+  from jsonb_array_elements(days) d
+  where (d ->> 'day')::date between current_date - 60 and current_date + 1
+  on conflict (user_id, device, day) do update
+    set bytes = greatest(u.bytes, excluded.bytes), requests = greatest(u.requests, excluded.requests),
+        searches = greatest(u.searches, excluded.searches);
+end;
+$$;
+
+-- Übersicht für den Verwalter: je Konto Datenmenge (dieser Monat, letzte 30 Tage), Suchen, Bücher, zuletzt aktiv.
+create or replace function usage_overview() returns jsonb
+language plpgsql stable security definer
+set search_path = public
+as $$
+begin
+  if not is_konto_admin() then raise exception 'nur für den Verwalter'; end if;
+  return coalesce((
+    select jsonb_agg(row_to_json(r) order by r.month_bytes desc, r.name)
+    from (
+      select coalesce(u.raw_user_meta_data ->> 'name', split_part(u.email, '@', 1)) as name,
+             coalesce(sum(d.bytes) filter (where d.day >= date_trunc('month', current_date)), 0) as month_bytes,
+             coalesce(sum(d.bytes) filter (where d.day > current_date - 30), 0) as days30_bytes,
+             coalesce(sum(d.searches) filter (where d.day >= date_trunc('month', current_date)), 0) as month_searches,
+             count(distinct d.device) filter (where d.day > current_date - 30) as devices,
+             (select count(*) from user_books b where b.user_id = u.id and b.data is not null) as books,
+             greatest(max(d.day)::timestamptz, u.last_sign_in_at) as last_active
+      from auth.users u
+      left join usage_daily d on d.user_id = u.id
+      where coalesce((u.raw_app_meta_data ->> 'konto')::boolean, false)
+      group by u.id
+    ) r), '[]'::jsonb);
+end;
+$$;
+
+-- Verlauf je Tag (alle Konten zusammen, letzte 30 Tage) für das kleine Balkendiagramm in der Übersicht
+create or replace function usage_by_day() returns jsonb
+language plpgsql stable security definer
+set search_path = public
+as $$
+begin
+  if not is_konto_admin() then raise exception 'nur für den Verwalter'; end if;
+  return coalesce((select jsonb_agg(jsonb_build_object('day', day, 'bytes', b) order by day)
+                   from (select day, sum(bytes) b from usage_daily where day > current_date - 30 group by day) x), '[]'::jsonb);
+end;
+$$;
+
+revoke all on function push_books(jsonb), pull_books(timestamptz), report_usage(text, jsonb), usage_overview(), usage_by_day()
+  from public, anon;
+grant execute on function push_books(jsonb), pull_books(timestamptz), report_usage(text, jsonb), usage_overview(), usage_by_day()
+  to authenticated;
