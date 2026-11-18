@@ -135,7 +135,8 @@ export async function logout() {
   const token = session?.access;
   save(null);
   if (token) {
-    fetch(`${sb.url}/auth/v1/logout`, { method: 'POST', headers: { apikey: sb.anonKey, Authorization: `Bearer ${token}` } }).catch(() => {});
+    // scope=local: nur diese Sitzung beenden – ohne meldete Supabase alle Geräte des Kontos ab (Prüfrunde 3)
+    fetch(`${sb.url}/auth/v1/logout?scope=local`, { method: 'POST', headers: { apikey: sb.anonKey, Authorization: `Bearer ${token}` } }).catch(() => {});
   }
 }
 

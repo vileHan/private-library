@@ -169,6 +169,13 @@
       // 10. Abmelden: Bücher/Regale weg, Geschenk bleibt
       await sync.clearLocalAfterLogout();
       add('Abmelden entfernt Bücher und Regale, Geschenk bleibt (K3, K6)', lib.library.byKey.size === 0 && settings.get('shelves', []).length === 0 && settings.get('gift', null)?.n === 'Berta');
+
+      // 12. Erneut anmelden mit veraltetem Geschenk (Prüfrunde 3): inzwischen hat ein anderes Gerät ein neueres gesetzt
+      await sleep(5);
+      field('gift', { n: 'Clara', m: 'Hallo', c: 'petrol', v: 'Test' }, now());
+      await sync.firstSync();
+      const kg = server.get('~einstellungen.gift').data.v?.n;
+      add('Erneute Anmeldung: veraltetes Gerätegeschenk überschreibt das Konto nicht (K6)', kg === 'Clara' && settings.get('gift', null)?.n === 'Clara', `Konto: ${kg}, Gerät: ${settings.get('gift', null)?.n}`);
     await sleep(1800); // geplante Abgleiche (1,5 s) noch gegen den nachgebildeten Server laufen lassen
     } catch (err) {
       add(`Abbruch: ${err.message}`, false);

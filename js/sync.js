@@ -206,7 +206,8 @@ function applyField(item, force = false) {
   const mine = settings.get(f, FIELDS[f]);
   const base = s.base && f in s.base ? s.base[f] : FIELDS[f];
   const localChanged = !!s.fdirty?.[f];
-  const result = localChanged ? merge(f, base, mine, remote) : remote;
+  const firstLogin = ms(s.fdirty?.[f]) === 1; // Vormerkung aus firstSync, keine echte Änderung auf diesem Gerät
+  const result = localChanged ? merge(f, base, mine, remote, firstLogin) : remote;
 
   s.base = { ...(s.base || {}), [f]: remote };
   s.ftime = { ...(s.ftime || {}), [f]: item.changed_at };
@@ -236,7 +237,7 @@ function clean(f, v) {
 }
 
 /** Eigene Änderungen seit dem letzten Abgleich (base → mine) auf den Kontostand (remote) anwenden. */
-function merge(f, base, mine, remote) {
+function merge(f, base, mine, remote, firstLogin = false) {
   if (f === 'shelves') {
     const added = mine.filter((x) => !base.includes(x));
     const removed = new Set(base.filter((x) => !mine.includes(x)));
@@ -252,7 +253,9 @@ function merge(f, base, mine, remote) {
     return out;
   }
   if (f === 'giftSeen') return mine || remote;
-  return mine; // Geschenk: die eigene, ausdrückliche Änderung gilt (Link geöffnet oder „entfernen“)
+  // Geschenk: die eigene, ausdrückliche Änderung gilt (Link geöffnet oder „entfernen“). Bei der Anmeldung gewinnt ein
+  // Geschenk im Konto – sonst setzte ein Gerät mit veraltetem Geschenk es im ganzen Konto zurück (Prüfrunde 3).
+  return firstLogin ? (remote ?? mine) : mine;
 }
 
 function takeGift(gift) {
