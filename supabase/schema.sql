@@ -468,14 +468,14 @@ set search_path = public
 as $$
 begin
   if auth.uid() is null or not is_konto() then return; end if;
-  if length(device) > 40 or jsonb_array_length(days) > 60 then return; end if;
+  if length(report_usage.device) > 40 or jsonb_array_length(report_usage.days) > 60 then return; end if;
   insert into usage_daily as u (user_id, device, day, bytes, requests, searches)
   select auth.uid(), report_usage.device, (d ->> 'day')::date,
          least(greatest((d ->> 'bytes')::bigint, 0), 10000000000), least(greatest((d ->> 'requests')::int, 0), 10000000),
          least(greatest((d ->> 'searches')::int, 0), 10000000)
-  from jsonb_array_elements(days) d
+  from jsonb_array_elements(report_usage.days) d
   where (d ->> 'day')::date between current_date - 60 and current_date + 1
-  on conflict (user_id, device, day) do update
+  on conflict on constraint usage_daily_pkey do update
     set bytes = greatest(u.bytes, excluded.bytes), requests = greatest(u.requests, excluded.requests),
         searches = greatest(u.searches, excluded.searches);
 end;

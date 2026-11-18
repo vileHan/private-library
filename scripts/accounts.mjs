@@ -120,7 +120,7 @@ try {
     const day = t2.slice(0, 10);
     const u = await call('report_usage', { device: 'test', days: [{ day, bytes: 1234, requests: 3, searches: 1 }] });
     const stored = (await client.query('select bytes from usage_daily d join auth.users u on u.id = d.user_id where u.email = $1', [emailOf(testName)])).rows[0];
-    step(`Nutzung melden (Status ${u.status})`, (u.status === 204 || u.status === 200) && Number(stored?.bytes) === 1234);
+    step(`Nutzung melden (Status ${u.status} ${u.status >= 400 ? JSON.stringify(u.body) : ""})`, (u.status === 204 || u.status === 200) && Number(stored?.bytes) === 1234);
     const ov = await call('usage_overview', {});
     step(`Übersicht ohne Verwalter-Recht abgelehnt (Status ${ov.status})`, ov.status >= 400);
     const anon = await call('pull_books', { since: null }, sb.anonKey);
