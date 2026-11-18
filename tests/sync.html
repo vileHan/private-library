@@ -126,7 +126,7 @@
       const backup = { app: 'private-library', version: 1, books: [{ ...work('d'), owned: true, addedAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-11-05T00:00:00.000Z' }] };
       await importJson(JSON.stringify(backup));
       await lib.loadLibrary();
-      sync.markAllDirty();
+      await sync.markAllDirty();
       await sync.syncNow();
       add('Sicherung einspielen stellt Buch auch im Konto wieder her (K3)', local('d')?.owned === true && srv('d')?.data?.owned === true);
 
@@ -137,7 +137,8 @@
       await store.putRaw({ ...work('e'), read: false, notes: 'alter Gerätestand', addedAt: '2026-03-01T00:00:00.000Z', updatedAt: new Date().toISOString() }); // vor den Konten, heute aufgefrischt
       await store.putRaw({ ...work('f'), owned: true, addedAt: '2026-04-01T00:00:00.000Z', updatedAt: new Date().toISOString() });
       settings.set('shelves', ['Urlaub']);
-      server.set('~einstellungen', { data: { shelves: ['Krimis'], readingGoals: { 2026: 12 }, gift: { n: 'Anna', m: 'Hallo', c: 'rosa', v: 'Test' }, giftSeen: true }, changed_at: '2026-11-10T00:00:00.000Z', synced_at: now() });
+      const field = (f, v, t = '2026-11-10T00:00:00.000Z') => server.set(`~einstellungen.${f}`, { data: { v }, changed_at: t, synced_at: now() });
+      field('shelves', ['Krimis']); field('readingGoals', { 2026: 12 }); field('gift', { n: 'Anna', m: 'Hallo', c: 'rosa', v: 'Test' }); field('giftSeen', true);
       await lib.loadLibrary();
       const res = await sync.firstSync();
       add('Erste Anmeldung: Konto-Änderung schlägt alten, aufgefrischten Gerätestand (K3)', local('e')?.read === true && local('e')?.notes === 'im Konto' && srv('e').data.notes === 'im Konto', `lokal: ${local('e')?.notes}`);
@@ -145,12 +146,29 @@
       add('Erste Anmeldung: Zählung „aus dem Konto geladen“ ohne eigene Bücher (K3)', res.fromAccount === 2 && res.fromDevice === 2, `fromAccount ${res.fromAccount} (erwartet 2: Buch e + Einstellungen), fromDevice ${res.fromDevice}`);
       await sync.syncNow();
       const sh = settings.get('shelves', []);
-      add('Erste Anmeldung: Regale zusammengeführt, Jahresziel übernommen (K3)', sh.includes('Urlaub') && sh.includes('Krimis') && settings.get('readingGoals', {})[2026] === 12 && server.get('~einstellungen').data.shelves.includes('Urlaub'));
+      add('Erste Anmeldung: Regale zusammengeführt, Jahresziel übernommen (K3)', sh.includes('Urlaub') && sh.includes('Krimis') && settings.get('readingGoals', {})[2026] === 12 && server.get('~einstellungen.shelves').data.v.includes('Urlaub'));
       add('Geschenk kommt aufs neue Gerät, Gruß gilt als gesehen (K6)', settings.get('gift', null)?.n === 'Anna' && settings.get('giftSeen', false) === true && settings.get('accent') === 'rosa');
+
+      // 11. Veraltetes Gerät (Prüfrunde 2): ohne Geschenk, hat lange nicht abgeholt, legt ein Regal an. Inzwischen hat ein
+      // anderes Gerät ein Geschenk und ein Regal ins Konto gebracht → nichts davon darf verloren gehen.
+      await sleep(5);
+      field('gift', { n: 'Berta', m: 'Hallo', c: 'salbei', v: 'Test' }, now());
+      field('shelves', [...server.get('~einstellungen.shelves').data.v, 'Neu-B'], now());
+      const raw = JSON.parse(localStorage.getItem('bibliothek-einstellungen')); raw.gift = null; localStorage.setItem('bibliothek-einstellungen', JSON.stringify(raw)); // Gerät ohne Geschenk (ohne Vormerken)
+      settings.set('shelves', [...settings.get('shelves', []), 'Neu-A']);
+      await sync.syncNow();
+      const sv = server.get('~einstellungen.shelves').data.v;
+      add('Veraltetes Gerät löscht kein Geschenk im Konto (K6)', server.get('~einstellungen.gift').data.v?.n === 'Berta' && settings.get('gift', null)?.n === 'Berta', `Konto: ${server.get('~einstellungen.gift').data.v?.n}, Gerät: ${settings.get('gift', null)?.n}`);
+      add('Regale beider Geräte werden zusammengeführt (K3)', ['Krimis', 'Urlaub', 'Neu-A', 'Neu-B'].every((x) => sv.includes(x) && settings.get('shelves', []).includes(x)), `Konto: ${sv.join(', ')}`);
+      // Regal entfernen kommt trotzdem an
+      settings.set('shelves', settings.get('shelves', []).filter((x) => x !== 'Neu-B'));
+      await sync.syncNow();
+      if (sync.hasPending()) await sync.syncNow(); // nach Ablehnung (Uhr des anderen Geräts vor) zusammengeführt → nächster Abgleich lädt hoch
+      add('Entferntes Regal verschwindet auch im Konto, auch bei vorgehender Uhr des anderen Geräts (K3)', !server.get('~einstellungen.shelves').data.v.includes('Neu-B') && !settings.get('shelves', []).includes('Neu-B') && !sync.hasPending(), `Konto: ${server.get('~einstellungen.shelves').data.v.join(', ')}; offen: ${JSON.stringify(sync.syncState().fdirty)}`);
 
       // 10. Abmelden: Bücher/Regale weg, Geschenk bleibt
       await sync.clearLocalAfterLogout();
-      add('Abmelden entfernt Bücher und Regale, Geschenk bleibt (K3, K6)', lib.library.byKey.size === 0 && settings.get('shelves', []).length === 0 && settings.get('gift', null)?.n === 'Anna');
+      add('Abmelden entfernt Bücher und Regale, Geschenk bleibt (K3, K6)', lib.library.byKey.size === 0 && settings.get('shelves', []).length === 0 && settings.get('gift', null)?.n === 'Berta');
     await sleep(1800); // geplante Abgleiche (1,5 s) noch gegen den nachgebildeten Server laufen lassen
     } catch (err) {
       add(`Abbruch: ${err.message}`, false);

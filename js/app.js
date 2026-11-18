@@ -708,7 +708,7 @@ $('#importInput').addEventListener('change', async (ev) => {
   try {
     const n = await importJson(await file.text());
     await loadLibrary();
-    if (account.loggedIn) { markAllDirty(); scheduleSync(300); } // übernommene Einträge auch ins Konto
+    if (account.loggedIn) await markAllDirty().then(() => scheduleSync(300)); // übernommene Einträge auch ins Konto
     renderSub();
     alert(`${n} Einträge übernommen.`);
   } catch (err) {

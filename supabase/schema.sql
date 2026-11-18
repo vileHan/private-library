@@ -504,7 +504,7 @@ begin
              coalesce(sum(d.bytes) filter (where d.day > current_date - 30), 0) as days30_bytes,
              coalesce(sum(d.searches) filter (where d.day >= date_trunc('month', current_date)), 0) as month_searches,
              count(distinct d.device) filter (where d.day > current_date - 30) as devices,
-             (select count(*) from user_books b where b.user_id = u.id and b.data is not null) as books,
+             (select count(*) from user_books b where b.user_id = u.id and b.data is not null and b.key not like '~%') as books,
              greatest(max(d.day)::timestamptz, u.last_sign_in_at) as last_active
       from auth.users u
       left join usage_daily d on d.user_id = u.id

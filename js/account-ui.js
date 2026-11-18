@@ -220,7 +220,7 @@ export async function renderUsage(box) {
   const table = el('table', { class: 'usage-table' },
     el('thead', {}, el('tr', {}, ...['Konto', monthName.slice(0, 3) + '.', 'Suchen', 'Bücher', 'zuletzt'].map((t) => el('th', { text: t })))),
     el('tbody', {}, ...rows.map((r) => el('tr', {},
-      el('td', { class: 'who', text: r.name, title: `Letzte 30 Tage: ${mb(Number(r.days30_bytes))}` }),
+      el('td', { class: 'who' }, r.name, el('span', { class: 'usage-30', text: `30 Tage: ${mb(Number(r.days30_bytes))}` })),
       el('td', { class: 'num', text: mb(Number(r.month_bytes)) }),
       el('td', { class: 'num', text: fmt.format(Number(r.month_searches)) }),
       el('td', { class: 'num', text: fmt.format(Number(r.books)) }),
