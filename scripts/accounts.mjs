@@ -1,7 +1,9 @@
 // Konten anlegen (Workflow „Konten anlegen“, .github/workflows/accounts.yml), 18.11.2026.
 // Liest das GitHub-Secret KONTEN – ein JSON-Objekt:
 //   { "jan": { "pw": "…", "admin": true }, "anna": { "pw": "…" }, "ben": "…", "alt": null }
-// Schlüssel = Benutzername (klein, a–z 0–9 . _ -), Wert = Startpasswort (Text) oder { pw, admin, name }; null = Konto löschen.
+// Schlüssel = Benutzername, so wie er angezeigt werden soll („Anna“, „Jörg“, „Anna-Lena“; erlaubt: Buchstaben inkl. Umlaute,
+// Ziffern, Leerzeichen, . _ - ' – siehe js/account-name.js). Beim Anmelden spielt Groß/klein keine Rolle.
+// Wert = Startpasswort (Text) oder { pw, admin }; null = Konto löschen.
 // Das Passwort wird nur gesetzt, wenn das Konto neu ist oder sich das Passwort IM SECRET geändert hat – ändert jemand
 // sein Passwort in der App, überschreibt ein neuer Lauf es also nicht. Zurücksetzen = Passwort im Secret ändern + Lauf.
 // Konten entstehen direkt in Supabase Auth (Tabellen auth.users/auth.identities), es wird keine E-Mail verschickt.
@@ -10,7 +12,7 @@
 import pg from 'pg';
 import { createHash, randomBytes } from 'node:crypto';
 import { CONFIG } from '../js/config.js';
-import { ACCOUNT_DOMAIN } from '../js/account-name.js';
+import { accountEmail, accountNameProblem, cleanAccountName, normalizeAccountName } from '../js/account-name.js';
 
 let konten;
 try {
@@ -24,9 +26,10 @@ const client = new pg.Client({ connectionString: process.env.SUPABASE_DB_URL, ss
 await client.connect();
 
 const mark = (name, pw) => createHash('sha256').update(`${name}\n${pw}`).digest('hex').slice(0, 16);
-const emailOf = (name) => `${name}@${ACCOUNT_DOMAIN}`;
+const emailOf = (name) => accountEmail(name);
 
-async function upsertAccount(name, { pw, admin = false, display = '' }) {
+async function upsertAccount(display, { pw, admin = false }) {
+  const name = normalizeAccountName(display);
   const email = emailOf(name);
   const meta = { provider: 'email', providers: ['email'], konto: true, admin: !!admin, pwmark: mark(name, pw) };
   const found = (await client.query('select id, raw_app_meta_data m from auth.users where email = $1', [email])).rows[0];
@@ -38,7 +41,7 @@ async function upsertAccount(name, { pw, admin = false, display = '' }) {
        values ('00000000-0000-0000-0000-000000000000', gen_random_uuid(), 'authenticated', 'authenticated', $1,
          extensions.crypt($2, extensions.gen_salt('bf')), now(), $3, $4, now(), now(), '', '', '', '')
        returning id`,
-      [email, pw, meta, { name: display || name }],
+      [email, pw, meta, { name: display }],
     )).rows[0].id;
     await client.query(
       `insert into auth.identities (id, user_id, provider_id, identity_data, provider, last_sign_in_at, created_at, updated_at)
@@ -54,15 +57,15 @@ async function upsertAccount(name, { pw, admin = false, display = '' }) {
        encrypted_password = case when $4 then extensions.crypt($5, extensions.gen_salt('bf')) else encrypted_password end,
        updated_at = now()
      where id = $1`,
-    [found.id, meta, { name: display || name }, pwChanged, pw],
+    [found.id, meta, { name: display }, pwChanged, pw],
   );
   return pwChanged ? 'passwort' : 'gleich';
 }
 
 const count = { neu: 0, passwort: 0, gleich: 0, geloescht: 0, ungueltig: 0 };
 for (const [rawName, value] of Object.entries(konten)) {
-  const name = rawName.trim().toLowerCase();
-  if (!/^[a-z0-9._-]{2,30}$/.test(name)) { count.ungueltig++; continue; }
+  const name = cleanAccountName(rawName);
+  if (accountNameProblem(name)) { count.ungueltig++; continue; }
   if (value === null) {
     const r = await client.query('delete from auth.users where email = $1', [emailOf(name)]);
     count.geloescht += r.rowCount;
@@ -70,10 +73,10 @@ for (const [rawName, value] of Object.entries(konten)) {
   }
   const v = typeof value === 'string' ? { pw: value } : value;
   if (!v || typeof v.pw !== 'string' || v.pw.length < 8) { count.ungueltig++; continue; }
-  count[await upsertAccount(name, { pw: v.pw, admin: v.admin, display: typeof v.name === 'string' ? v.name : '' })]++;
+  count[await upsertAccount(name, { pw: v.pw, admin: v.admin })]++;
 }
 console.log(`Konten: ${count.neu} neu, ${count.passwort} Passwort neu gesetzt, ${count.gleich} unverändert, ` +
-  `${count.geloescht} gelöscht, ${count.ungueltig} ungültig (Name a–z/0–9, 2–30 Zeichen; Passwort mind. 8 Zeichen).`);
+  `${count.geloescht} gelöscht, ${count.ungueltig} ungültig (Name: Buchstaben, Ziffern, Leerzeichen, . _ - '; Passwort mind. 8 Zeichen).`);
 const total = (await client.query(
   `select count(*)::int n, count(*) filter (where (raw_app_meta_data->>'admin')::boolean)::int a
    from auth.users where (raw_app_meta_data->>'konto')::boolean`)).rows[0];
@@ -81,7 +84,7 @@ console.log(`Konten in der Datenbank: ${total.n}, davon Verwalter: ${total.a}`);
 
 // ---------- Selbsttest ----------
 const sb = CONFIG.supabase;
-const testName = `selbsttest-${randomBytes(4).toString('hex')}`;
+const testName = `Selbsttest Jörg-${randomBytes(3).toString('hex')}`; // mit Umlaut, Leerzeichen und Großbuchstaben
 const testPw = randomBytes(18).toString('base64url');
 let ok = true;
 const step = (label, cond) => { console.log(`${cond ? '✓' : '✗'} ${label}`); if (!cond) ok = false; };
@@ -97,6 +100,11 @@ try {
     method: 'POST', headers: { apikey: sb.anonKey, 'Content-Type': 'application/json' },
     body: JSON.stringify({ email: emailOf(testName), password: 'falsch-falsch' }),
   });
+  const upper = await fetch(`${sb.url}/auth/v1/token?grant_type=password`, {
+    method: 'POST', headers: { apikey: sb.anonKey, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: emailOf(`  ${testName.toUpperCase()} `), password: testPw }),
+  });
+  step(`Anmelden mit anderer Groß-/Kleinschreibung (Status ${upper.status})`, upper.ok);
   step(`Falsches Passwort abgelehnt (Status ${wrong.status})`, wrong.status === 400);
   if (session.access_token) {
     const call = async (fn, body, token = session.access_token) => {

@@ -78,7 +78,7 @@ export function renderAccount(box, rerender) {
   box.append(actions);
 
   // Passwort ändern (autocomplete="new-password": Schlüsselbund bietet ein sicheres Passwort an und speichert es)
-  const user = el('input', { type: 'text', name: 'username', autocomplete: 'username', value: account.name.toLowerCase(), hidden: true });
+  const user = el('input', { type: 'text', name: 'username', autocomplete: 'username', value: account.name, hidden: true });
   const pw1 = el('input', { type: 'password', autocomplete: 'new-password', placeholder: 'Neues Passwort (mind. 8 Zeichen)', 'aria-label': 'Neues Passwort' });
   const pw2 = el('input', { type: 'password', autocomplete: 'new-password', placeholder: 'Neues Passwort wiederholen', 'aria-label': 'Neues Passwort wiederholen' });
   const pwMsg = el('p', { class: 'konto-msg', 'aria-live': 'polite' });
@@ -100,7 +100,7 @@ export function renderAccount(box, rerender) {
 
 function renderLogin(box, rerender, presetName = '') {
   box.append(el('p', { text: 'Mit einem Konto sind deine Bücher auf allen Geräten gleich (Handy, Tablet, Computer) und sicher aufgehoben. Benutzername und Passwort bekommst du persönlich.' }));
-  const name = el('input', { type: 'text', name: 'username', autocomplete: 'username', autocapitalize: 'none', autocorrect: 'off', spellcheck: 'false', placeholder: 'Benutzername', 'aria-label': 'Benutzername', value: presetName.toLowerCase() });
+  const name = el('input', { type: 'text', name: 'username', autocomplete: 'username', autocapitalize: 'words', autocorrect: 'off', spellcheck: 'false', placeholder: 'Benutzername', 'aria-label': 'Benutzername', value: presetName });
   const pw = el('input', { type: 'password', name: 'password', autocomplete: 'current-password', placeholder: 'Passwort', 'aria-label': 'Passwort' });
   const msg = el('p', { class: 'konto-msg', 'aria-live': 'polite' });
   const submit = el('button', { type: 'submit', text: 'Anmelden' });
