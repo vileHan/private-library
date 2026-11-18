@@ -522,3 +522,63 @@ revoke all on function push_books(jsonb), pull_books(timestamptz), report_usage(
   from public, anon;
 grant execute on function push_books(jsonb), pull_books(timestamptz), report_usage(text, jsonb), usage_overview(), usage_by_day()
   to authenticated;
+
+-- Einladungen (18.11.2026): Konten entstehen per Einladungs-Link …/#einladung-<code>. Die Person wählt Benutzername und
+-- Passwort selbst; jeder Code gilt genau einmal. Gespeichert wird nur der SHA-256-Wert des Codes (die Codes selbst
+-- kennt nur der Verwalter – tools/einladungen.ps1 erzeugt sie auf dem eigenen Rechner).
+create table if not exists invites (
+  hash       text primary key,               -- sha256(code), hex
+  admin      boolean not null default false, -- Verwalter-Einladung (sieht die Datennutzung)
+  created_at timestamptz not null default now(),
+  used_at    timestamptz,
+  used_by    uuid references auth.users (id) on delete set null
+);
+alter table invites enable row level security; -- keine Policy
+
+-- Gilt der Code noch? (für die Anzeige „Einladung schon verwendet“, bevor jemand das Formular ausfüllt)
+create or replace function invite_status(code text) returns text
+language sql stable security definer
+set search_path = public
+as $$
+  select coalesce((select case when used_at is null then 'frei' else 'verwendet' end from invites
+                   where hash = encode(extensions.digest(invite_status.code, 'sha256'), 'hex')), 'unbekannt')
+$$;
+
+-- Konto mit Einladungscode anlegen. name = Anmeldename (klein geschrieben, wie js/account-name.js ihn bildet),
+-- display = Anzeigename (so wie getippt). Fehler als Text: einladung | name | vergeben | passwort.
+create or replace function register_account(code text, name text, display text, password text) returns void
+language plpgsql security definer
+set search_path = public
+as $$
+declare
+  inv invites;
+  v_email text;
+  uid uuid := gen_random_uuid();
+begin
+  if password is null or length(password) < 8 or octet_length(password) > 72 then raise exception 'passwort'; end if;
+  if name is null or length(name) < 2 or octet_length(name) > 32 or name <> lower(name)
+     or name !~ '^[[:alnum:]][[:alnum:] ._''-]*$' or name ~ '  ' or name <> btrim(name) then
+    raise exception 'name';
+  end if;
+  if display is null or lower(display) <> name then display := name; end if;
+  select * into inv from invites
+   where hash = encode(extensions.digest(register_account.code, 'sha256'), 'hex') and used_at is null
+   for update;
+  if not found then raise exception 'einladung'; end if;
+  v_email := encode(convert_to(name, 'UTF8'), 'hex') || '@bibliothek.invalid';
+  if exists (select 1 from auth.users u where u.email = v_email) then raise exception 'vergeben'; end if;
+  insert into auth.users (instance_id, id, aud, role, email, encrypted_password, email_confirmed_at,
+     raw_app_meta_data, raw_user_meta_data, created_at, updated_at,
+     confirmation_token, recovery_token, email_change_token_new, email_change)
+  values ('00000000-0000-0000-0000-000000000000', uid, 'authenticated', 'authenticated', v_email,
+     extensions.crypt(password, extensions.gen_salt('bf')), now(),
+     jsonb_build_object('provider', 'email', 'providers', jsonb_build_array('email'), 'konto', true, 'admin', inv.admin),
+     jsonb_build_object('name', display), now(), now(), '', '', '', '');
+  insert into auth.identities (id, user_id, provider_id, identity_data, provider, last_sign_in_at, created_at, updated_at)
+  values (gen_random_uuid(), uid, uid::text,
+     jsonb_build_object('sub', uid::text, 'email', v_email, 'email_verified', true), 'email', now(), now(), now());
+  update invites set used_at = now(), used_by = uid where hash = inv.hash;
+end;
+$$;
+revoke all on function invite_status(text), register_account(text, text, text, text) from public;
+grant execute on function invite_status(text), register_account(text, text, text, text) to anon, authenticated;

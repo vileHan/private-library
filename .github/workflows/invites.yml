@@ -1,0 +1,26 @@
+name: Einladungen anlegen
+
+# Speichert Einladungscodes (nur ihre SHA-256-Werte) und macht einen Selbsttest der Registrierung. Dauer: ~1 Minute.
+# Normalerweise startet tools/einladungen.ps1 diesen Ablauf – die Codes bleiben auf dem eigenen Rechner.
+on:
+  workflow_dispatch:
+    inputs:
+      hashes:
+        description: 'SHA-256-Werte der Codes, durch Komma getrennt („admin:“ davor = Verwalter). Leer = nur Selbsttest.'
+        required: false
+        default: ''
+
+jobs:
+  invites:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install --no-audit --no-fund
+      - run: node scripts/invites.mjs
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          HASHES: ${{ inputs.hashes }}
