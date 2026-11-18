@@ -1,7 +1,7 @@
 // Einstellungen → „Konto“ (Anmelden, Abgleich, Passwort, Abmelden) und – nur für den Verwalter – „Datennutzung“.
 // 18.11.2026.
 import { el, fmt, plural } from './util.js';
-import { account, login, logout, changePassword, accountRpc } from './account.js';
+import { account, login, logout, changePassword, accountRpc, register, inviteFromUrl, inviteStatus } from './account.js';
 import { syncNow, syncState, firstSync, hasPending, clearLocalAfterLogout } from './sync.js';
 import { library } from './library.js';
 import { settings } from './settings.js';
@@ -24,7 +24,7 @@ const mb = (bytes) => {
 /** Konto-Abschnitt zeichnen. rerender() zeichnet die ganzen Einstellungen neu (z. B. nach dem Anmelden). */
 export function renderAccount(box, rerender) {
   box.replaceChildren(el('h2', { text: 'Konto' }));
-  if (!account.loggedIn) return renderLogin(box, rerender);
+  if (!account.loggedIn) return pendingInvite ? renderRegister(box, rerender) : renderLogin(box, rerender);
 
   const status = el('p', { class: 'konto-status' });
   const showStatus = (text) => {
@@ -111,14 +111,7 @@ function renderLogin(box, rerender, presetName = '') {
     msg.textContent = 'Melde an …';
     try {
       await login(name.value, pw.value);
-      msg.textContent = 'Angemeldet – gleiche Bücher ab …';
-      const { fromAccount, fromDevice } = await firstSync();
-      settings.set('libSeen', [...library.byKey.values()].filter((e) => e.owned).map((e) => e.key)); // nichts als „neu“ zählen
-      rerender();
-      const parts = [];
-      if (fromDevice) parts.push(`${plural(fromDevice, 'Buch', 'Bücher')} von diesem Gerät ins Konto übernommen`);
-      if (fromAccount) parts.push(`${plural(fromAccount, 'Änderung', 'Änderungen')} aus dem Konto geladen`);
-      window.alert(`Angemeldet als ${account.name}.${parts.length ? `\n${parts.join(', ')}.` : ''}`);
+      await afterLogin(msg, rerender, `Angemeldet als ${account.name}.`);
     } catch (err) {
       msg.textContent = err.message;
       submit.disabled = false;
@@ -126,6 +119,77 @@ function renderLogin(box, rerender, presetName = '') {
     }
   });
   box.append(form);
+  box.append(el('p', { class: 'konto-switch' }, el('button', {
+    type: 'button', class: 'link-btn', text: 'Ich habe eine Einladung – Konto erstellen ›',
+    onclick: () => { pendingInvite = { code: '', status: 'eingeben' }; rerender(); },
+  })));
+}
+
+/** Nach Anmelden/Erstellen: Bücher abgleichen, neu zeichnen, kurze Meldung. */
+async function afterLogin(msg, rerender, hello) {
+  msg.textContent = 'Angemeldet – gleiche Bücher ab …';
+  const { fromAccount, fromDevice } = await firstSync();
+  settings.set('libSeen', [...library.byKey.values()].filter((e) => e.owned).map((e) => e.key)); // nichts als „neu“ zählen
+  pendingInvite = null;
+  if (inviteFromUrl()) history.replaceState(history.state, '', location.pathname + location.search); // Link ist verbraucht
+  rerender();
+  const parts = [];
+  if (fromDevice) parts.push(`${plural(fromDevice, 'Buch', 'Bücher')} von diesem Gerät ins Konto übernommen`);
+  if (fromAccount) parts.push(`${plural(fromAccount, 'Änderung', 'Änderungen')} aus dem Konto geladen`);
+  window.alert(`${hello}${parts.length ? `\n${parts.join(', ')}.` : ''}`);
+}
+
+// ---------- Einladung: Konto selbst erstellen (18.11.2026) ----------
+// pendingInvite = { code, status: 'frei' | 'verwendet' | 'unbekannt' | 'offline' | 'eingeben' } oder null
+let pendingInvite = null;
+
+/** Beim Start mit …/#einladung-<code>: Code merken und prüfen. Gibt true zurück, wenn das Formular gezeigt werden soll. */
+export async function startInvite() {
+  const code = inviteFromUrl();
+  if (!code) return false;
+  if (account.loggedIn) {
+    history.replaceState(history.state, '', location.pathname + location.search);
+    return false;
+  }
+  pendingInvite = { code, status: await inviteStatus(code) };
+  return true;
+}
+
+function renderRegister(box, rerender) {
+  const inv = pendingInvite;
+  const cancel = el('p', { class: 'konto-switch' }, el('button', {
+    type: 'button', class: 'link-btn', text: '‹ Ich habe schon ein Konto – anmelden',
+    onclick: () => { pendingInvite = null; rerender(); },
+  }));
+  if (inv.status === 'verwendet' || inv.status === 'unbekannt') {
+    box.append(el('p', { class: 'konto-hint', text: inv.status === 'verwendet'
+      ? 'Diese Einladung wurde schon verwendet – jede Einladung gilt nur einmal. Hast du damit schon ein Konto erstellt? Dann melde dich einfach an.'
+      : 'Diese Einladung kennt die App nicht. Bitte prüfe den Link oder frag nach einer neuen Einladung.' }), cancel);
+    return;
+  }
+  box.append(el('p', { text: 'Willkommen! Wähle einen Benutzernamen und ein Passwort. Damit meldest du dich auf allen deinen Geräten an – deine Bücher sind dann überall gleich.' }));
+  const code = el('input', { type: 'text', autocomplete: 'off', autocapitalize: 'none', autocorrect: 'off', spellcheck: 'false', placeholder: 'Einladungscode', 'aria-label': 'Einladungscode', value: inv.code });
+  const name = el('input', { type: 'text', name: 'username', autocomplete: 'username', autocapitalize: 'words', autocorrect: 'off', spellcheck: 'false', placeholder: 'Benutzername (z. B. dein Vorname)', 'aria-label': 'Benutzername' });
+  const pw1 = el('input', { type: 'password', name: 'password', autocomplete: 'new-password', placeholder: 'Passwort (mind. 8 Zeichen)', 'aria-label': 'Passwort' });
+  const pw2 = el('input', { type: 'password', autocomplete: 'new-password', placeholder: 'Passwort wiederholen', 'aria-label': 'Passwort wiederholen' });
+  const msg = el('p', { class: 'konto-msg', 'aria-live': 'polite' });
+  const submit = el('button', { type: 'submit', text: 'Konto erstellen' });
+  const form = el('form', { class: 'konto-form' }, ...(inv.code ? [] : [code]), name, pw1, pw2, submit, msg);
+  form.addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    if (pw1.value !== pw2.value) { msg.textContent = 'Die beiden Passwörter sind nicht gleich.'; return; }
+    submit.disabled = true;
+    msg.textContent = 'Erstelle Konto …';
+    try {
+      await register(code.value, name.value, pw1.value);
+      await afterLogin(msg, rerender, `Willkommen, ${account.name}! Dein Konto ist fertig.`);
+    } catch (err) {
+      msg.textContent = err.message;
+      submit.disabled = false;
+      if (account.loggedIn) rerender();
+    }
+  });
+  box.append(form, el('p', { class: 'konto-sub', text: 'Tipp: Lass dein iPhone das Passwort im Schlüsselbund sichern. Groß- und Kleinschreibung beim Namen ist beim Anmelden egal.' }), cancel);
 }
 
 /** Datennutzung aller Konten – nur für den Verwalter. */

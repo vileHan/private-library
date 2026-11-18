@@ -1,8 +1,9 @@
 // Konto: Anmelden mit Benutzername + Passwort über Supabase Auth (18.11.2026). Ohne Bibliothek – nur einfache
 // Abrufe an /auth/v1. Die Sitzung (Zugangs- und Erneuerungsschlüssel) liegt pro Gerät im localStorage; das Passwort
-// wird nie gespeichert. Konten legt nur der Workflow „Konten anlegen“ an (app_metadata "konto": true).
+// wird nie gespeichert. Konten entstehen per Einladung (register_account) oder über den Workflow „Konten anlegen“
+// (app_metadata "konto": true).
 import { CONFIG } from './config.js';
-import { accountEmail, normalizeAccountName } from './account-name.js';
+import { accountEmail, accountNameProblem, cleanAccountName, normalizeAccountName } from './account-name.js';
 import { readJson } from './usage.js';
 
 const KEY = 'bibliothek-konto';
@@ -136,4 +137,48 @@ export async function logout() {
   if (token) {
     fetch(`${sb.url}/auth/v1/logout`, { method: 'POST', headers: { apikey: sb.anonKey, Authorization: `Bearer ${token}` } }).catch(() => {});
   }
+}
+
+/** Einladungscode aus der Adresse …/#einladung-<code> ('' wenn keiner). */
+export function inviteFromUrl(loc = window.location) {
+  return (loc.hash.match(/^#einladung-([a-z0-9]{6,40})$/i) || [])[1]?.toLowerCase() || '';
+}
+
+/** Gilt der Code noch? 'frei' | 'verwendet' | 'unbekannt' | 'offline' */
+export async function inviteStatus(code) {
+  try {
+    const res = await fetch(`${sb.url}/rest/v1/rpc/invite_status`, {
+      method: 'POST', headers: { apikey: sb.anonKey, 'Content-Type': 'application/json' }, body: JSON.stringify({ code: cleanCode(code) }),
+    });
+    return res.ok ? await readJson(res) : 'offline';
+  } catch { return 'offline'; }
+}
+
+const cleanCode = (code) => String(code || '').trim().toLowerCase().replace(/^.*#einladung-/, '').replace(/[^a-z0-9]/g, '');
+
+/** Konto mit Einladungscode erstellen (Name und Passwort selbst gewählt) und gleich anmelden. */
+export async function register(code, displayName, password) {
+  const problem = accountNameProblem(displayName);
+  if (problem) throw new Error(problem);
+  if (!password || password.length < 8) throw new Error('Das Passwort braucht mindestens 8 Zeichen.');
+  if (new TextEncoder().encode(password).length > 72) throw new Error('Das Passwort ist zu lang.');
+  let res;
+  try {
+    res = await fetch(`${sb.url}/rest/v1/rpc/register_account`, {
+      method: 'POST', headers: { apikey: sb.anonKey, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code: cleanCode(code), name: normalizeAccountName(displayName), display: cleanAccountName(displayName), password }),
+    });
+  } catch {
+    throw new Error('Keine Verbindung – bitte später noch einmal versuchen.');
+  }
+  if (!res.ok) {
+    const msg = (await readJson(res).catch(() => null))?.message;
+    throw new Error({
+      einladung: 'Diese Einladung gilt nicht (mehr). Jede Einladung funktioniert nur einmal.',
+      vergeben: 'Diesen Benutzernamen gibt es schon – bitte einen anderen wählen.',
+      name: 'Dieser Benutzername geht nicht. Erlaubt sind Buchstaben, Ziffern, Leerzeichen und . _ - \'',
+      passwort: 'Das Passwort braucht mindestens 8 Zeichen.',
+    }[msg] || 'Das Konto konnte nicht erstellt werden. Bitte später noch einmal versuchen.');
+  }
+  return login(displayName, password);
 }

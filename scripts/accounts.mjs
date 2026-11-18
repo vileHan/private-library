@@ -14,6 +14,8 @@ import { createHash, randomBytes } from 'node:crypto';
 import { CONFIG } from '../js/config.js';
 import { accountEmail, accountNameProblem, cleanAccountName, normalizeAccountName } from '../js/account-name.js';
 
+// Zusätzlich LOESCHEN (Workflow-Eingabe): Testkonten löschen, Namen durch Komma getrennt. Nur für Testkonten – die
+// Eingabe steht im öffentlichen Log; echte Konten über das Secret mit null löschen.
 let konten;
 try {
   konten = JSON.parse(process.env.KONTEN || '{}');
@@ -63,6 +65,10 @@ async function upsertAccount(display, { pw, admin = false }) {
 }
 
 const count = { neu: 0, passwort: 0, gleich: 0, geloescht: 0, ungueltig: 0 };
+for (const n of (process.env.LOESCHEN || '').split(',').map((s) => s.trim()).filter(Boolean)) {
+  const email = accountEmail(n);
+  if (email) count.geloescht += (await client.query('delete from auth.users where email = $1', [email])).rowCount;
+}
 for (const [rawName, value] of Object.entries(konten)) {
   const name = cleanAccountName(rawName);
   if (accountNameProblem(name)) { count.ungueltig++; continue; }

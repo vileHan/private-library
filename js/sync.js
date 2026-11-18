@@ -3,7 +3,7 @@
 // je Buch der neuere Stand – auf dem Server (push_books) wie auf dem Gerät (unten). Gelöschte Einträge werden als
 // „data: null“ übertragen, damit sie auch auf den anderen Geräten verschwinden.
 // Ablauf: 1. eigene Änderungen hochladen, 2. alles abholen, was seit dem letzten Abgleich am Server ankam.
-// Regale ohne Bücher und Jahresziele reisen als Eintrag „~einstellungen“ mit.
+// Regale ohne Bücher, Jahresziele und das Geschenk (Name, Gruß gesehen) reisen als Eintrag „~einstellungen“ mit.
 import { store } from './store.js';
 import { settings } from './settings.js';
 import { library, loadLibrary, onUserChange } from './library.js';
@@ -12,7 +12,7 @@ import { deviceId, recentDays } from './usage.js';
 
 const KEY = 'bibliothek-abgleich';
 const SETTINGS_KEY = '~einstellungen';
-const SYNCED_SETTINGS = ['shelves', 'readingGoals'];
+const SYNCED_SETTINGS = ['shelves', 'readingGoals', 'gift', 'giftSeen'];
 const listeners = new Set();
 
 function load() {
@@ -112,7 +112,8 @@ async function doSync() {
     save(done);
     if (changed) await loadLibrary();
     reportUsage();
-    listeners.forEach((fn) => fn({ changed }));
+    listeners.forEach((fn) => fn({ changed, giftChanged }));
+    giftChanged = false;
     return changed;
   } catch (error) {
     listeners.forEach((fn) => fn({ changed, error }));
@@ -128,9 +129,15 @@ function packEntry(e) {
 }
 
 function packSettings() {
-  return { shelves: settings.get('shelves', []), readingGoals: settings.get('readingGoals', {}) };
+  return {
+    shelves: settings.get('shelves', []),
+    readingGoals: settings.get('readingGoals', {}),
+    gift: settings.get('gift', null), // Geschenk (Name in der Kopfleiste, Gruß) – reist mit aufs Tablet usw.
+    giftSeen: settings.get('giftSeen', false),
+  };
 }
 
+let giftChanged = false;
 /** Einstellungen vom Konto übernehmen. Bei der ersten Anmeldung zusammenführen statt ersetzen. */
 function applySettings(item, first) {
   const s = load();
@@ -140,6 +147,8 @@ function applySettings(item, first) {
   try {
     const shelves = Array.isArray(data.shelves) ? data.shelves.filter((x) => typeof x === 'string') : [];
     const goals = data.readingGoals && typeof data.readingGoals === 'object' ? data.readingGoals : {};
+    const remoteGift = data.gift && typeof data.gift.n === 'string' ? data.gift : null;
+    const myGift = settings.get('gift', null);
     if (first) {
       const mineShelves = settings.get('shelves', []);
       const mineGoals = settings.get('readingGoals', {});
@@ -147,8 +156,12 @@ function applySettings(item, first) {
       const mergedGoals = { ...goals, ...mineGoals };
       settings.set('shelves', mergedShelves);
       settings.set('readingGoals', mergedGoals);
+      // Geschenk: das des Geräts bleibt; hat das Gerät keins, kommt das aus dem Konto (ohne den Gruß erneut zu zeigen,
+      // wenn er schon einmal gesehen wurde)
+      if (!myGift && remoteGift) takeGift(remoteGift, !!data.giftSeen);
       // Etwas vom Gerät dazugekommen? Dann den zusammengeführten Stand wieder hochladen.
-      if (mergedShelves.length !== shelves.length || Object.keys(mergedGoals).length !== Object.keys(goals).length) {
+      if (mergedShelves.length !== shelves.length || Object.keys(mergedGoals).length !== Object.keys(goals).length
+          || (myGift && JSON.stringify(myGift) !== JSON.stringify(remoteGift))) {
         const t = load();
         t.settingsDirty = new Date().toISOString();
         save(t);
@@ -157,6 +170,8 @@ function applySettings(item, first) {
     } else {
       settings.set('shelves', shelves);
       settings.set('readingGoals', goals);
+      if (JSON.stringify(myGift) !== JSON.stringify(remoteGift)) takeGift(remoteGift, !!data.giftSeen);
+      else if (remoteGift && data.giftSeen && !settings.get('giftSeen', false)) settings.set('giftSeen', true);
     }
   } finally {
     applyingRemote = false;
@@ -165,6 +180,14 @@ function applySettings(item, first) {
   t.settingsTime = item.changed_at;
   save(t);
   return true;
+}
+
+function takeGift(gift, seen) {
+  const hadGift = !!settings.get('gift', null);
+  settings.set('gift', gift);
+  settings.set('giftSeen', seen || !gift);
+  if (gift && !hadGift && gift.c) settings.set('accent', gift.c); // Farbe des Geschenks, wie beim Öffnen des Links
+  giftChanged = true;
 }
 
 let lastReport = 0;
@@ -184,7 +207,7 @@ export async function firstSync() {
   save(s);
   markAllDirty();
   const fromDevice = Object.keys(load().dirty || {}).length;
-  if (settings.get('shelves', []).length || Object.keys(settings.get('readingGoals', {})).length) {
+  if (settings.get('shelves', []).length || Object.keys(settings.get('readingGoals', {})).length || settings.get('gift', null)) {
     const t = load();
     t.settingsDirty = new Date(1).toISOString(); // verliert gegen jeden Stand im Konto, wird aber zusammengeführt
     save(t);

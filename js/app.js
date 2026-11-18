@@ -13,11 +13,11 @@ import { scanIsbn } from './scan.js';
 import { settings } from './settings.js';
 import { GENRES } from './genres.js';
 import { applyTheme, renderLook } from './theme.js';
-import { initGift, showGreeting, giftData, clearGift } from './gift.js';
+import { initGift, showGreeting, giftData, clearGift, refreshGift } from './gift.js';
 import { registerBack, enterLevel, goBack, attachEdgeSwipe, currentDepth, rewindTo, captureView, swipingBack } from './nav.js';
 import { account } from './account.js';
 import { syncNow, onSync, markAllDirty, scheduleSync } from './sync.js';
-import { renderAccount, renderUsage } from './account-ui.js';
+import { renderAccount, renderUsage, startInvite } from './account-ui.js';
 
 // Abzeichen an „Meine Bücher“ (13.11.2026): zählt nur Bücher, die seit dem letzten Besuch von „Meine Bücher“ neu als
 // „Besitze“ markiert wurden – wie ein „Neu“-Hinweis. Beim Öffnen von „Meine Bücher“ verschwindet es. Gemerkt wird die
@@ -758,7 +758,7 @@ function renderSettings() {
         el('button', { type: 'button', class: 'link-btn', text: 'Geburtstagsgruß noch einmal ansehen ›', onclick: () => showGreeting({ music: true }) }),
         el('button', {
           type: 'button', class: 'link-btn danger', text: 'Geschenk von diesem Gerät entfernen',
-          onclick: () => { if (window.confirm('Name und Geburtstagsgruß von diesem Gerät entfernen? Bücher und Einstellungen bleiben.')) { clearGift(); renderSettings(); } },
+          onclick: () => { if (window.confirm(account.loggedIn ? 'Name und Geburtstagsgruß entfernen – auf allen Geräten deines Kontos? Bücher und Einstellungen bleiben.' : 'Name und Geburtstagsgruß von diesem Gerät entfernen? Bücher und Einstellungen bleiben.')) { clearGift(); renderSettings(); } },
         }))]
     : []));
 }
@@ -772,8 +772,11 @@ function renderAccountParts() {
     : 'Deine Markierungen, Bewertungen und Notizen liegen nur auf diesem Gerät. Exportiere sie regelmäßig als Sicherung – oder melde dich oben mit einem Konto an.';
 }
 // Änderungen von anderen Geräten sofort zeigen
-onSync(({ changed }) => {
+onSync(({ changed, giftChanged }) => {
+  if (giftChanged) refreshGift();
   if (!$('#view-settings').hidden) renderAccount($('#accountBox'), renderAccountParts);
   if (changed && !$('#view-library').hidden) renderSub();
 });
 if (account.loggedIn) syncNow().catch(() => {});
+// Einladungs-Link …/#einladung-<code>: gleich das Formular „Konto erstellen“ zeigen
+startInvite().then((show) => { if (show) showView('settings'); }).catch(() => {});

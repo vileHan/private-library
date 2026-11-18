@@ -228,3 +228,16 @@ export function burstConfetti({ count = 140, duration = 3000 } = {}) {
   requestAnimationFrame(frame);
   return canvas;
 }
+
+/**
+ * Nach dem Abgleich mit dem Konto (18.11.2026): Geschenk kam von einem anderen Gerät dazu oder wurde dort entfernt –
+ * Kopfleiste, Farbe und 🎂-Knopf anpassen. Der Gruß erscheint nur, wenn er im Konto noch nicht als gesehen gilt.
+ */
+export function refreshGift() {
+  applyTheme();
+  if (giftData()) { showGift(); return; }
+  document.getElementById('giftBtn')?.remove();
+  const h1 = document.querySelector('.top h1');
+  if (h1) h1.textContent = 'Meine Bibliothek';
+  document.title = 'Meine Bibliothek';
+}

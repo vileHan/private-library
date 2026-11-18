@@ -1,10 +1,16 @@
-name: Konten anlegen
+name: Konten verwalten
 
-# Legt die Konten aus dem Secret KONTEN in Supabase Auth an (bzw. setzt geänderte Passwörter, löscht Konten mit null)
-# und macht einen Selbsttest mit einem Wegwerf-Konto. Dauer: ~1 Minute. Ins Log kommen nur Anzahlen.
-# Vorher einmal „Datenbankschema“ laufen lassen, falls schema.sql geändert wurde.
+# Seit 18.11.2026 entstehen Konten per Einladungs-Link (tools/einladungen.ps1). Dieser Ablauf dient zum
+# Passwort-Zurücksetzen und Löschen: Secret KONTEN = { "Anna": { "pw": "neues Passwort" }, "Alt": null } – das Passwort
+# wird nur gesetzt, wenn es sich im Secret geändert hat. Danach ein Selbsttest mit einem Wegwerf-Konto. Dauer: ~1 Minute.
+# Ins Log kommen nur Anzahlen. Vorher einmal „Datenbankschema“ laufen lassen, falls schema.sql geändert wurde.
 on:
   workflow_dispatch:
+    inputs:
+      loeschen:
+        description: 'Nur Testkonten löschen (Namen durch Komma; steht im öffentlichen Log!)'
+        required: false
+        default: ''
 
 jobs:
   accounts:
@@ -20,3 +26,4 @@ jobs:
         env:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
           KONTEN: ${{ secrets.KONTEN }}
+          LOESCHEN: ${{ inputs.loeschen }}
