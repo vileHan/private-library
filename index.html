@@ -141,13 +141,15 @@
 
     <!-- Einstellungen als eigener Reiter (vorher zugeklappt unter Meine Bücher, 12.11.2026) -->
     <section id="view-settings" role="tabpanel" aria-labelledby="tab-settings" hidden>
+      <section class="data konto" id="accountBox"></section>
+      <section class="data usage" id="usageBox" hidden></section>
       <section class="data look" id="lookBox">
         <h2>Darstellung</h2>
         <div id="lookControls"></div>
       </section>
       <section class="data">
         <h2>Daten sichern</h2>
-        <p>Deine Markierungen, Bewertungen und Notizen liegen nur auf diesem Gerät. Exportiere sie regelmäßig als Sicherung.</p>
+        <p id="backupNote">Deine Markierungen, Bewertungen und Notizen liegen nur auf diesem Gerät. Exportiere sie regelmäßig als Sicherung.</p>
         <div class="data-actions">
           <button id="exportBtn" type="button">Exportieren</button>
           <label class="button">Importieren<input id="importInput" type="file" accept="application/json,.json" hidden></label>

@@ -31,6 +31,9 @@ export const store = {
   getAll: () => tx('readonly', (s) => s.getAll()),
   put: (entry) => tx('readwrite', (s) => s.put({ ...entry, updatedAt: new Date().toISOString() })),
   remove: (key) => tx('readwrite', (s) => s.delete(key)),
+  get: (key) => tx('readonly', (s) => s.get(key)),
+  /** Unverändert speichern (Abgleich: Eintrag eines anderen Geräts übernehmen) */
+  putRaw: (entry) => tx('readwrite', (s) => s.put(entry)),
   clear: () => tx('readwrite', (s) => s.clear()),
 };
 
@@ -63,6 +66,7 @@ export function entryFromWork(work, existing) {
     tags: existing?.tags ?? [],            // eigene Regale
     ownedIsbns: ownedIsbnsOf(existing),
     addedAt: existing?.addedAt || new Date().toISOString(),
+    changedAt: existing?.changedAt,        // letzte eigene Änderung (Abgleich mit dem Konto, 18.11.2026)
   };
 }
 

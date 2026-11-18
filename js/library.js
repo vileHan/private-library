@@ -8,6 +8,10 @@ const listeners = new Set();
 /** Wird nach jeder Änderung aufgerufen (z. B. Zähler im Tab aktualisieren). */
 export function onLibraryChange(fn) { listeners.add(fn); }
 
+// Eigene Änderungen (nicht das Auffrischen der Buchdaten) – für den Abgleich mit dem Konto (sync.js)
+const userChangeHooks = new Set();
+export function onUserChange(fn) { userChangeHooks.add(fn); }
+
 export async function loadLibrary() {
   const all = await store.getAll();
   library.byKey = new Map(all.map((e) => [e.key, e]));
@@ -36,9 +40,11 @@ export async function updateEntry(work, change) {
   const existing = entryFor(work);
   const entry = entryFromWork(work, existing);
   change(entry);
+  entry.changedAt = new Date().toISOString(); // Zeitpunkt der eigenen Änderung: beim Abgleich gewinnt der neuere Stand
   if (isEmpty(entry)) await store.remove(entry.key);
   else await store.put(entry);
   await loadLibrary();
+  userChangeHooks.forEach((fn) => fn(entry.key, entry.changedAt));
   return entryFor(work);
 }
 

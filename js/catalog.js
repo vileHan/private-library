@@ -5,6 +5,7 @@ import { CONFIG } from './config.js';
 import { searchDnb, editionsByIsbns } from './dnb.js';
 import { normalizeIsbn } from './isbn.js';
 import { normalizeText, groupEditions } from './works.js';
+import { readJson, countSearch } from './usage.js';
 
 const sb = CONFIG.supabase;
 const useDb = () => !!(sb.url && sb.anonKey);
@@ -17,7 +18,7 @@ async function rpc(fn, body, signal) {
     signal,
   });
   if (!res.ok) throw new Error(`Datenbank antwortet mit Fehler ${res.status}`);
-  return res.json();
+  return readJson(res);
 }
 
 /**
@@ -76,6 +77,7 @@ export const catalog = {
     if (useDb() && !normalizeIsbn(query)) {
       try {
         const off = cursor ?? 0;
+        if (!cursor) countSearch();
         const tokens = normalizeText(query).split(' ').filter(Boolean);
         const rows = await rpc('search_works', { tokens, lim: PAGE, off }, signal);
         const total = Number(rows[0]?.total || 0);
@@ -112,7 +114,7 @@ export const catalog = {
     if (blurbCache.has(key)) return blurbCache.get(key);
     const res = await fetch(`${sb.url}/functions/v1/blurb?isbn=${key}`); // ohne Kopfzeilen → keine Vorab-Anfrage
     if (!res.ok) throw new Error(`Klappentext: Fehler ${res.status}`);
-    const { text = '' } = await res.json();
+    const { text = '' } = (await readJson(res)) || {};
     blurbCache.set(key, text);
     return text;
   },
@@ -147,7 +149,7 @@ export const catalog = {
       const part = keys.slice(i, i + 40).map((k) => `"${k.replace(/["\\]/g, '\\$&')}"`).join(',');
       const res = await fetch(`${sb.url}/rest/v1/works?select=*&id=in.(${encodeURIComponent(part)})`, { headers: { apikey: sb.anonKey } });
       if (!res.ok) throw new Error(`Datenbank antwortet mit Fehler ${res.status}`);
-      out.push(...(await res.json()).map(toWork));
+      out.push(...((await readJson(res)) || []).map(toWork));
     }
     return out;
   },

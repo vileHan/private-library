@@ -426,7 +426,7 @@ begin
   select auth.uid(), i ->> 'key', nullif(i -> 'data', 'null'::jsonb), (i ->> 'changed_at')::timestamptz, now()
   from jsonb_array_elements(items) i
   where coalesce(i ->> 'key', '') <> '' and length(i ->> 'key') <= 400
-    and octet_length(coalesce(i ->> 'data', '')) <= 20000
+    and octet_length(coalesce(i ->> 'data', '')) <= 60000
   on conflict (user_id, key) do update
     set data = excluded.data, changed_at = excluded.changed_at, synced_at = now()
     where b.changed_at < excluded.changed_at;

@@ -15,6 +15,9 @@ import { GENRES } from './genres.js';
 import { applyTheme, renderLook } from './theme.js';
 import { initGift, showGreeting, giftData, clearGift } from './gift.js';
 import { registerBack, enterLevel, goBack, attachEdgeSwipe, currentDepth, rewindTo, captureView, swipingBack } from './nav.js';
+import { account } from './account.js';
+import { syncNow, onSync, markAllDirty, scheduleSync } from './sync.js';
+import { renderAccount, renderUsage } from './account-ui.js';
 
 // Abzeichen an „Meine Bücher“ (13.11.2026): zählt nur Bücher, die seit dem letzten Besuch von „Meine Bücher“ neu als
 // „Besitze“ markiert wurden – wie ein „Neu“-Hinweis. Beim Öffnen von „Meine Bücher“ verschwindet es. Gemerkt wird die
@@ -248,7 +251,7 @@ clearBtn.addEventListener('click', () => {
 document.addEventListener('touchstart', (ev) => {
   const a = document.activeElement;
   if (!a || !a.matches?.('input[type="search"], input[type="text"], textarea')) return;
-  const frame = a.closest('.search-wrap, .searchbar, .tags-edit') || a;
+  const frame = a.closest('.search-wrap, .searchbar, .tags-edit, .konto-form') || a;
   if (frame.contains(ev.target)) return;
   ignoreScrollBriefly();
   a.blur();
@@ -705,6 +708,7 @@ $('#importInput').addEventListener('change', async (ev) => {
   try {
     const n = await importJson(await file.text());
     await loadLibrary();
+    if (account.loggedIn) { markAllDirty(); scheduleSync(300); } // übernommene Einträge auch ins Konto
     renderSub();
     alert(`${n} Einträge übernommen.`);
   } catch (err) {
@@ -748,6 +752,7 @@ applyTheme();
 initGift();
 attachEdgeSwipe(); // Wischen vom linken Rand = zurück (nur installierte iPhone-App; sonst hat das System eine Geste)
 function renderSettings() {
+  renderAccountParts();
   renderLook($('#lookControls'), () => (giftData()
     ? [el('p', { class: 'gift-actions' },
         el('button', { type: 'button', class: 'link-btn', text: 'Geburtstagsgruß noch einmal ansehen ›', onclick: () => showGreeting({ music: true }) }),
@@ -757,3 +762,18 @@ function renderSettings() {
         }))]
     : []));
 }
+
+// ---------- Konto (18.11.2026) ----------
+function renderAccountParts() {
+  renderAccount($('#accountBox'), () => { renderAccountParts(); if (!$('#view-library').hidden) renderSub(); });
+  renderUsage($('#usageBox'));
+  $('#backupNote').textContent = account.loggedIn
+    ? 'Deine Bücher liegen in deinem Konto und auf diesem Gerät. Eine zusätzliche Sicherung als Datei schadet trotzdem nicht.'
+    : 'Deine Markierungen, Bewertungen und Notizen liegen nur auf diesem Gerät. Exportiere sie regelmäßig als Sicherung – oder melde dich oben mit einem Konto an.';
+}
+// Änderungen von anderen Geräten sofort zeigen
+onSync(({ changed }) => {
+  if (!$('#view-settings').hidden) renderAccount($('#accountBox'), renderAccountParts);
+  if (changed && !$('#view-library').hidden) renderSub();
+});
+if (account.loggedIn) syncNow().catch(() => {});

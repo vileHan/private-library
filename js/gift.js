@@ -8,6 +8,7 @@ import { settings } from './settings.js';
 import { el } from './util.js';
 import { ACCENTS, applyTheme } from './theme.js';
 import { CONFIG } from './config.js';
+import { readJson } from './usage.js';
 
 export function encodeGift(data) {
   const b = btoa(unescape(encodeURIComponent(JSON.stringify(data))));
@@ -40,7 +41,7 @@ export async function giftFromCode(code) {
       signal: AbortSignal.timeout?.(3000), // hängende Verbindung (Funkloch): nach 3 s aufgeben
     });
     if (!res.ok) return null;
-    const data = await res.json();
+    const data = await readJson(res);
     return data && typeof data.n === 'string' ? data : null;
   } catch { return null; }
 }

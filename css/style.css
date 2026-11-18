@@ -760,3 +760,34 @@ body.edge-swiping main { box-shadow: -1px 0 0 color-mix(in srgb, var(--text) 14%
 .sort-opt[aria-pressed="true"] { color: var(--accent); font-weight: 600; }
 .sort-opt[aria-pressed="true"]::after { content: "✓"; }
 body.mini-open { overflow: hidden; }
+
+/* Konto und Datennutzung (18.11.2026) */
+.konto-form { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+.konto-form input {
+  font: inherit; font-size: 16px; /* unter 16 px zoomt das iPhone beim Antippen */
+  padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg, var(--surface)); color: var(--text);
+}
+.konto-form input:focus { outline: 2px solid var(--accent); outline-offset: 0; border-color: transparent; }
+.konto-form button { align-self: flex-start; }
+.konto-form button, .konto .data-actions button {
+  font: inherit; padding: 8px 14px; border-radius: 999px; border: 1px solid var(--accent); background: var(--accent); color: var(--accent-text);
+}
+.konto .data-actions button:not(:first-child) { background: transparent; color: var(--accent); }
+.konto .data-actions button.danger { border-color: #d9534f; color: #d9534f; }
+.konto .data-actions { margin-top: 10px; }
+.konto-form button:disabled, .konto .data-actions button:disabled { opacity: .55; }
+.konto-status { display: flex; flex-direction: column; gap: 2px; color: var(--text) !important; font-size: 1rem !important; margin: 4px 0 0; }
+.konto-sub { color: var(--muted); font-size: .85rem; }
+.konto-msg { margin: 0; min-height: 1.2em; font-size: .9rem; }
+.konto-hint { color: #b5651d !important; }
+.usage-total { color: var(--text) !important; margin: 4px 0 6px; }
+.usage-meter { height: 8px; border-radius: 999px; background: var(--line); overflow: hidden; }
+.usage-meter span { display: block; height: 100%; background: var(--accent); border-radius: inherit; }
+.usage-bars { display: flex; align-items: flex-end; gap: 2px; height: 48px; margin: 4px 0 12px; }
+.usage-bars span { flex: 1; background: var(--accent); opacity: .7; border-radius: 2px 2px 0 0; min-height: 1px; }
+.usage-scroll { overflow-x: auto; margin: 0 -4px; }
+.usage-table { width: 100%; border-collapse: collapse; font-size: .85rem; }
+.usage-table th { text-align: left; font-weight: 600; color: var(--muted); padding: 4px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.usage-table td { padding: 6px 4px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.usage-table .num { text-align: right; font-variant-numeric: tabular-nums; }
+.usage-table th:nth-child(n+2):nth-child(-n+5) { text-align: right; }
