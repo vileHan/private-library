@@ -35,6 +35,8 @@ function markLibrarySeen() {
   settings.set('libSeen', ownedKeys());
   updateLibBadge();
 }
+// Abzeichen neu zeichnen, wenn sich die Liste der gesehenen Bücher ändert (z. B. nach dem Anmelden, Prüfung 18.11.2026)
+settings.onSet((name) => { if (name === 'libSeen') updateLibBadge(); });
 onLibraryChange(() => {
   if (!$('#view-library').hidden) markLibrarySeen(); // wer gerade in „Meine Bücher“ ist, sieht das neue Buch ja
   else updateLibBadge();
