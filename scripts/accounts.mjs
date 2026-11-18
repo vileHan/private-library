@@ -42,8 +42,8 @@ async function upsertAccount(name, { pw, admin = false, display = '' }) {
     )).rows[0].id;
     await client.query(
       `insert into auth.identities (id, user_id, provider_id, identity_data, provider, last_sign_in_at, created_at, updated_at)
-       values (gen_random_uuid(), $1, $1::text, $2, 'email', now(), now(), now())`,
-      [id, { sub: id, email, email_verified: true }],
+       values (gen_random_uuid(), $1::uuid, $3, $2, 'email', now(), now(), now())`,
+      [id, { sub: id, email, email_verified: true }, String(id)],
     );
     return 'neu';
   }
