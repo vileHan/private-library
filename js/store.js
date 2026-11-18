@@ -110,7 +110,8 @@ export async function importJson(text) {
     for (const b of data.books) {
       if (!b?.key) continue;
       const cur = current.get(b.key);
-      if (!cur || (b.updatedAt || '') > (cur.updatedAt || '')) { s.put(b); n++; }
+      // Übernommene Einträge gelten als eigene Änderung von jetzt – so stellt eine Sicherung auch im Konto wieder her
+      if (!cur || (b.updatedAt || '') > (cur.updatedAt || '')) { s.put({ ...b, changedAt: new Date().toISOString() }); n++; }
     }
   });
   importSettings(data.settings);

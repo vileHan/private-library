@@ -3,13 +3,9 @@
 Nur was noch zu tun ist. Erledigtes steht in der Git-Historie, Entscheidungen und Details in [CLAUDE.md](CLAUDE.md),
 prüfbare Anforderungen in [ANFORDERUNGEN.md](ANFORDERUNGEN.md). Aufgeräumt am 13.11.2026 (Nutzer: „alles außer Konten raus“).
 
-## Konten erstellen (Wunsch des Nutzers 10.11.2026)
-- **Start zum Testen: 5 Konten** (Nutzer + 4 Testpersonen), später ausbaubar auf Familie und Freunde (10–20).
-- Kostenlos über Supabase Auth (Gratis-Tarif, bis 50.000 aktive Nutzer/Monat). Anmeldung per E-Mail + Passwort oder E-Mail-Link; die 5 Konten legt der Nutzer im Supabase-Dashboard an oder per Einladung (keine offene Registrierung). Eingebauter Mailversand reicht für 5 Personen.
-- Tabelle `user_books` mit Row Level Security: jede Person sieht nur ihre eigenen Einträge (~1 MB für 5 × 500 Bücher, Grenze 500 MB).
-- Angemeldet: Markierungen liegen in Supabase und sind auf allen Geräten gleich (Handy, iPad, Laptop). Beim ersten Anmelden werden die vorhandenen Daten des Geräts hochgeladen. Ohne Anmeldung bleibt alles wie heute (nur auf dem Gerät).
+## Konten
+- Umgesetzt am 18.11.2026 (Einladungs-Links, siehe CLAUDE.md „Konten“). Offen: Einladungen verschicken, Testkonto „Test Prüfkonto“ nach der Prüfung löschen.
 - Später möglich: sehen, wer ein Buch schon hat / ausleihen kann.
-- Aufwand ca. 4–6 Stunden (Stufe 3). Offen: Anmeldung per Passwort oder Link?
 
 ---
 

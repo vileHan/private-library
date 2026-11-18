@@ -19,7 +19,7 @@ $sha = [System.Security.Cryptography.SHA256]::Create()
 $links = @()
 $hashes = @()
 for ($i = 0; $i -lt $Anzahl; $i++) {
-  $bytes = New-Object byte[] 12
+  $bytes = New-Object byte[] 16
   $rng.GetBytes($bytes)
   $code = -join ($bytes | ForEach-Object { $alphabet[$_ % $alphabet.Length] })
   $hash = -join ($sha.ComputeHash([Text.Encoding]::UTF8.GetBytes($code)) | ForEach-Object { $_.ToString('x2') })

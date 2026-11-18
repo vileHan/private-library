@@ -67,13 +67,13 @@ Commits laufen mit der GitHub-noreply-Adresse (in der lokalen Git-Konfiguration 
   🔍 Prüfung: Stufe N, X Runden, Ergebnis
   ```
   Leere Zeilen weglassen.
-- **Tests**: `tests/index.html` (Katalog, 46) und `tests/ui.html` (Oberfläche in 360 px, 49; eigene Daten bleiben unberührt, ein Testeintrag wird wieder gelöscht).
+- **Tests**: `tests/index.html` (Katalog, 46), `tests/ui.html` (Oberfläche in 360 px, 49; eigene Daten bleiben unberührt, ein Testeintrag wird wieder gelöscht) und `tests/sync.html` (Konten-Abgleich gegen einen nachgebildeten Server, 14; eigene Daten werden gesichert und wiederhergestellt).
 - **Prüf-Stempel** `tools/pruefstempel.ps1` (Hash über js, css, index.html, sw.js, supabase, scripts, tests, Workflows; Doku zählt nicht) → `.claude/pruefung.json` (nicht im Repository).
 - **Stop-Hook** (`.claude/settings.json` → `.claude/hooks/stop-pruefung.ps1`): Ist der Stand ungeprüft, hält er Claude vor dem Beenden einer Antwort **einmal** an und fordert die Prüfung. Beim zweiten Mal lässt er durch (keine Endlosschleife). Ausnahme: Arbeit läuft noch (z. B. Import) oder reine Frage – kurz begründen.
 
 ## Bewusst später
 
-- Konten (zunächst 5 zum Testen) mit Abgleich zwischen Geräten – siehe PLAN.md „Konten erstellen“
+- Später möglich: sehen, wer ein Buch schon hat / ausleihen kann (Konten gibt es seit 18.11.2026).
 
 ## Datenquellen
 
@@ -258,3 +258,12 @@ Ziel: Die Daten werden **einmal aufbereitet** und nicht bei jeder Suche neu.
 ## Ersatz-Genres für Bücher ohne Gattungsbegriff (13.11.2026)
 
 - ~89.000 von ~375.000 Werken hatten kein Genre (Schätzung der DB), vor allem 2000–2011 (die DNB vergibt den Gattungsbegriff erst später). `fillGenres` (works.js, am Ende von `groupEditions`, also im Import über den ganzen Katalog) füllt nur leere bzw. keiner Stöber-Gruppe zuordenbare Genres, erste Stufe gewinnt: 1. **Reihe** (häufigstes echtes Genre der Reihe), 2. **Autor** (≥ 2 Werke mit Genre, ≥ 2/3 in derselben Gruppe – Christie/Leon → Krimis, Christie Golden gemischt → nichts), 3. **GND-Schlagworte + Untertitel** (`genreFromSubjects`: „Kriminalroman“, „Kommissar“, „Thriller“, „Gedichte“, „Jugendbuch“ …; dnb.js liest 650/689/655 als `subjects`, der Import behält sie nur bei Ausgaben ohne Gattungsbegriff), 4. **Sachgruppe** (K → „Kinder- und Jugendbücher“, B → „Romane, Erzählungen“). Genre-Texte so gewählt, dass `genreGroup`/SQL `genre_group` sie richtig einordnen. Abgeleitete Genres erscheinen wie normale (Nutzerentscheidung „bau deinen Vorschlag ein“). Wirkt ab Import 01.12.2026. Stichprobe 2004/2005: 448 von 467 Werken ohne Gattungsbegriff, danach alle mit Genre.
+
+## Konten (18.11.2026, ANFORDERUNGEN K1–K6)
+
+- **Einladungs-Links** `…/#einladung-<code>`: Die Person wählt Benutzername (Buchstaben inkl. Umlaute, Ziffern, Leerzeichen, . _ - '; Anzeige = Name wie gewählt, Anmelden ohne Groß/klein) und Passwort selbst; jeder Code gilt einmal (Tabelle `invites`, nur SHA-256 des Codes; `register_account`, `invite_status`, security definer). Code auch von Hand eingebbar („Ich habe eine Einladung“). **Codes erzeugen:** `tools/einladungen.ps1 -Anzahl N [-Verwalter]` → startet Workflow „Einladungen anlegen“ (nur Hashes), Links landen in `Dokumente\Bibliothek-Einladungen.txt` (nie ins Repository). Verwalter-Einladung = `app_metadata.admin` → sieht „Datennutzung (nur für dich)“.
+- **Technik**: Supabase Auth (Gratis), Konten direkt in `auth.users`/`auth.identities` (keine Mails). Benutzername → `<hex(utf8(kleingeschrieben))>@bibliothek.invalid` (`js/account-name.js`, gemeinsam mit den Skripten). Freigeschaltet = `app_metadata.konto`; Selbstregistrierung über Supabase hätte das nie und darf nichts (`is_konto()`). Sitzung in localStorage `bibliothek-konto` (kein Passwort), Erneuern per refresh_token (`js/account.js`).
+- **Abgleich** (`js/sync.js`, Tabelle `user_books`, `push_books`/`pull_books`): Eintrag = Bibliothekseintrag als JSON, `data: null` = gelöscht. `changedAt` setzt nur `updateEntry` (eigene Änderung) – Auffrischen der Buchdaten zählt nicht. Je Buch gewinnt die neuere eigene Änderung (Server und Gerät). Erst hochladen (vorgemerkte Schlüssel in localStorage `bibliothek-abgleich`), dann seit dem letzten Stand abholen (30 s Überlappung). Eintrag `~einstellungen`: leere Regale, Jahresziele, **Geschenk + giftSeen** (Geschenk reist aufs Tablet; Gruß nur, wenn noch nicht gesehen). Erste Anmeldung: Gerätebücher ins Konto, Regale/Ziele zusammenführen, Geschenk des Geräts gewinnt. Abmelden: Bücher/Regale/Ziele vom Gerät (Geschenk bleibt). Auslöser: Änderung (1,5 s), Öffnen/Zurückkehren (≥ 30 s), wieder online, Knopf. Sicherung importieren → alles vormerken.
+- **Datennutzung** (`js/usage.js`): zählt Antworttext + ~300 Byte je Supabase-Abruf je Tag/Gerät (localStorage `bibliothek-nutzung`), meldet höchstens alle 10 Min. (`report_usage`); Übersicht `usage_overview`/`usage_by_day` nur für Verwalter. Cover/DNB zählen nicht. Obergrenze grob: ~50 Personen sicher, bis ~100 (5 GB/Monat).
+- **Passwort zurücksetzen / Konto löschen**: Workflow „Konten verwalten“ mit Secret `KONTEN` = `{ "Anna": { "pw": "neu" }, "Alt": null }` (Passwort wird nur gesetzt, wenn es sich im Secret geändert hat). Eingabe `loeschen` nur für Testkonten (öffentliches Log). Selbsttests in beiden Workflows (Wegwerf-Konto).
+- Testkonto für Prüfungen: „Test Prüfkonto“ (Zugangsdaten nur lokal im Scratchpad der Sitzung) – nach Abschluss löschen.

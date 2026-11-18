@@ -123,9 +123,9 @@ try {
     const t1 = new Date(Date.now() - 60000).toISOString();
     const t2 = new Date().toISOString();
     const p1 = await call('push_books', { items: [{ key: 'test|a', data: { title: 'A', owned: true }, changed_at: t2 }, { key: 'test|b', data: null, changed_at: t2 }] });
-    step(`Bücher hochladen (Status ${p1.status}, ${p1.body} Zeilen)`, p1.status === 200 && p1.body === 2);
+    step(`Bücher hochladen (Status ${p1.status}, ${p1.body?.stored} Zeilen)`, p1.status === 200 && p1.body?.stored === 2);
     const p2 = await call('push_books', { items: [{ key: 'test|a', data: { title: 'A alt' }, changed_at: t1 }] });
-    step('Älterer Stand überschreibt nicht', p2.status === 200 && p2.body === 0);
+    step("Älterer Stand überschreibt nicht und bekommt den Serverstand zurück", p2.status === 200 && p2.body?.stored === 0 && p2.body?.rejected?.[0]?.data?.title === "A");
     const pull = await call('pull_books', { since: null });
     const a = pull.body?.items?.find((i) => i.key === 'test|a');
     step(`Bücher abholen (${pull.body?.items?.length} Einträge)`, pull.status === 200 && a?.data?.title === 'A' && pull.body.items.length === 2);

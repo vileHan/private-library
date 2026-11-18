@@ -791,3 +791,7 @@ body.mini-open { overflow: hidden; }
 .usage-table td { padding: 6px 4px; border-bottom: 1px solid var(--line); white-space: nowrap; }
 .usage-table .num { text-align: right; font-variant-numeric: tabular-nums; }
 .usage-table th:nth-child(n+2):nth-child(-n+5) { text-align: right; }
+.usage-table { font-size: .8rem; }
+.usage-table td.who { white-space: normal; word-break: break-word; max-width: 7.5em; }
+.usage-table th:nth-child(n+2):nth-child(-n+4) { text-align: right; }
+.usage-table th:nth-child(5) { text-align: left; }

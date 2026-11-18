@@ -69,7 +69,7 @@ try {
     const t = new Date().toISOString();
     const p = await rpc('push_books', { items: [{ key: 'test|x', data: { title: 'X', owned: true }, changed_at: t }] }, s.access_token);
     const q = await rpc('pull_books', { since: null }, s.access_token);
-    step('Abgleich mit neuem Konto', p.body === 1 && q.body?.items?.length === 1);
+    step('Abgleich mit neuem Konto', p.body?.stored === 1 && q.body?.items?.length === 1);
   }
 } catch (err) {
   step(`Selbsttest abgebrochen: ${err.message}`, false);

@@ -414,14 +414,22 @@ create index if not exists user_books_synced_idx on user_books (user_id, synced_
 alter table user_books enable row level security; -- keine Policy: nur über die Funktionen unten
 
 -- Änderungen eines Geräts hochladen: [{key, data, changed_at}, …]. Ältere Stände überschreiben nie neuere.
-create or replace function push_books(items jsonb) returns int
+-- Rückgabe (seit Prüfrunde 1, 18.11.2026): { stored, rejected: [{key, data, changed_at}] } – abgelehnte Einträge mit dem
+-- Stand des Servers, damit das Gerät ihn übernimmt (sonst liefen Geräte bei Uhrabweichung auseinander).
+drop function if exists push_books(jsonb) cascade;
+create function push_books(items jsonb) returns jsonb
 language plpgsql security definer
 set search_path = public
 as $$
-declare n int;
+declare n int; rej jsonb;
 begin
   if auth.uid() is null or not is_konto() then raise exception 'kein Konto'; end if;
   if jsonb_array_length(items) > 500 then raise exception 'zu viele Einträge auf einmal'; end if;
+  select coalesce(jsonb_agg(jsonb_build_object('key', b.key, 'data', b.data, 'changed_at', b.changed_at)), '[]'::jsonb) into rej
+  from jsonb_array_elements(items) i
+  join user_books b on b.user_id = auth.uid() and b.key = i ->> 'key'
+  where b.changed_at >= (i ->> 'changed_at')::timestamptz
+    and (b.changed_at <> (i ->> 'changed_at')::timestamptz or b.data is distinct from nullif(i -> 'data', 'null'::jsonb));
   insert into user_books as b (user_id, key, data, changed_at, synced_at)
   select auth.uid(), i ->> 'key', nullif(i -> 'data', 'null'::jsonb), (i ->> 'changed_at')::timestamptz, now()
   from jsonb_array_elements(items) i
@@ -431,7 +439,7 @@ begin
     set data = excluded.data, changed_at = excluded.changed_at, synced_at = now()
     where b.changed_at < excluded.changed_at;
   get diagnostics n = row_count;
-  return n;
+  return jsonb_build_object('stored', n, 'rejected', rej);
 end;
 $$;
 

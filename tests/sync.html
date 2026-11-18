@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Abgleich-Tests</title>
+  <style>
+    body { font: 15px/1.5 system-ui, sans-serif; margin: 16px; background: #fff; color: #222; }
+    li.ok::marker { content: "✓ "; color: #1a7f37; }
+    li.fail::marker { content: "✗ "; color: #b3261e; }
+    li.fail { color: #b3261e; }
+    small { color: #666; }
+  </style>
+</head>
+<body>
+  <!-- Abgleich-Tests (Konten, ANFORDERUNGEN K3/K6), 18.11.2026: Der Server (push_books/pull_books aus schema.sql) wird hier
+       im Speicher nachgebildet – es geht nichts an Supabase. Eigene Bücher, Einstellungen und Anmeldung dieses Browsers
+       werden vorher gesichert und danach wiederhergestellt. Ergebnis auch in window.__syncResults.
+       Aufruf: http://localhost:8080/tests/sync.html -->
+  <h1>Abgleich-Tests</h1>
+  <p id="status">Läuft …</p>
+  <ul id="list"></ul>
+  <script type="module">
+    const results = [];
+    const add = (name, ok, detail = '') => results.push({ name, ok: !!ok, detail });
+    const LS_KEYS = ['bibliothek-konto', 'bibliothek-abgleich', 'bibliothek-einstellungen', 'bibliothek-nutzung'];
+    const savedLs = Object.fromEntries(LS_KEYS.map((k) => [k, localStorage.getItem(k)]));
+
+    // ---------- nachgebildeter Server (wie push_books/pull_books in supabase/schema.sql) ----------
+    const server = new Map(); // key → { data, changed_at, synced_at }
+    let clock = Date.now();
+    const now = () => new Date((clock = Math.max(clock + 1, Date.now()))).toISOString();
+    const ms = (t) => Date.parse(t);
+    const same = (a, b) => JSON.stringify(sortKeys(a)) === JSON.stringify(sortKeys(b));
+    function sortKeys(v) {
+      if (Array.isArray(v)) return v.map(sortKeys);
+      if (v && typeof v === 'object') return Object.fromEntries(Object.keys(v).sort().map((k) => [k, sortKeys(v[k])]));
+      return v ?? null;
+    }
+    function push(items) {
+      const rejected = [];
+      let stored = 0;
+      for (const i of items) {
+        const b = server.get(i.key);
+        if (b && ms(b.changed_at) >= ms(i.changed_at)) {
+          if (ms(b.changed_at) !== ms(i.changed_at) || !same(b.data, i.data)) rejected.push({ key: i.key, data: b.data, changed_at: b.changed_at });
+          continue;
+        }
+        server.set(i.key, { data: i.data ?? null, changed_at: i.changed_at, synced_at: now() });
+        stored++;
+      }
+      return { stored, rejected };
+    }
+    function pull(since) {
+      return { now: now(), items: [...server].filter(([, b]) => !since || ms(b.synced_at) > ms(since)).map(([key, b]) => ({ key, data: b.data, changed_at: b.changed_at })) };
+    }
+    const realFetch = window.fetch.bind(window);
+    window.fetch = async (url, opts = {}) => {
+      const m = String(url).match(/\/rest\/v1\/rpc\/(push_books|pull_books|report_usage)$/);
+      if (!m) return realFetch(url, opts);
+      const body = JSON.parse(opts.body || '{}');
+      if (m[1] === 'report_usage') return new Response(null, { status: 204 });
+      return new Response(JSON.stringify(m[1] === 'push_books' ? push(body.items) : pull(body.since)), { status: 200 });
+    };
+
+    // ---------- eigene Daten sichern, Testanmeldung setzen ----------
+    const { store } = await import('../js/store.js');
+    const savedBooks = await store.getAll();
+    await store.clear();
+    for (const k of LS_KEYS) localStorage.removeItem(k);
+    localStorage.setItem('bibliothek-konto', JSON.stringify({ name: 'test', display: 'Test', userId: 'u', admin: false, konto: true, access: 'a', refresh: 'r', expiresAt: Date.now() + 3600e3 }));
+    const lib = await import('../js/library.js');
+    const sync = await import('../js/sync.js');
+    const { settings } = await import('../js/settings.js');
+    const { importJson } = await import('../js/store.js');
+    await lib.loadLibrary();
+    const work = (id, extra = {}) => ({ key: `testautor|${id}`, title: `Buch ${id}`, authors: ['Testautor'], authorSort: 'Testautor', isbns: [], ...extra });
+    const local = (id) => lib.library.byKey.get(`testautor|${id}`);
+    const srv = (id) => server.get(`testautor|${id}`);
+    const sleep = (t) => new Promise((r) => setTimeout(r, t));
+
+    try {
+      // 1. Eigene Änderung → Konto
+      await lib.updateEntry(work('a'), (e) => { e.owned = true; });
+      await sync.syncNow();
+      add('Eigene Änderung wird hochgeladen (K3)', srv('a')?.data?.owned === true && srv('a').changed_at === local('a').changedAt && !sync.hasPending());
+
+      // 2. Neuere Änderung eines anderen Geräts kommt an
+      server.set('testautor|a', { data: { ...srv('a').data, read: true }, changed_at: now(), synced_at: now() });
+      let n = await sync.syncNow();
+      add('Neuere Änderung eines anderen Geräts kommt an (K3)', local('a')?.read === true && n === 1, `übernommen: ${n}`);
+
+      // 3. Älterer Stand eines anderen Geräts überschreibt die eigene neuere Änderung nicht
+      await lib.updateEntry(local('a'), (e) => { e.notes = 'neu'; });
+      server.set('testautor|a', { data: { ...srv('a').data, notes: 'alt' }, changed_at: new Date(Date.now() - 60000).toISOString(), synced_at: now() });
+      await sync.syncNow();
+      add('Älterer Stand überschreibt neuere eigene Änderung nicht (K3)', local('a')?.notes === 'neu' && srv('a').data.notes === 'neu');
+
+      // 4. Löschung eines anderen Geräts kommt an
+      await lib.updateEntry(work('b'), (e) => { e.wish = true; });
+      await sync.syncNow();
+      await sleep(5);
+      server.set('testautor|b', { data: null, changed_at: now(), synced_at: now() });
+      await sync.syncNow();
+      add('Löschung eines anderen Geräts kommt an (K3)', !local('b'));
+
+      // 5. Eigene Löschung gelangt ins Konto
+      await lib.updateEntry(work('c'), (e) => { e.read = true; });
+      await sync.syncNow();
+      await lib.updateEntry(local('c'), (e) => { e.read = false; e.readAt = null; });
+      await sync.syncNow();
+      add('Eigene Löschung gelangt ins Konto (K3)', !local('c') && srv('c') && srv('c').data === null);
+
+      // 6. Auffrischen der Buchdaten ist keine eigene Änderung
+      await lib.refreshEntry(work('a', { title: 'Buch a (neuer Titel)', year: 2020 }));
+      add('Auffrischen der Buchdaten zählt nicht als Änderung (K3)', local('a').title === 'Buch a (neuer Titel)' && !sync.hasPending());
+
+      // 7. Uhrabweichung: Server hat (laut Uhr) neueren Stand, den das Abholen nicht mehr liefert → Ablehnung → Serverstand
+      server.set('testautor|a', { data: { ...srv('a').data, notes: 'vom Server' }, changed_at: new Date(Date.now() + 3600e3).toISOString(), synced_at: new Date(Date.now() - 3600e3).toISOString() });
+      await lib.updateEntry(local('a'), (e) => { e.notes = 'lokal'; });
+      await sync.syncNow();
+      add('Abgelehnte Änderung: Gerät übernimmt den Serverstand (K3)', local('a')?.notes === 'vom Server' && !sync.hasPending(), `lokal: ${local('a')?.notes}`);
+
+      // 8. Sicherung einspielen stellt ein im Konto gelöschtes Buch wieder her (auch kurz nach der Löschung)
+      server.set('testautor|d', { data: null, changed_at: new Date(Date.now() - 5000).toISOString(), synced_at: new Date(Date.now() - 3600e3).toISOString() }); // vor 5 s gelöscht
+      const backup = { app: 'private-library', version: 1, books: [{ ...work('d'), owned: true, addedAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-11-05T00:00:00.000Z' }] };
+      await importJson(JSON.stringify(backup));
+      await lib.loadLibrary();
+      sync.markAllDirty();
+      await sync.syncNow();
+      add('Sicherung einspielen stellt Buch auch im Konto wieder her (K3)', local('d')?.owned === true && srv('d')?.data?.owned === true);
+
+      // 9. Erste Anmeldung auf einem Gerät mit alten Einträgen: echte Konto-Änderung gewinnt, Lücken werden gefüllt
+      await sync.clearLocalAfterLogout();
+      server.clear(); // neues Konto-Szenario: nur das, was unten im Konto liegt
+      server.set('testautor|e', { data: { ...work('e'), read: true, rating: 4, notes: 'im Konto' }, changed_at: '2026-11-15T10:00:00.000Z', synced_at: now() });
+      await store.putRaw({ ...work('e'), read: false, notes: 'alter Gerätestand', addedAt: '2026-03-01T00:00:00.000Z', updatedAt: new Date().toISOString() }); // vor den Konten, heute aufgefrischt
+      await store.putRaw({ ...work('f'), owned: true, addedAt: '2026-04-01T00:00:00.000Z', updatedAt: new Date().toISOString() });
+      settings.set('shelves', ['Urlaub']);
+      server.set('~einstellungen', { data: { shelves: ['Krimis'], readingGoals: { 2026: 12 }, gift: { n: 'Anna', m: 'Hallo', c: 'rosa', v: 'Test' }, giftSeen: true }, changed_at: '2026-11-10T00:00:00.000Z', synced_at: now() });
+      await lib.loadLibrary();
+      const res = await sync.firstSync();
+      add('Erste Anmeldung: Konto-Änderung schlägt alten, aufgefrischten Gerätestand (K3)', local('e')?.read === true && local('e')?.notes === 'im Konto' && srv('e').data.notes === 'im Konto', `lokal: ${local('e')?.notes}`);
+      add('Erste Anmeldung: Bücher nur auf dem Gerät kommen ins Konto (K3)', srv('f')?.data?.owned === true);
+      add('Erste Anmeldung: Zählung „aus dem Konto geladen“ ohne eigene Bücher (K3)', res.fromAccount === 2 && res.fromDevice === 2, `fromAccount ${res.fromAccount} (erwartet 2: Buch e + Einstellungen), fromDevice ${res.fromDevice}`);
+      await sync.syncNow();
+      const sh = settings.get('shelves', []);
+      add('Erste Anmeldung: Regale zusammengeführt, Jahresziel übernommen (K3)', sh.includes('Urlaub') && sh.includes('Krimis') && settings.get('readingGoals', {})[2026] === 12 && server.get('~einstellungen').data.shelves.includes('Urlaub'));
+      add('Geschenk kommt aufs neue Gerät, Gruß gilt als gesehen (K6)', settings.get('gift', null)?.n === 'Anna' && settings.get('giftSeen', false) === true && settings.get('accent') === 'rosa');
+
+      // 10. Abmelden: Bücher/Regale weg, Geschenk bleibt
+      await sync.clearLocalAfterLogout();
+      add('Abmelden entfernt Bücher und Regale, Geschenk bleibt (K3, K6)', lib.library.byKey.size === 0 && settings.get('shelves', []).length === 0 && settings.get('gift', null)?.n === 'Anna');
+    await sleep(1800); // geplante Abgleiche (1,5 s) noch gegen den nachgebildeten Server laufen lassen
+    } catch (err) {
+      add(`Abbruch: ${err.message}`, false);
+    } finally {
+      // eigene Daten zurück
+      await store.clear();
+      for (const b of savedBooks) await store.putRaw(b);
+      for (const [k, v] of Object.entries(savedLs)) v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v);
+      window.fetch = realFetch;
+    }
+
+    const failed = results.filter((r) => !r.ok).length;
+    document.getElementById('status').textContent = failed ? `${failed} von ${results.length} Tests fehlgeschlagen` : `Alle ${results.length} Tests bestanden`;
+    document.getElementById('list').replaceChildren(...results.map((r) => {
+      const li = document.createElement('li');
+      li.className = r.ok ? 'ok' : 'fail';
+      li.textContent = r.name;
+      if (r.detail) { const s = document.createElement('small'); s.textContent = ` – ${r.detail}`; li.append(s); }
+      return li;
+    }));
+    window.__syncResults = results;
+  </script>
+</body>
+</html>

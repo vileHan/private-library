@@ -779,4 +779,6 @@ onSync(({ changed, giftChanged }) => {
 });
 if (account.loggedIn) syncNow().catch(() => {});
 // Einladungs-Link …/#einladung-<code>: gleich das Formular „Konto erstellen“ zeigen
-startInvite().then((show) => { if (show) showView('settings'); }).catch(() => {});
+const openInvite = () => startInvite().then((show) => { if (show) showView('settings'); }).catch(() => {});
+openInvite();
+window.addEventListener('hashchange', openInvite); // Link in schon offener App (nur Raute geändert)

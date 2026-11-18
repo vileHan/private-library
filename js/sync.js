@@ -12,6 +12,7 @@ import { deviceId, recentDays } from './usage.js';
 
 const KEY = 'bibliothek-abgleich';
 const SETTINGS_KEY = '~einstellungen';
+const EPOCH = new Date(0).toISOString();
 const SYNCED_SETTINGS = ['shelves', 'readingGoals', 'gift', 'giftSeen'];
 const listeners = new Set();
 
@@ -53,7 +54,9 @@ settings.onSet((name) => {
 export function markAllDirty() {
   const s = load();
   s.dirty = { ...(s.dirty || {}) };
-  for (const e of library.byKey.values()) s.dirty[e.key] ??= e.changedAt || e.updatedAt || e.addedAt || new Date(0).toISOString();
+  // Ohne changedAt (Einträge von vor den Konten) zählt der Zeitpunkt des Hinzufügens: Er füllt Lücken im Konto, gewinnt aber
+  // nicht gegen spätere echte Änderungen. updatedAt taugt nicht – das setzt auch das Auffrischen der Buchdaten (Prüfrunde 1).
+  for (const e of library.byKey.values()) s.dirty[e.key] ??= e.changedAt || e.addedAt || EPOCH;
   save(s);
 }
 
@@ -83,28 +86,40 @@ async function doSync() {
     const dirty = { ...(state.dirty || {}) };
     const items = Object.entries(dirty).map(([key, changedAt]) => ({ key, data: packEntry(library.byKey.get(key)), changed_at: changedAt }));
     if (state.settingsDirty) items.push({ key: SETTINGS_KEY, data: packSettings(), changed_at: state.settingsDirty });
-    for (let i = 0; i < items.length; i += 200) await accountRpc('push_books', { items: items.slice(i, i + 200) });
+    const rejected = [];
+    let settingsSeen = null; // schon über die Ablehnung übernommen → beim Abholen nicht doppelt zählen
+    for (let i = 0; i < items.length; i += 200) {
+      const r = await accountRpc('push_books', { items: items.slice(i, i + 200) });
+      rejected.push(...(r?.rejected || []));
+    }
     // Erledigt – außer was sich während des Hochladens schon wieder geändert hat
     const after = load();
     for (const [key, t] of Object.entries(dirty)) if (after.dirty?.[key] === t) delete after.dirty[key];
-    if (after.settingsDirty === state.settingsDirty) delete after.settingsDirty;
+    if (state.settingsDirty && after.settingsDirty === state.settingsDirty) {
+      after.settingsTime = state.settingsDirty; // eigener Stand – kommt beim Abholen nur zurück
+      delete after.settingsDirty;
+    }
     save(after);
+
+    // Abgelehnt = Server hat einen neueren (oder gleich alten, anderen) Stand → den übernehmen (Prüfrunde 1: sonst
+    // blieben Geräte bei Uhrabweichung oder nach dem Cursor-Fenster dauerhaft verschieden)
+    for (const item of rejected) {
+      if (item.key === SETTINGS_KEY) { settingsSeen = item.changed_at; if (applySettings(item, first, true)) changed++; continue; }
+      if (ms(item.changed_at) < ms(load().dirty?.[item.key])) continue; // inzwischen schon wieder geändert
+      if (await applyRemote(item)) changed++;
+    }
 
     // 2. Abholen (30 s Überlappung: Änderungen, die gerade parallel gespeichert wurden, nicht verpassen)
     const since = state.cursor ? new Date(ms(state.cursor) - 30_000).toISOString() : null;
     const res = await accountRpc('pull_books', { since });
     const pending = load().dirty || {};
     for (const item of res.items || []) {
-      if (item.key === SETTINGS_KEY) { if (applySettings(item, first)) changed++; continue; }
+      if (item.key === SETTINGS_KEY) { if (ms(item.changed_at) !== ms(settingsSeen) && applySettings(item, first)) changed++; continue; }
       const local = library.byKey.get(item.key);
-      const localTime = Math.max(ms(local?.changedAt), ms(pending[item.key]));
+      // dirty[key]: gerade selbst hochgeladen – das kommt hier nur zurück und ist keine Änderung aus dem Konto
+      const localTime = Math.max(ms(local?.changedAt), ms(pending[item.key]), ms(dirty[item.key]));
       if (ms(item.changed_at) <= localTime) continue; // eigener Stand ist neuer oder gleich
-      if (item.data == null) {
-        if (local) { await store.remove(item.key); changed++; }
-      } else {
-        await store.putRaw({ ...item.data, key: item.key, changedAt: item.changed_at, updatedAt: new Date().toISOString() });
-        changed++;
-      }
+      if (await applyRemote(item)) changed++;
     }
     const done = load();
     done.cursor = res.now;
@@ -119,6 +134,21 @@ async function doSync() {
     listeners.forEach((fn) => fn({ changed, error }));
     throw error;
   }
+}
+
+/** Stand vom Server aufs Gerät übernehmen (Buch speichern oder löschen). true = etwas geändert. */
+async function applyRemote(item) {
+  const local = library.byKey.get(item.key);
+  if (item.data == null) {
+    if (!local) return false;
+    await store.remove(item.key);
+    library.byKey.delete(item.key);
+    return true;
+  }
+  const entry = { ...item.data, key: item.key, changedAt: item.changed_at, updatedAt: new Date().toISOString() };
+  await store.putRaw(entry);
+  library.byKey.set(item.key, entry);
+  return true;
 }
 
 /** Eintrag für den Server: ohne Felder, die nur dieses Gerät betreffen. */
@@ -139,10 +169,10 @@ function packSettings() {
 
 let giftChanged = false;
 /** Einstellungen vom Konto übernehmen. Bei der ersten Anmeldung zusammenführen statt ersetzen. */
-function applySettings(item, first) {
+function applySettings(item, first, force = false) {
   const s = load();
   const data = item.data || {};
-  if (!first && ms(item.changed_at) <= ms(s.settingsDirty || s.settingsTime)) return false;
+  if (!first && !force && ms(item.changed_at) <= ms(s.settingsDirty || s.settingsTime)) return false;
   applyingRemote = true;
   try {
     const shelves = Array.isArray(data.shelves) ? data.shelves.filter((x) => typeof x === 'string') : [];
