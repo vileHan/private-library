@@ -138,7 +138,7 @@
       await store.putRaw({ ...work('f'), owned: true, addedAt: '2026-04-01T00:00:00.000Z', updatedAt: new Date().toISOString() });
       settings.set('shelves', ['Urlaub']);
       const field = (f, v, t = '2026-11-10T00:00:00.000Z') => server.set(`~einstellungen.${f}`, { data: { v }, changed_at: t, synced_at: now() });
-      field('shelves', ['Krimis']); field('readingGoals', { 2026: 12 }); field('gift', { n: 'Anna', m: 'Hallo', c: 'rosa', v: 'Test' }); field('giftSeen', true);
+      field('shelves', ['Krimis']); field('readingGoals', { 2026: 12 }); field('gift', { n: 'Anna', m: 'Hallo', c: 'rosa', v: 'Test' }); field('giftSeen', true); field('libraryName', 'Annas Krimiecke');
       await lib.loadLibrary();
       const res = await sync.firstSync();
       add('Erste Anmeldung: Konto-Änderung schlägt alten, aufgefrischten Gerätestand (K3)', local('e')?.read === true && local('e')?.notes === 'im Konto' && srv('e').data.notes === 'im Konto', `lokal: ${local('e')?.notes}`);
@@ -148,6 +148,7 @@
       const sh = settings.get('shelves', []);
       add('Erste Anmeldung: Regale zusammengeführt, Jahresziel übernommen (K3)', sh.includes('Urlaub') && sh.includes('Krimis') && settings.get('readingGoals', {})[2026] === 12 && server.get('~einstellungen.shelves').data.v.includes('Urlaub'));
       add('Geschenk kommt aufs neue Gerät, Gruß gilt als gesehen (K6)', settings.get('gift', null)?.n === 'Anna' && settings.get('giftSeen', false) === true && settings.get('accent') === 'rosa');
+      add('Name der Bibliothek kommt aus dem Konto aufs neue Gerät (K7)', settings.get('libraryName', '') === 'Annas Krimiecke');
 
       // 11. Veraltetes Gerät (Prüfrunde 2): ohne Geschenk, hat lange nicht abgeholt, legt ein Regal an. Inzwischen hat ein
       // anderes Gerät ein Geschenk und ein Regal ins Konto gebracht → nichts davon darf verloren gehen.
@@ -168,7 +169,7 @@
 
       // 10. Abmelden: Bücher/Regale weg, Geschenk bleibt
       await sync.clearLocalAfterLogout();
-      add('Abmelden entfernt Bücher und Regale, Geschenk bleibt (K3, K6)', lib.library.byKey.size === 0 && settings.get('shelves', []).length === 0 && settings.get('gift', null)?.n === 'Berta');
+      add('Abmelden entfernt Bücher, Regale und Bibliotheksnamen, Geschenk bleibt (K3, K6, K7)', lib.library.byKey.size === 0 && settings.get('shelves', []).length === 0 && settings.get('libraryName', '') === '' && settings.get('gift', null)?.n === 'Berta');
 
       // 12. Erneut anmelden mit veraltetem Geschenk (Prüfrunde 3): inzwischen hat ein anderes Gerät ein neueres gesetzt
       await sleep(5);

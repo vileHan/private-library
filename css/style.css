@@ -796,3 +796,74 @@ body.mini-open { overflow: hidden; }
 .usage-table th:nth-child(n+2):nth-child(-n+4) { text-align: right; }
 .usage-table th:nth-child(5) { text-align: left; }
 .usage-table .usage-30 { display: block; color: var(--muted); font-size: .72rem; white-space: nowrap; }
+
+/* Konto, Feinschliff (19.11.2026): Kopf mit Anfangsbuchstabe, Status mit Punkt, Name der Bibliothek */
+.konto-head { display: flex; align-items: center; gap: 12px; margin: 6px 0 12px; }
+.konto-avatar {
+  flex: none; width: 46px; height: 46px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--accent); color: var(--accent-text); font: 600 1.25rem/1 var(--serif, Georgia, serif);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+.konto-who { display: flex; flex-direction: column; min-width: 0; }
+.konto-label { color: var(--muted); font-size: .75rem; letter-spacing: .02em; }
+.konto-name { font-size: 1.1rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.konto-sync { color: var(--muted); font-size: .8rem; display: inline-flex; align-items: center; gap: 6px; margin-top: 2px; }
+.konto-sync::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: #3a9d5d; }
+.konto-sync.waiting::before { background: #d39b2a; }
+.konto-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 10px 12px; border-radius: 10px; background: color-mix(in srgb, var(--accent-soft) 55%, transparent);
+}
+.konto-row > div { display: flex; flex-direction: column; min-width: 0; }
+.konto-libname { font-family: var(--serif, inherit); font-size: 1rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.konto .konto-small {
+  flex: none; font: inherit; font-size: .85rem; padding: 6px 12px; border-radius: 999px;
+  border: 1px solid var(--accent); background: transparent; color: var(--accent); cursor: pointer;
+}
+.konto-explain { margin: 6px 2px 4px; }
+.konto .data-actions { margin-top: 14px; }
+.konto-switch { margin: 10px 0 0; }
+
+/* Name der Bibliothek in der Kopfleiste ist antippbar */
+.top h1.lib-title { cursor: pointer; -webkit-tap-highlight-color: transparent; border-radius: 6px; }
+.top h1.lib-title:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+
+/* Fenster „Name der Bibliothek“ */
+.rename-dialog { position: fixed; inset: 0; z-index: 65; display: grid; place-items: center; padding: 20px; background: rgba(0, 0, 0, .38); animation: fade-in .15s ease; }
+.rename-box {
+  width: min(380px, 100%); background: var(--surface); color: var(--text); border-radius: 16px; padding: 18px 18px 14px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, .25); display: flex; flex-direction: column; gap: 10px;
+}
+.rename-box h2 { margin: 0; font-size: 1.05rem; }
+.rename-note { margin: 0; color: var(--muted); font-size: .85rem; }
+.rename-box input { font: inherit; font-size: 16px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); color: var(--text); }
+.rename-box input:focus { outline: 2px solid var(--accent); border-color: transparent; }
+.rename-actions { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
+.rename-actions .spacer { flex: 1; }
+.rename-actions button.primary, .rename-actions button.ghost {
+  font: inherit; padding: 8px 14px; border-radius: 999px; border: 1px solid var(--accent); cursor: pointer;
+}
+.rename-actions .primary { background: var(--accent); color: var(--accent-text); }
+.rename-actions .ghost { background: transparent; color: var(--accent); }
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+
+/* Hinweis „Als App auf den Home-Bildschirm“ – bleibt über der Reiterleiste stehen, bis „Verstanden“ */
+.install-hint {
+  position: fixed; left: 12px; right: 12px; z-index: 35;
+  bottom: calc(68px + env(safe-area-inset-bottom));
+  max-width: 460px; margin: 0 auto; padding: 14px 16px 12px;
+  background: var(--surface); color: var(--text); border: 1px solid var(--line); border-radius: 16px;
+  box-shadow: 0 10px 32px rgba(0, 0, 0, .22); animation: install-in .25s ease;
+}
+.install-head { display: flex; align-items: center; gap: 10px; }
+.install-ico { font-size: 1.4rem; }
+.install-hint h2 { margin: 0; font-size: 1rem; }
+.install-hint ol { margin: 8px 0 6px; padding-left: 1.3em; font-size: .92rem; }
+.install-hint li { margin: 3px 0; }
+.install-note { margin: 4px 0 8px; color: var(--muted); font-size: .82rem; }
+.install-ok {
+  display: block; margin-left: auto; font: inherit; padding: 7px 16px; border-radius: 999px;
+  border: 0; background: var(--accent); color: var(--accent-text); cursor: pointer;
+}
+@keyframes install-in { from { transform: translateY(12px); opacity: 0; } to { transform: none; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .install-hint, .rename-dialog { animation: none; } }

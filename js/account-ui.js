@@ -5,6 +5,8 @@ import { account, login, logout, changePassword, accountRpc, register, inviteFro
 import { syncNow, syncState, firstSync, hasPending, clearLocalAfterLogout } from './sync.js';
 import { library } from './library.js';
 import { settings } from './settings.js';
+import { currentTitle, openRename, libraryTitle, applyLibraryTitle } from './libname.js';
+import { showInstallHint, isStandalone } from './install.js';
 
 const FREE_BYTES = 5 * 1024 ** 3; // Supabase Gratis-Tarif: 5 GB Datenverkehr im Monat
 
@@ -26,16 +28,21 @@ export function renderAccount(box, rerender) {
   box.replaceChildren(el('h2', { text: 'Konto' }));
   if (!account.loggedIn) return pendingInvite ? renderRegister(box, rerender) : renderLogin(box, rerender);
 
-  const status = el('p', { class: 'konto-status' });
+  // Kopf (19.11.2026): Anfangsbuchstabe im Kreis, Name, Abgleich-Status mit Punkt
+  const status = el('span', { class: 'konto-sync' });
   const showStatus = (text) => {
     const s = syncState();
-    status.replaceChildren(
-      el('span', {}, 'Angemeldet als ', el('strong', { text: account.name })),
-      el('span', { class: 'konto-sub', text: text || `Zuletzt abgeglichen: ${when(s.lastSync)}${hasPending() ? ' · Änderungen warten' : ''}` }),
-    );
+    const waiting = hasPending();
+    status.className = `konto-sync${waiting ? ' waiting' : ''}`;
+    status.textContent = text || (waiting ? 'Änderungen warten auf den Abgleich' : `Abgeglichen ${when(s.lastSync)}`);
   };
   showStatus();
-  box.append(status);
+  box.append(el('div', { class: 'konto-head' },
+    el('span', { class: 'konto-avatar', 'aria-hidden': 'true', text: (account.name.trim()[0] || '?').toUpperCase() }),
+    el('div', { class: 'konto-who' },
+      el('span', { class: 'konto-label', text: 'Angemeldet als' }),
+      el('strong', { class: 'konto-name', text: account.name }),
+      status)));
 
   if (account.expired) {
     box.append(el('p', { class: 'konto-hint', text: 'Die Anmeldung ist abgelaufen (z. B. neues Passwort). Bitte melde dich neu an – deine Bücher bleiben auf diesem Gerät.' }));
@@ -72,10 +79,19 @@ export function renderAccount(box, rerender) {
         if (!window.confirm(`Abmelden? Deine Bücher bleiben im Konto gespeichert und werden von diesem Gerät entfernt.${pendingNote}`)) return;
         await logout();
         await clearLocalAfterLogout();
+        applyLibraryTitle();
         rerender();
       },
     }));
+  // Name der Bibliothek (Kopfleiste) – getrennt vom Benutzernamen
+  box.append(el('div', { class: 'konto-row' },
+    el('div', {},
+      el('span', { class: 'konto-label', text: 'Name der Bibliothek' }),
+      el('strong', { class: 'konto-libname', text: currentTitle() })),
+    el('button', { type: 'button', class: 'konto-small', text: 'Ändern', onclick: openRename })),
+  el('p', { class: 'konto-sub konto-explain', text: 'Du kannst den Namen auch oben in der Kopfleiste antippen. Das ändert nur, wie deine Bibliothek heißt – dein Benutzername zum Anmelden bleibt gleich.' }));
   box.append(actions);
+  box.append(el('p', { class: 'konto-switch' }, el('button', { type: 'button', class: 'link-btn', text: '📲 Als App auf den Home-Bildschirm – so geht’s ›', onclick: showInstallHint })));
 
   // Passwort ändern (autocomplete="new-password": Schlüsselbund bietet ein sicheres Passwort an und speichert es)
   const user = el('input', { type: 'text', name: 'username', autocomplete: 'username', value: account.name, hidden: true });
@@ -123,6 +139,7 @@ function renderLogin(box, rerender, presetName = '') {
     type: 'button', class: 'link-btn', text: 'Ich habe eine Einladung – Konto erstellen ›',
     onclick: () => { pendingInvite = { code: '', status: 'eingeben' }; rerender(); },
   })));
+  box.append(el('p', { class: 'konto-switch' }, el('button', { type: 'button', class: 'link-btn', text: '📲 Als App auf den Home-Bildschirm – so geht’s ›', onclick: showInstallHint })));
 }
 
 /** Nach Anmelden/Erstellen: Bücher abgleichen, neu zeichnen, kurze Meldung. */
@@ -130,6 +147,9 @@ async function afterLogin(msg, rerender, hello) {
   msg.textContent = 'Angemeldet – gleiche Bücher ab …';
   const { fromAccount, fromDevice } = await firstSync();
   settings.set('libSeen', [...library.byKey.values()].filter((e) => e.owned).map((e) => e.key)); // nichts als „neu“ zählen
+  // Bibliothek nach dem Benutzernamen benennen – außer es gibt schon einen Namen (aus dem Konto) oder ein Geschenk
+  if (!settings.get('libraryName', '') && !settings.get('gift', null)) settings.set('libraryName', libraryTitle(account.name));
+  if (!isStandalone()) showInstallHint(); // bleibt stehen, bis „Verstanden“ getippt wird
   pendingInvite = null;
   if (inviteFromUrl()) history.replaceState(history.state, '', location.pathname + location.search); // Link ist verbraucht
   rerender();

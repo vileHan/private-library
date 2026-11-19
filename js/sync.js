@@ -16,7 +16,7 @@ import { deviceId, recentDays } from './usage.js';
 const KEY = 'bibliothek-abgleich';
 const FIELD_PREFIX = '~einstellungen.';
 const EPOCH = new Date(0).toISOString();
-const FIELDS = { shelves: [], readingGoals: {}, gift: null, giftSeen: false }; // Feld → Standardwert
+const FIELDS = { shelves: [], readingGoals: {}, gift: null, giftSeen: false, libraryName: '' }; // Feld → Standardwert (libraryName = Name in der Kopfleiste, 19.11.2026)
 const listeners = new Set();
 
 function load() {
@@ -233,6 +233,7 @@ function clean(f, v) {
   if (f === 'shelves') return Array.isArray(v) ? v.filter((x) => typeof x === 'string') : [];
   if (f === 'readingGoals') return v && typeof v === 'object' && !Array.isArray(v) ? v : {};
   if (f === 'gift') return v && typeof v.n === 'string' ? v : null;
+  if (f === 'libraryName') return typeof v === 'string' ? v.slice(0, 40) : '';
   return !!v;
 }
 
@@ -253,6 +254,7 @@ function merge(f, base, mine, remote, firstLogin = false) {
     return out;
   }
   if (f === 'giftSeen') return mine || remote;
+  if (f === 'libraryName') return firstLogin ? (remote || mine) : mine; // bei der Anmeldung gewinnt ein Name aus dem Konto
   // Geschenk: die eigene, ausdrückliche Änderung gilt (Link geöffnet oder „entfernen“). Bei der Anmeldung gewinnt ein
   // Geschenk im Konto – sonst setzte ein Gerät mit veraltetem Geschenk es im ganzen Konto zurück (Prüfrunde 3).
   return firstLogin ? (remote ?? mine) : mine;
@@ -301,6 +303,7 @@ export async function clearLocalAfterLogout() {
   try {
     settings.set('shelves', []);
     settings.set('readingGoals', {});
+    settings.set('libraryName', ''); // gehört zum Konto
     settings.set('libSeen', []);
   } finally {
     applyingRemote = false;

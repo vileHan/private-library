@@ -67,7 +67,7 @@ Commits laufen mit der GitHub-noreply-Adresse (in der lokalen Git-Konfiguration 
   🔍 Prüfung: Stufe N, X Runden, Ergebnis
   ```
   Leere Zeilen weglassen.
-- **Tests**: `tests/index.html` (Katalog, 46), `tests/ui.html` (Oberfläche in 360 px, 49; eigene Daten bleiben unberührt, ein Testeintrag wird wieder gelöscht) und `tests/sync.html` (Konten-Abgleich gegen einen nachgebildeten Server, 18; eigene Daten werden gesichert und wiederhergestellt).
+- **Tests**: `tests/index.html` (Katalog, 46), `tests/ui.html` (Oberfläche in 360 px, 49; eigene Daten bleiben unberührt, ein Testeintrag wird wieder gelöscht) und `tests/sync.html` (Konten-Abgleich gegen einen nachgebildeten Server, 19; eigene Daten werden gesichert und wiederhergestellt).
 - **Prüf-Stempel** `tools/pruefstempel.ps1` (Hash über js, css, index.html, sw.js, supabase, scripts, tests, Workflows; Doku zählt nicht) → `.claude/pruefung.json` (nicht im Repository).
 - **Stop-Hook** (`.claude/settings.json` → `.claude/hooks/stop-pruefung.ps1`): Ist der Stand ungeprüft, hält er Claude vor dem Beenden einer Antwort **einmal** an und fordert die Prüfung. Beim zweiten Mal lässt er durch (keine Endlosschleife). Ausnahme: Arbeit läuft noch (z. B. Import) oder reine Frage – kurz begründen.
 
@@ -267,3 +267,6 @@ Ziel: Die Daten werden **einmal aufbereitet** und nicht bei jeder Suche neu.
 - **Datennutzung** (`js/usage.js`): zählt Antworttext + ~300 Byte je Supabase-Abruf je Tag/Gerät (localStorage `bibliothek-nutzung`), meldet höchstens alle 10 Min. (`report_usage`); Übersicht `usage_overview`/`usage_by_day` nur für Verwalter. Cover/DNB zählen nicht. Obergrenze grob: ~50 Personen sicher, bis ~100 (5 GB/Monat).
 - **Passwort zurücksetzen / Konto löschen**: Workflow „Konten verwalten“ mit Secret `KONTEN` = `{ "Anna": { "pw": "neu" }, "Alt": null }` (Passwort wird nur gesetzt, wenn es sich im Secret geändert hat). Eingabe `loeschen` nur für Testkonten (öffentliches Log). Selbsttests in beiden Workflows (Wegwerf-Konto).
 - Prüfkonten nach dem Test löschen (Workflow „Konten verwalten“, Eingabe `loeschen`); für neue Prüfungen eine Test-Einladung erzeugen.
+- **Name der Bibliothek** (19.11.2026, K7, `js/libname.js`): Kopfleiste = settings `libraryName` (Feld im Abgleich, reist mit dem Konto) → sonst Geschenk („Annas Bibliothek“) → „Meine Bibliothek“. Erste Anmeldung setzt „<Benutzername>s Bibliothek“, wenn weder Kontoname noch Geschenk da ist. Name antippen = Fenster zum Umbenennen (ändert nicht den Benutzernamen). Abmelden setzt ihn auf dem Gerät zurück.
+- **App-Hinweis** (`js/install.js`): nach der ersten Anmeldung im Browser (nicht in der installierten App) eine Karte über der Reiterleiste mit Schritten für iPhone/Android, bleibt bis „Verstanden“ (settings `installHint`, pro Gerät), unter Einstellungen → Konto wieder aufrufbar.
+- **Konto-Ansicht**: Kopf mit Anfangsbuchstabe im Kreis, Name, Abgleich-Status (grüner/gelber Punkt), Zeile „Name der Bibliothek · Ändern“ mit Erklärung.

@@ -18,6 +18,8 @@ import { registerBack, enterLevel, goBack, attachEdgeSwipe, currentDepth, rewind
 import { account } from './account.js';
 import { syncNow, onSync, markAllDirty, scheduleSync } from './sync.js';
 import { renderAccount, renderUsage, startInvite } from './account-ui.js';
+import { initLibraryTitle } from './libname.js';
+import { initInstallHint } from './install.js';
 
 // Abzeichen an „Meine Bücher“ (13.11.2026): zählt nur Bücher, die seit dem letzten Besuch von „Meine Bücher“ neu als
 // „Besitze“ markiert wurden – wie ein „Neu“-Hinweis. Beim Öffnen von „Meine Bücher“ verschwindet es. Gemerkt wird die
@@ -253,7 +255,7 @@ clearBtn.addEventListener('click', () => {
 document.addEventListener('touchstart', (ev) => {
   const a = document.activeElement;
   if (!a || !a.matches?.('input[type="search"], input[type="text"], textarea')) return;
-  const frame = a.closest('.search-wrap, .searchbar, .tags-edit, .konto-form') || a;
+  const frame = a.closest('.search-wrap, .searchbar, .tags-edit, .konto-form, .rename-box') || a;
   if (frame.contains(ev.target)) return;
   ignoreScrollBriefly();
   a.blur();
@@ -751,6 +753,8 @@ refreshAllFromDb((keys) => catalog.worksByKeys(keys)).then((n) => {
 
 // Darstellung und Geschenk (10.11.2026)
 applyTheme();
+initLibraryTitle(); // Name in der Kopfleiste antippbar (19.11.2026)
+initInstallHint(); // noch nicht weggeklickter App-Hinweis
 initGift();
 attachEdgeSwipe(); // Wischen vom linken Rand = zurück (nur installierte iPhone-App; sonst hat das System eine Geste)
 function renderSettings() {

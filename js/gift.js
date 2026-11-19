@@ -9,6 +9,7 @@ import { el } from './util.js';
 import { ACCENTS, applyTheme } from './theme.js';
 import { CONFIG } from './config.js';
 import { readJson } from './usage.js';
+import { applyLibraryTitle } from './libname.js';
 
 export function encodeGift(data) {
   const b = btoa(unescape(encodeURIComponent(JSON.stringify(data))));
@@ -47,7 +48,7 @@ export async function giftFromCode(code) {
 }
 
 /** „Anna“ → „Annas Bibliothek“, „Klaus“ → „Klaus’ Bibliothek“ */
-export const libraryTitle = (name) => `${name}${/[sßxz]$/i.test(name) ? '’' : 's'} Bibliothek`;
+export { libraryTitle } from './libname.js';
 
 export const giftData = () => settings.get('gift', null);
 
@@ -76,10 +77,7 @@ export async function initGift() {
 function showGift() {
   const gift = giftData();
   if (!gift) return;
-  const title = libraryTitle(gift.n);
-  const h1 = document.querySelector('.top h1');
-  if (h1) h1.textContent = title;
-  document.title = title;
+  applyLibraryTitle();
   // 🎂 in der Kopfleiste: Gruß jederzeit erneut abspielen (gibt es nur, wenn die App über einen Geschenk-Link kam)
   const actions = document.querySelector('.top-actions');
   if (actions && !document.getElementById('giftBtn')) {
@@ -135,9 +133,7 @@ export function clearGift() {
   settings.set('gift', null);
   settings.set('giftSeen', false);
   if (/[#&]g=|^#fuer-/.test(location.hash)) history.replaceState(null, '', location.pathname + location.search);
-  const h1 = document.querySelector('.top h1');
-  if (h1) h1.textContent = 'Meine Bibliothek';
-  document.title = 'Meine Bibliothek';
+  applyLibraryTitle();
   document.getElementById('giftBtn')?.remove();
 }
 
@@ -237,7 +233,5 @@ export function refreshGift() {
   applyTheme();
   if (giftData()) { showGift(); return; }
   document.getElementById('giftBtn')?.remove();
-  const h1 = document.querySelector('.top h1');
-  if (h1) h1.textContent = 'Meine Bibliothek';
-  document.title = 'Meine Bibliothek';
+  applyLibraryTitle();
 }
