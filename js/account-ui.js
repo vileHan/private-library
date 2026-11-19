@@ -143,12 +143,13 @@ function renderLogin(box, rerender, presetName = '') {
 }
 
 /** Nach Anmelden/Erstellen: Bücher abgleichen, neu zeichnen, kurze Meldung. */
-async function afterLogin(msg, rerender, hello) {
+async function afterLogin(msg, rerender, hello, isNew = false) {
   msg.textContent = 'Angemeldet – gleiche Bücher ab …';
   const { fromAccount, fromDevice } = await firstSync();
   settings.set('libSeen', [...library.byKey.values()].filter((e) => e.owned).map((e) => e.key)); // nichts als „neu“ zählen
-  // Bibliothek nach dem Benutzernamen benennen – außer es gibt schon einen Namen (aus dem Konto) oder ein Geschenk
-  if (!settings.get('libraryName', '') && !settings.get('gift', null)) settings.set('libraryName', libraryTitle(account.name));
+  // Neues Konto: Bibliothek nach dem Benutzernamen benennen – außer das Gerät hat schon einen Namen oder ein Geschenk.
+  // Nur beim Erstellen, nicht bei jeder Anmeldung: sonst käme ein bewusst auf „Standard“ gesetzter Name zurück.
+  if (isNew && !settings.get('libraryName', '') && !settings.get('gift', null)) settings.set('libraryName', libraryTitle(account.name));
   if (!isStandalone()) showInstallHint(); // bleibt stehen, bis „Verstanden“ getippt wird
   pendingInvite = null;
   if (inviteFromUrl()) history.replaceState(history.state, '', location.pathname + location.search); // Link ist verbraucht
@@ -202,7 +203,7 @@ function renderRegister(box, rerender) {
     msg.textContent = 'Erstelle Konto …';
     try {
       await register(code.value, name.value, pw1.value);
-      await afterLogin(msg, rerender, `Willkommen, ${account.name}! Dein Konto ist fertig.`);
+      await afterLogin(msg, rerender, `Willkommen, ${account.name}! Dein Konto ist fertig.`, true);
     } catch (err) {
       msg.textContent = err.message;
       submit.disabled = false;

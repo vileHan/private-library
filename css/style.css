@@ -829,7 +829,7 @@ body.mini-open { overflow: hidden; }
 .top h1.lib-title:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
 
 /* Fenster „Name der Bibliothek“ */
-.rename-dialog { position: fixed; inset: 0; z-index: 65; display: grid; place-items: center; padding: 20px; background: rgba(0, 0, 0, .38); animation: fade-in .15s ease; }
+.rename-dialog { position: fixed; inset: 0; z-index: 65; display: grid; grid-template-columns: minmax(0, 1fr); place-items: center; padding: 20px; background: rgba(0, 0, 0, .38); animation: fade-in .15s ease; }
 .rename-box {
   width: min(380px, 100%); background: var(--surface); color: var(--text); border-radius: 16px; padding: 18px 18px 14px;
   box-shadow: 0 12px 40px rgba(0, 0, 0, .25); display: flex; flex-direction: column; gap: 10px;
@@ -838,10 +838,10 @@ body.mini-open { overflow: hidden; }
 .rename-note { margin: 0; color: var(--muted); font-size: .85rem; }
 .rename-box input { font: inherit; font-size: 16px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); color: var(--text); }
 .rename-box input:focus { outline: 2px solid var(--accent); border-color: transparent; }
-.rename-actions { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
+.rename-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
 .rename-actions .spacer { flex: 1; }
 .rename-actions button.primary, .rename-actions button.ghost {
-  font: inherit; padding: 8px 14px; border-radius: 999px; border: 1px solid var(--accent); cursor: pointer;
+  font: inherit; padding: 8px 12px; border-radius: 999px; border: 1px solid var(--accent); cursor: pointer;
 }
 .rename-actions .primary { background: var(--accent); color: var(--accent-text); }
 .rename-actions .ghost { background: transparent; color: var(--accent); }
