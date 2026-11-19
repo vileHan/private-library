@@ -18,7 +18,7 @@
   <!-- Oberflächen-Tests: laden die App in einem 360 px breiten Rahmen (kleinstes übliches Handy) und klicken sie durch.
        Ändern KEINE eigenen Daten (keine Besitz-/Gelesen-Knöpfe). Ergebnis auch in window.__uiResults (für den Prüfer-Agenten).
        Aufruf: http://localhost:8080/tests/ui.html – Anforderungen siehe ANFORDERUNGEN.md (IDs in Klammern). -->
-  <iframe id="app" src="../index.html"></iframe>
+  <iframe id="app"></iframe>
   <div id="out">
     <h1>Oberflächen-Tests</h1>
     <p id="status">Läuft …</p>
@@ -47,6 +47,14 @@
       return until(() => !/läuft/i.test($('#searchStatus').textContent) && $$('#results .book').length > 0);
     }
 
+    // Angemeldetes Konto für die Dauer der Tests ausblenden – sonst gingen Test-Änderungen (Geschenk, Regale) per Abgleich
+    // ins echte Konto (20.11.2026). Wird am Ende (und beim Verlassen der Seite) wiederhergestellt.
+    const HIDE = ['bibliothek-konto', 'bibliothek-abgleich'];
+    const hidden = Object.fromEntries(HIDE.map((k) => [k, localStorage.getItem(k)]));
+    for (const k of HIDE) localStorage.removeItem(k);
+    const unhide = () => { for (const [k, v] of Object.entries(hidden)) if (v != null) localStorage.setItem(k, v); };
+    window.addEventListener('pagehide', unhide);
+    frame.src = '../index.html';
     await new Promise((r) => frame.addEventListener('load', r, { once: true }));
     const errors = [];
     frame.contentWindow.addEventListener('error', (e) => errors.push(e.message));
@@ -222,6 +230,10 @@
       const { store } = await imp('store.js');
       const lib = await imp('library.js');
       const KEY = 'ui-test-refresh';
+      // Hat dieser Browser „Rewitched“ schon als eigenes Buch, fände die App das statt des Testeintrags → überspringen
+      const ownRewitched = (await store.getAll()).some((x) => x.key !== KEY && (x.isbns || []).includes('9783404015061'));
+      if (ownRewitched) add('Eigener Eintrag wird aufgefrischt, eigene Angaben bleiben (D4)', true, 'übersprungen: eigenes Buch mit dieser ISBN in diesem Browser');
+      else {
       await store.put({ key: KEY, title: 'Rewitched', sortTitle: 'Rewitched', subtitle: '', authors: ['Lucy Jane Wood'], authorSort: 'Wood, Lucy Jane',
         year: 2026, genre: 'Fantasy', publisher: 'Lübbe', series: '', volume: '', isbns: ['9783404015061'], coverIsbns: [], coverIds: [], editions: [],
         owned: true, read: true, readAt: '2026-01-02', wish: false, rating: 4, notes: 'Testnotiz', tags: ['Test'], ownedIsbns: ['9783404015061'],
@@ -237,6 +249,7 @@
       } finally {
         await store.remove(KEY);
         await lib.loadLibrary();
+      }
       }
 
       // D4b: Alle eigenen Einträge werden beim Start aus dem Katalog aufgefrischt (fehlender Band), eigene Angaben bleiben
@@ -266,6 +279,9 @@
       {
         const W = frame.contentWindow;
         const lsBefore = W.localStorage.getItem('bibliothek-einstellungen');
+        { // eigener Bibliotheksname (Konto) hätte Vorrang vor dem Test-Geschenk – für die Dauer der Tests ausblenden
+          const s = JSON.parse(lsBefore || '{}'); delete s.libraryName; W.localStorage.setItem('bibliothek-einstellungen', JSON.stringify(s));
+        }
         const theme = await imp('theme.js');
         const gift = await imp('gift.js');
         const box = doc().createElement('div');
@@ -634,6 +650,7 @@
     }
     add('Keine JavaScript-Fehler in der App', errors.length === 0, errors.slice(0, 3).join(' | '));
 
+    unhide();
     const failed = results.filter((x) => !x.ok).length;
     document.getElementById('status').textContent = failed ? `${failed} von ${results.length} Tests fehlgeschlagen` : `Alle ${results.length} Tests bestanden`;
     for (const x of results) {

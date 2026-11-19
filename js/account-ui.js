@@ -5,7 +5,7 @@ import { account, login, logout, changePassword, accountRpc, register, inviteFro
 import { syncNow, syncState, firstSync, hasPending, clearLocalAfterLogout } from './sync.js';
 import { library } from './library.js';
 import { settings } from './settings.js';
-import { currentTitle, openRename, libraryTitle, applyLibraryTitle } from './libname.js';
+import { currentTitle, openRename, libraryTitle, applyLibraryTitle, libraryTitleInto } from './libname.js';
 import { showInstallHint, isStandalone } from './install.js';
 
 const FREE_BYTES = 5 * 1024 ** 3; // Supabase Gratis-Tarif: 5 GB Datenverkehr im Monat
@@ -27,22 +27,39 @@ const mb = (bytes) => {
 export function renderAccount(box, rerender) {
   box.replaceChildren(el('h2', { text: 'Konto' }));
   if (!account.loggedIn) return pendingInvite ? renderRegister(box, rerender) : renderLogin(box, rerender);
+  renderSignedIn(box, rerender);
+}
 
-  // Kopf (19.11.2026): Anfangsbuchstabe im Kreis, Name, Abgleich-Status mit Punkt
+// Symbole nach Lucide (ISC-Lizenz), feste Texte
+const ico = (body) => { const s = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); s.setAttribute('viewBox', '0 0 24 24'); s.setAttribute('aria-hidden', 'true'); s.classList.add('kl-ico'); s.innerHTML = body; return s; };
+const ICONS = {
+  sync: '<path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/>',
+  key: '<path d="M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z"/><circle cx="16.5" cy="7.5" r=".5"/>',
+  phone: '<rect width="14" height="20" x="5" y="2" rx="2"/><path d="M12 18h.01"/>',
+  pencil: '<path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/>',
+};
+const chevron = () => el('span', { class: 'kl-chev', 'aria-hidden': 'true', text: '›' });
+
+/** Liste wie in den Einstellungen gängiger Apps: Zeile = Symbol, Text, rechts Zusatz/Pfeil */
+function listRow(icon, label, { onclick, trail } = {}) {
+  const b = el('button', { type: 'button', class: 'kl-row', onclick }, ico(ICONS[icon]), el('span', { class: 'kl-label', text: label }));
+  if (trail) b.append(trail);
+  return b;
+}
+
+/** Angemeldet (20.11.2026): Kopf, Name der Bibliothek als antippbarer Titel, Liste, Abmelden ganz unten. */
+function renderSignedIn(box, rerender) {
   const status = el('span', { class: 'konto-sync' });
   const showStatus = (text) => {
-    const s = syncState();
     const waiting = hasPending();
     status.className = `konto-sync${waiting ? ' waiting' : ''}`;
-    status.textContent = text || (waiting ? 'Änderungen warten auf den Abgleich' : `Abgeglichen ${when(s.lastSync)}`);
+    status.textContent = text || (waiting ? 'Änderungen warten auf den Abgleich' : `Abgeglichen ${when(syncState().lastSync)}`);
   };
   showStatus();
-  box.append(el('div', { class: 'konto-head' },
-    el('span', { class: 'konto-avatar', 'aria-hidden': 'true', text: (account.name.trim()[0] || '?').toUpperCase() }),
-    el('div', { class: 'konto-who' },
-      el('span', { class: 'konto-label', text: 'Angemeldet als' }),
-      el('strong', { class: 'konto-name', text: account.name }),
-      status)));
+  box.append(el('div', { class: 'konto-who' },
+    el('span', { class: 'konto-label', text: 'Angemeldet als' }),
+    el('strong', { class: 'konto-name', text: account.name }),
+    status));
 
   if (account.expired) {
     box.append(el('p', { class: 'konto-hint', text: 'Die Anmeldung ist abgelaufen (z. B. neues Passwort). Bitte melde dich neu an – deine Bücher bleiben auf diesem Gerät.' }));
@@ -50,50 +67,15 @@ export function renderAccount(box, rerender) {
     return;
   }
 
-  const pwBox = el('form', { class: 'konto-form', hidden: true });
-  const actions = el('div', { class: 'data-actions' },
-    el('button', {
-      type: 'button', text: 'Jetzt abgleichen',
-      onclick: async (ev) => {
-        const btn = ev.currentTarget;
-        btn.disabled = true;
-        showStatus('Gleiche ab …');
-        try {
-          const n = await syncNow();
-          showStatus(n ? `Abgeglichen – ${plural(n, 'Änderung', 'Änderungen')} übernommen.` : 'Abgeglichen – alles aktuell.');
-        } catch {
-          showStatus('Abgleich fehlgeschlagen – keine Verbindung? Es wird später erneut versucht.');
-        }
-        btn.disabled = false;
-      },
-    }),
-    el('button', { type: 'button', text: 'Passwort ändern', onclick: () => { pwBox.hidden = !pwBox.hidden; if (!pwBox.hidden) pwBox.querySelector('input').focus(); } }),
-    el('button', {
-      type: 'button', class: 'danger', text: 'Abmelden',
-      onclick: async () => {
-        let pendingNote = '';
-        if (hasPending()) {
-          try { await syncNow(); } catch { /* unten nachfragen */ }
-          if (hasPending()) pendingNote = '\n\nACHTUNG: Einige Änderungen konnten noch nicht hochgeladen werden (keine Verbindung) und gehen verloren.';
-        }
-        if (!window.confirm(`Abmelden? Deine Bücher bleiben im Konto gespeichert und werden von diesem Gerät entfernt.${pendingNote}`)) return;
-        await logout();
-        await clearLocalAfterLogout();
-        applyLibraryTitle();
-        rerender();
-      },
-    }));
-  // Name der Bibliothek (Kopfleiste) – getrennt vom Benutzernamen
-  box.append(el('div', { class: 'konto-row' },
-    el('div', {},
-      el('span', { class: 'konto-label', text: 'Name der Bibliothek' }),
-      el('strong', { class: 'konto-libname', text: currentTitle() })),
-    el('button', { type: 'button', class: 'konto-small', text: 'Ändern', onclick: openRename })),
-  el('p', { class: 'konto-sub konto-explain', text: 'Du kannst den Namen auch oben in der Kopfleiste antippen. Das ändert nur, wie deine Bibliothek heißt – dein Benutzername zum Anmelden bleibt gleich.' }));
-  box.append(actions);
-  box.append(el('p', { class: 'konto-switch' }, el('button', { type: 'button', class: 'link-btn', text: '📲 Als App auf den Home-Bildschirm – so geht’s ›', onclick: showInstallHint })));
+  // Name der Bibliothek: großer Anfangsbuchstabe, unterstrichen wie ein Link, Stift → Umbenennen
+  const libName = el('span', { class: 'konto-libname' });
+  libraryTitleInto(libName);
+  box.append(el('button', { type: 'button', class: 'konto-lib', onclick: openRename, 'aria-label': `Name der Bibliothek ändern: ${currentTitle()}` },
+    el('span', { class: 'konto-label', text: 'Deine Bibliothek' }),
+    el('span', { class: 'konto-lib-line' }, libName, ico(ICONS.pencil))));
 
   // Passwort ändern (autocomplete="new-password": Schlüsselbund bietet ein sicheres Passwort an und speichert es)
+  const pwBox = el('form', { class: 'konto-form kl-form', hidden: true });
   const user = el('input', { type: 'text', name: 'username', autocomplete: 'username', value: account.name, hidden: true });
   const pw1 = el('input', { type: 'password', autocomplete: 'new-password', placeholder: 'Neues Passwort (mind. 8 Zeichen)', 'aria-label': 'Neues Passwort' });
   const pw2 = el('input', { type: 'password', autocomplete: 'new-password', placeholder: 'Neues Passwort wiederholen', 'aria-label': 'Neues Passwort wiederholen' });
@@ -111,7 +93,47 @@ export function renderAccount(box, rerender) {
       pwMsg.textContent = err.message;
     }
   });
-  box.append(pwBox);
+
+  const syncRow = listRow('sync', 'Jetzt abgleichen', {
+    onclick: async () => {
+      syncRow.disabled = true;
+      syncRow.classList.add('busy');
+      showStatus('Gleiche ab …');
+      try {
+        const n = await syncNow();
+        showStatus(n ? `Abgeglichen – ${plural(n, 'Änderung', 'Änderungen')} übernommen` : 'Abgeglichen – alles aktuell');
+      } catch {
+        showStatus('Abgleich fehlgeschlagen – keine Verbindung? Später erneut.');
+      }
+      syncRow.disabled = false;
+      syncRow.classList.remove('busy');
+    },
+  });
+  const pwRow = listRow('key', 'Passwort ändern', {
+    trail: chevron(),
+    onclick: () => { pwBox.hidden = !pwBox.hidden; pwRow.classList.toggle('open', !pwBox.hidden); if (!pwBox.hidden) pw1.focus(); },
+  });
+  box.append(el('div', { class: 'konto-list' },
+    syncRow,
+    pwRow,
+    pwBox,
+    listRow('phone', 'Als App installieren', { trail: chevron(), onclick: showInstallHint })));
+
+  box.append(el('button', {
+    type: 'button', class: 'konto-logout', text: 'Abmelden',
+    onclick: async () => {
+      let pendingNote = '';
+      if (hasPending()) {
+        try { await syncNow(); } catch { /* unten nachfragen */ }
+        if (hasPending()) pendingNote = '\n\nACHTUNG: Einige Änderungen konnten noch nicht hochgeladen werden (keine Verbindung) und gehen verloren.';
+      }
+      if (!window.confirm(`Abmelden? Deine Bücher bleiben im Konto gespeichert und werden von diesem Gerät entfernt.${pendingNote}`)) return;
+      await logout();
+      await clearLocalAfterLogout();
+      applyLibraryTitle();
+      rerender();
+    },
+  }));
 }
 
 function renderLogin(box, rerender, presetName = '') {
@@ -139,7 +161,7 @@ function renderLogin(box, rerender, presetName = '') {
     type: 'button', class: 'link-btn', text: 'Ich habe eine Einladung – Konto erstellen ›',
     onclick: () => { pendingInvite = { code: '', status: 'eingeben' }; rerender(); },
   })));
-  box.append(el('p', { class: 'konto-switch' }, el('button', { type: 'button', class: 'link-btn', text: '📲 Als App auf den Home-Bildschirm – so geht’s ›', onclick: showInstallHint })));
+  box.append(el('div', { class: 'konto-list' }, listRow('phone', 'Als App installieren', { trail: chevron(), onclick: showInstallHint })));
 }
 
 /** Nach Anmelden/Erstellen: Bücher abgleichen, neu zeichnen, kurze Meldung. */

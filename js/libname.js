@@ -22,14 +22,17 @@ export function applyLibraryTitle() {
   const h1 = document.querySelector('.top h1');
   if (h1) h1.textContent = t;
   document.title = t;
-  for (const n of document.querySelectorAll('.konto-libname')) n.textContent = t; // Anzeige unter Einstellungen → Konto
+  for (const n of document.querySelectorAll('.konto-libname')) libraryTitleInto(n); // Anzeige unter Einstellungen → Konto
 }
 
 /** Fenster „Name der Bibliothek“ */
 export function openRename() {
   if (document.querySelector('.rename-dialog')) return;
   const input = el('input', { type: 'text', maxlength: '40', value: currentTitle(), 'aria-label': 'Name der Bibliothek', autocapitalize: 'sentences', enterkeyhint: 'done' });
-  const close = () => { wrap.remove(); applyLibraryTitle(); };
+  // Tastatur (iPhone): Fenster an den sichtbaren Bereich heften, damit es nie unter der Tastatur liegt (20.11.2026)
+  const vv = window.visualViewport;
+  const place = () => { if (vv) { wrap.style.top = `${vv.offsetTop}px`; wrap.style.height = `${vv.height}px`; } };
+  const close = () => { vv?.removeEventListener('resize', place); vv?.removeEventListener('scroll', place); wrap.remove(); applyLibraryTitle(); };
   const save = (value) => {
     const v = value.trim().replace(/\s+/g, ' ').slice(0, 40);
     settings.set('libraryName', v === currentTitleWithout() ? '' : v); // gleich dem Standard → nichts Eigenes speichern
@@ -49,6 +52,9 @@ export function openRename() {
   wrap.addEventListener('click', (ev) => { if (ev.target === wrap) close(); });
   form.addEventListener('keydown', (ev) => { if (ev.key === 'Escape') close(); });
   document.body.append(wrap);
+  place();
+  vv?.addEventListener('resize', place);
+  vv?.addEventListener('scroll', place);
   input.focus();
   input.select();
 }
@@ -71,4 +77,10 @@ export function initLibraryTitle() {
   h1.addEventListener('keydown', (ev) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); openRename(); } });
   applyLibraryTitle();
   settings.onSet((name) => { if (name === 'libraryName' || name === 'gift') applyLibraryTitle(); });
+}
+
+/** Name mit großem Anfangsbuchstaben in einen Knoten schreiben (Einstellungen → Konto). */
+export function libraryTitleInto(node) {
+  const t = currentTitle();
+  node.replaceChildren(el('span', { class: 'cap', text: t.slice(0, 1) }), t.slice(1));
 }

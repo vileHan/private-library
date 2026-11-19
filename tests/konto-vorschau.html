@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Konto-Vorschau</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body data-view="settings">
+  <!-- Vorschau der Konto-Ansicht (angemeldet), ohne echte Daten: eigener Speicher im Arbeitsspeicher statt localStorage,
+       keine Netzabrufe. Ändert nichts an Anmeldung, Büchern oder Einstellungen dieses Browsers. ?abgemeldet = Anmeldeansicht -->
+  <header class="top"><div class="top-row"><h1>Meine Bibliothek</h1><div class="top-actions"></div></div></header>
+  <main><section id="view-settings"><section class="data konto" id="accountBox"></section></section></main>
+  <script type="module">
+    const mem = new Map();
+    const fake = { getItem: (k) => (mem.has(k) ? mem.get(k) : null), setItem: (k, v) => mem.set(k, String(v)), removeItem: (k) => mem.delete(k), clear: () => mem.clear(), key: () => null, get length() { return mem.size; } };
+    Object.defineProperty(window, 'localStorage', { value: fake, configurable: true });
+    window.fetch = () => new Promise(() => {});
+    if (!location.search.includes('abgemeldet')) {
+      fake.setItem('bibliothek-konto', JSON.stringify({ name: 'jan', display: 'Jan', userId: 'x', konto: true, access: 'a', refresh: 'r', expiresAt: Date.now() + 3600e3 }));
+    }
+    fake.setItem('bibliothek-einstellungen', JSON.stringify({ libraryName: 'Jans Bibliothek' }));
+    fake.setItem('bibliothek-abgleich', JSON.stringify({ lastSync: new Date().toISOString() }));
+    const { renderAccount } = await import('../js/account-ui.js');
+    const { initLibraryTitle } = await import('../js/libname.js');
+    initLibraryTitle();
+    const draw = () => renderAccount(document.getElementById('accountBox'), draw);
+    draw();
+  </script>
+</body>
+</html>
