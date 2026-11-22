@@ -6,6 +6,7 @@ prüfbare Anforderungen in [ANFORDERUNGEN.md](ANFORDERUNGEN.md). Aufgeräumt am 
 ## Nachprüfen, sobald die DNB wieder antwortet (seit ~19.11.2026 abgeschaltet, Sicherheitslücke)
 - `tests/index.html` (Katalog) und in `tests/ui.html` „ISBN außerhalb des Katalogs (Sachbuch)“ laufen lassen – der Stempel vom 22.11.2026 wurde auf Wunsch des Nutzers ohne diese Tests gesetzt.
 - Prüfen, ob der Import am 01.12.2026 gelaufen ist (sonst nach Rückkehr der DNB von Hand starten).
+- Nach dem Import (Prüfer-Hinweise 22.11.2026): Datenbankgröße mit „Diagnose“ messen (Spitze geschätzt 400–420 MB, Grenze 450/500 MB); Suchzeit und Ergebnis für „kind“ und „liebe“ ansehen (Originaltitel bringen mehr Kandidaten); zählen, ob die Einzahl/Mehrzahl-Regel Titel wie „Pippis: …“ falsch kürzt; „long lost“ und „dark elements“ testen.
 
 ## Konten
 - Umgesetzt am 18.11.2026 (Einladungs-Links, siehe CLAUDE.md „Konten“). Offen: Einladungen verschicken, Testkonto „Test Prüfkonto“ nach der Prüfung löschen.
