@@ -3,6 +3,10 @@
 Nur was noch zu tun ist. Erledigtes steht in der Git-Historie, Entscheidungen und Details in [CLAUDE.md](CLAUDE.md),
 prüfbare Anforderungen in [ANFORDERUNGEN.md](ANFORDERUNGEN.md). Aufgeräumt am 13.11.2026 (Nutzer: „alles außer Konten raus“).
 
+## Nachprüfen, sobald die DNB wieder antwortet (seit ~19.11.2026 abgeschaltet, Sicherheitslücke)
+- `tests/index.html` (Katalog) und in `tests/ui.html` „ISBN außerhalb des Katalogs (Sachbuch)“ laufen lassen – der Stempel vom 22.11.2026 wurde auf Wunsch des Nutzers ohne diese Tests gesetzt.
+- Prüfen, ob der Import am 01.12.2026 gelaufen ist (sonst nach Rückkehr der DNB von Hand starten).
+
 ## Konten
 - Umgesetzt am 18.11.2026 (Einladungs-Links, siehe CLAUDE.md „Konten“). Offen: Einladungen verschicken, Testkonto „Test Prüfkonto“ nach der Prüfung löschen.
 - Später möglich: sehen, wer ein Buch schon hat / ausleihen kann.
