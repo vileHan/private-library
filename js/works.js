@@ -34,6 +34,21 @@ export function searchableSubtitle(s = '') {
   return s && s.length <= 60 ? s : '';
 }
 
+/**
+ * Suchtext eines Werks für die Datenbank (search_title): Titel, kurzer Untertitel, Reihe – dahinter die Wörter des
+ * Originaltitels, die noch nicht vorkommen („Unchained“ nicht doppelt). So findet „long lost“ die deutsche Ausgabe
+ * (22.11.2026). Hinten angehängt, damit „Titel beginnt mit der Eingabe“ weiter nur den deutschen Titel meint.
+ */
+export function searchTitleOf(w) {
+  const base = normalizeText([w.title, searchableSubtitle(w.subtitle), w.series].filter(Boolean).join(' '));
+  const have = new Set(base.split(' '));
+  const extra = [];
+  for (const t of w.origTitles || []) {
+    for (const word of normalizeText(t).split(' ')) if (word && !have.has(word)) { have.add(word); extra.push(word); }
+  }
+  return extra.length ? `${base} ${extra.join(' ')}` : base;
+}
+
 function titleKey(title) {
   return normalizeText(title).replace(ARTICLES, '');
 }
@@ -95,7 +110,9 @@ export function fixSeriesTitles(editions) {
     // „Game of Thrones - das Erbe von Winterfell“ → eigentlicher Titel dahinter
     if (a) {
       for (const s of rawSeriesByAuthor.get(a) || []) {
-        const esc = s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+');
+        // Einzahl/Mehrzahl am Ende darf abweichen: Band 1 heißt bei der DNB „Dark Element - steinerne Schwingen“,
+        // die Reihe „Dark Elements“ (Notizen des Nutzers, 22.11.2026)
+        const esc = s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+').replace(/s$/i, '') + 's?';
         // Trenner nur mit Leerraum („ - “, „ – “, „:“) – ein Bindestrich im zusammengesetzten Wort trennt nichts:
         // „Die Känguru-Chroniken“ (Reihe „Die Känguru“) blieb sonst als „Chroniken“ übrig (Analyse 09.11.2026)
         // Auch „, “ vor einem Großbuchstaben: „Die drei ??? Kids, Mission Geister-Code“ (13.11.2026)
@@ -398,6 +415,9 @@ function buildWork(editions) {
     // nur für fillGenres (Ersatz-Genre), wird nicht gespeichert
     subjects: [...new Set(editions.flatMap((e) => e.subjects || []))].slice(0, 12),
     subjectGroups: [...new Set(editions.flatMap((e) => e.subjectGroups || []))],
+    // Originaltitel (MARC 240, z. B. „Long lost“), nur zum Suchen – NICHT zum Gruppieren (verbände bei Reihen
+    // verschiedene Bände). Höchstens 2, nur wenn anders als der deutsche Titel (22.11.2026)
+    origTitles: [...new Set(editions.map((e) => e.workTitle).filter((t) => t && normalizeText(t) !== normalizeText(title)))].slice(0, 2),
     publisher: main.publisher,
     series: mostCommon(editions.map((e) => e.series)),
     volume: mostCommon(editions.map((e) => e.volume)),

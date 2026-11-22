@@ -14,7 +14,7 @@ import pg from 'pg';
 globalThis.DOMParser = DOMParser;
 const { CONFIG } = await import('../js/config.js');
 const { fetchRecords, filterCql } = await import('../js/dnb.js');
-const { groupEditions, normalizeText, searchableSubtitle } = await import('../js/works.js');
+const { groupEditions, normalizeText, searchTitleOf } = await import('../js/works.js');
 const { normalizeIsbn } = await import('../js/isbn.js');
 
 const env = process.env;
@@ -62,6 +62,7 @@ function slim(e) {
   return JSON.parse(JSON.stringify({
     isbns: e.isbns, authors: e.authors, authorsSort: e.authorsSort.slice(0, 1), title: e.title, sortTitle: e.sortTitle,
     subtitle: e.subtitle, series: e.series, volume: e.volume, looseSeries: e.looseSeries, publisher: e.publisher, year: e.year,
+    workTitle: e.workTitle && e.workTitle !== e.title ? e.workTitle : '', // Originaltitel (240), nur für die Suche (22.11.2026)
     genres: e.genres.slice(0, 2), themes: e.themes.slice(0, 1), isComic: e.isComic, isEbook: e.isEbook,
     // für Ersatz-Genres ohne Gattungsbegriff (fillGenres in js/works.js, 13.11.2026) – nur wenn kein Gattungsbegriff da ist
     subjects: e.genres.length ? [] : (e.subjects || []).slice(0, 6), subjectGroups: (e.subjectGroups || []).slice(0, 2),
@@ -125,7 +126,7 @@ function toRows(works, coverIds) {
       bestseller: !!w.bestseller,
       isbns,
       cover_ids: [...new Set(isbns.map((i) => coverIds.get(i)).filter(Boolean))].slice(0, 3),
-      search_title: normalizeText([w.title, searchableSubtitle(w.subtitle), w.series].filter(Boolean).join(' ')),
+      search_title: searchTitleOf(w),
       search_author: normalizeText((w.authors || []).join(' ')),
     };
   });

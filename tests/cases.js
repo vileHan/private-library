@@ -4,7 +4,7 @@
 import { CONFIG } from '../js/config.js';
 import { fetchRecords, searchDnb, displayName } from '../js/dnb.js';
 import { classify } from '../js/classify.js';
-import { groupEditions, normalizeText, isOmnibus, fillGenres, genreFromSubjects } from '../js/works.js';
+import { groupEditions, normalizeText, isOmnibus, fillGenres, genreFromSubjects, searchTitleOf } from '../js/works.js';
 import { cleanTitle, splitVolumePrefix, isPublisherSeries, cleanSeriesName, splitTitleSubtitle, plausibleYear } from '../js/titles.js';
 import { isbn13to10 } from '../js/isbn.js';
 
@@ -48,6 +48,9 @@ async function byIsbn(isbn) {
 export async function runAll() {
   const results = [];
   const opts = { excludeGenreGroups: CONFIG.catalogFilter.excludeGenreGroups };
+  // DNB nicht erreichbar (z. B. Abschaltung 11/2026): die Netz-Tests als ein Fehler melden, die Prüfungen ohne Netz
+  // unten trotzdem laufen lassen (22.11.2026)
+  try {
   for (const [isbn, label] of Object.entries(KEEP)) {
     const e = await byIsbn(isbn);
     const r = e ? classify(e, opts) : { keep: false, reason: 'bei der DNB nicht gefunden' };
@@ -257,6 +260,10 @@ export async function runAll() {
   results.push({ name: 'Titelwörter: Lernblöcke, „Lernen ab N Jahren“, Freundebuch, DSA raus; ähnliche Romantitel bleiben',
     ok: wordFails.length === 0, detail: wordFails.join('; ') });
 
+  } catch (err) {
+    results.push({ name: 'Tests mit DNB-Daten', ok: false, detail: `abgebrochen (DNB nicht erreichbar?): ${err.message}` });
+  }
+
   // ---------- Ohne Netz: Titel-Helfer ----------
   const unit = [
     [cleanTitle('Harry Potter und der Stein der Weisen - Ausgabe zur TV-Serie'), 'Harry Potter und der Stein der Weisen'],
@@ -300,6 +307,15 @@ export async function runAll() {
     [String(groupEditions(['mit Farbschnitt-Garantie', 'Schmuckausgabe'].map((sub, i) => ({ title: 'Indigo und Jade - Sammelband I', authors: ['Anna Strauß'], authorsSort: ['Strauß, Anna'], series: '', volume: '', subtitle: sub, year: 2023, genres: [], themes: [], isbn: '97834400001' + i, isbns: ['97834400001' + i] }))).length + groupEditions(['die komplette Trilogie', 'die komplette Trilogie : Thriller'].map((sub, i) => ({ title: 'Chase', authors: ['Max Dellenbusch'], authorsSort: ['Dellenbusch, Max'], series: '', volume: '', subtitle: sub, year: 2022, genres: [], themes: [], isbn: '97834400002' + i, isbns: ['97834400002' + i] }))).length), '2'],
     [String(isOmnibus('Zwerge', 'Die komplette Saga 1') && isOmnibus('Eragon', 'Band 1-3') && isOmnibus('Krimis', 'drei Romane in einem Band') && !isOmnibus('Der Herr der Ringe', '') && !isOmnibus('Die Zwerge', 'Roman') && !isOmnibus('Catch 22', '')), 'true'],
     [groupEditions([{ title: 'Die drei ??? Kids, Mission Geister-Code', authors: ['Nina Schiefelbein'], authorsSort: ['Schiefelbein, Nina'], subtitle: '', year: 2024, genres: [], themes: [], series: 'Die drei ??? Kids', volume: '5', isbn: '9783440000001', isbns: ['9783440000001'] }, { title: 'Mission Kaugummi-Code', authors: ['Nina Schiefelbein'], authorsSort: ['Schiefelbein, Nina'], subtitle: '', year: 2021, genres: [], themes: [], series: 'Die drei ??? Kids', volume: '2', isbn: '9783440000002', isbns: ['9783440000002'] }]).map((x) => x.title).sort().join(' | '), 'Mission Geister-Code | Mission Kaugummi-Code'],
+    // 22.11.2026 (Notizen des Nutzers): Originaltitel durchsuchbar, ohne doppelte Wörter; Reihenname in Einzahl vorne im Titel
+    [searchTitleOf({ title: 'In ewiger Schuld', subtitle: '', series: '', origTitles: ['Long lost'] }), 'in ewiger schuld long lost'],
+    [searchTitleOf({ title: 'Unchained', subtitle: 'Roman', series: '', origTitles: [] }), 'unchained roman'],
+    [searchTitleOf({ title: 'Wait for you', subtitle: '', series: 'Wait for you', origTitles: ['Wait for you'] }), 'wait for you wait for you'],
+    [JSON.stringify(groupEditions(['Long lost', 'Long lost'].map((wt, i) => ({ title: 'In ewiger Schuld', workTitle: wt, authors: ['Harlan Coben'], authorsSort: ['Coben, Harlan'], series: '', volume: '', subtitle: '', year: 2010 + i, genres: [], themes: [], isbn: '97834400004' + i, isbns: ['97834400004' + i] })))[0].origTitles), '["Long lost"]'],
+    [groupEditions([
+      { title: 'Dark Element - steinerne Schwingen', authors: ['Jennifer L. Armentrout'], authorsSort: ['Armentrout, Jennifer L.'], series: '', volume: '', subtitle: '', year: 2014, genres: [], themes: [], isbn: '9783440000051', isbns: ['9783440000051'] },
+      { title: 'Eiskalte Sehnsucht', authors: ['Jennifer L. Armentrout'], authorsSort: ['Armentrout, Jennifer L.'], series: 'Dark elements', volume: '2', subtitle: '', year: 2015, genres: [], themes: [], isbn: '9783440000052', isbns: ['9783440000052'] },
+    ]).map((w) => `${w.title} [${w.series}]`).sort().join(' | '), 'Eiskalte Sehnsucht [Dark elements] | Steinerne Schwingen [Dark elements]'],
     [cleanSeriesName('Gesammelte Werke'), 'Gesammelte Werke'],
     [cleanSeriesName('Die Tribute von Panem-Trilogie'), 'Die Tribute von Panem'],
     [cleanSeriesName('Die Wellenläufer-Reihe'), 'Die Wellenläufer'],
