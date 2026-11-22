@@ -201,10 +201,19 @@ async function runSearch(query, append = false) {
   } catch (err) {
     if (err.name === 'AbortError') return;
     clearSkeleton();
-    status.classList.add('error');
-    status.textContent = navigator.onLine === false
+    const msg = navigator.onLine === false
       ? 'Keine Internetverbindung. „Meine Bücher“ funktioniert trotzdem.'
-      : `Die Suche hat nicht geklappt: ${err.message}`;
+      : /^Dieses Buch/.test(err.message) ? err.message // eigene, schon verständliche Meldung (ISBN, DNB ausgefallen)
+        : 'Die Suche ist gerade nicht erreichbar. Bitte später noch einmal versuchen.';
+    if (!append) {
+      // Alte Treffer weg (sonst sah es nach einem Scan so aus, als wäre das vorige Buch gefunden worden, 22.11.2026);
+      // eigene Bücher, die zur Suche passen (z. B. dieselbe ISBN), zeigt renderResults trotzdem.
+      renderResults();
+      const empty = $('#results .empty');
+      if (empty) empty.replaceWith(emptyState({ icon: '⚠️', title: 'Gerade nicht gefunden', text: msg }));
+    }
+    status.classList.add('error');
+    status.textContent = msg;
     $('#moreBtn').disabled = false;
     $('#moreBtn').textContent = 'Erneut versuchen';
   }
