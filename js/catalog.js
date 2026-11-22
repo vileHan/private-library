@@ -87,15 +87,34 @@ export const catalog = {
         console.warn('Datenbank nicht erreichbar, suche live bei der DNB:', err);
       }
     }
-    const res = await searchDnb(query, cursor ?? 1, signal);
-    // ISBN (Barcode): Die DNB kennt nur die gescannte Ausgabe. Steht das Buch im Katalog, das ganze Werk zeigen –
-    // mit allen Ausgaben, dem ersten Erscheinungsjahr und den Cover-IDs (sonst z. B. Rewitched als „2026“ statt 2025).
+    // ISBN (Barcode, 22.11.2026): zuerst im eigenen Katalog über den ISBN-Index – das ganze Werk mit allen Ausgaben,
+    // erstem Erscheinungsjahr und Cover-IDs, schnell und ohne DNB. Nur wenn das Buch nicht im Katalog steht (Sachbuch,
+    // Selbstverlag, E-Book …), fragt die App die DNB (ungefiltert).
     const isbn = normalizeIsbn(query);
+    let dbChecked = false;
     if (isbn && useDb() && !cursor) {
-      const work = await dbWorkForIsbn(isbn, res.editions, signal).catch(() => null);
-      if (work) return { works: [work], total: 1, next: null };
+      try {
+        const rows = await rpc('work_by_isbn', { isbn: Number(isbn) }, signal);
+        dbChecked = true;
+        if (rows.length) return { works: [toWork(rows[0])], total: 1, next: null };
+      } catch (err) {
+        if (err.name === 'AbortError') throw err;
+      }
     }
-    return res;
+    try {
+      const res = await searchDnb(query, cursor ?? 1, signal);
+      // Datenbank war nicht erreichbar: wie früher das Werk über Titel + Nachname im Katalog suchen
+      if (isbn && useDb() && !cursor && !dbChecked) {
+        const work = await dbWorkForIsbn(isbn, res.editions, signal).catch(() => null);
+        if (work) return { works: [work], total: 1, next: null };
+      }
+      return res;
+    } catch (err) {
+      if (err.name === 'AbortError' || !isbn) throw err;
+      throw new Error(dbChecked
+        ? 'Dieses Buch steht nicht in unserem Katalog, und die Deutsche Nationalbibliothek ist gerade nicht erreichbar. Bitte später noch einmal versuchen.'
+        : err.message);
+    }
   },
 
   /** Ausgaben-Details zu ISBNs (live von der DNB). */

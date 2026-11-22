@@ -321,6 +321,18 @@ grant execute on function series_works(text, text) to anon, authenticated;
 grant execute on function author_works(text, text[]) to anon, authenticated;
 grant execute on function browse_genre(text, int, int) to anon, authenticated;
 
+-- ISBN → Werk (22.11.2026): Barcode-Scan und ISBN-Suche finden Katalog-Bücher direkt in der eigenen Datenbank, ohne
+-- die DNB (die war 11/2026 tagelang abgeschaltet). Ohne Index dauerte die Suche 14 s (Supabase bricht nach 3 s ab);
+-- GIN-Index über die ISBN-Liste, ~441.000 ISBNs. security definer wie browse_genre (sonst greift der Index unter RLS nicht).
+create index if not exists works_isbns_idx on works using gin (isbns);
+create or replace function work_by_isbn(isbn bigint)
+returns setof works
+language sql stable security definer
+set search_path = public
+as $$ select w.* from works w where w.isbns @> array[work_by_isbn.isbn] order by cardinality(w.isbns) desc limit 3 $$;
+revoke all on function work_by_isbn(bigint) from public;
+grant execute on function work_by_isbn(bigint) to anon, authenticated;
+
 -- ISBN → Open-Library-Cover-ID (nur deutsche ISBNs 978-3…), gefüllt vom Workflow „Cover-IDs“ (scripts/covers.mjs).
 -- Getrennt vom Katalog-Import, weil der Open-Library-Export je nach Server 2–5 Stunden zum Herunterladen braucht.
 -- Seit 11/2026 auch die Zahl der Open-Library-Leselisten-Einträge des zugehörigen Werks (Beliebtheit).
