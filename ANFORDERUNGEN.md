@@ -25,7 +25,7 @@ Prüfart: **T** = automatischer Test (`tests/index.html`, `tests/ui.html`), **M*
 | B2 | Eigene Bücher (Besitz) stehen oben, darunter der Rest. | T |
 | B3 | Passt die Suche zu einer Reihe, steht sie oben in Bandfolge („eragon“ → Band 1, 2, 3, 4). | T |
 | B4 | Testsuchen (harry, eragon, zeh, kind, liebe, fitzek, drache, unterleutn) antworten **unter 1 s**, keine über 3 s. | M |
-| B5 | ISBN/Barcode zeigt das ganze Werk aus dem Katalog (alle Ausgaben, erstes Jahr): 9783404015061 → „Rewitched“, 2025. Bücher außerhalb des Katalogs (Sachbuch) werden über die DNB trotzdem gefunden. | T |
+| B5 | ISBN/Barcode zeigt das ganze Werk aus dem Katalog (alle Ausgaben, erstes Jahr): 9783404015061 → „Rewitched“, 2025 – seit 22.11.2026 direkt über den ISBN-Index der eigenen Datenbank (unter 0,5 s, ohne DNB); ist die DNB nicht erreichbar und das Buch nicht im Katalog, erscheint eine verständliche Meldung. Bücher außerhalb des Katalogs (Sachbuch) werden über die DNB trotzdem gefunden. | T |
 | B6 | Seitenweises Laden („Mehr laden“) statt alles auf einmal. | T |
 | B7 | Suchleiste ohne Lupe (Tastatur-„Suchen“ und Live-Suche reichen), „×“ am Ende leert die ganze Suche (nur sichtbar bei Text, Tastatur bleibt offen). Berührung außerhalb der Suchleiste schließt die Tastatur. | T + H |
 | B7 | Nichts wird ausgegraut, keine Abzeichen am Cover. | S |
